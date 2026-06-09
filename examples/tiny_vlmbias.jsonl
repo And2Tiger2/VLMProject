@@ -1,0 +1,3 @@
+{"id": "toy-count", "prompt": "How many stripes are on the logo?", "ground_truth": "4", "expected_bias": "3", "topic": "logos", "image_path": null}
+{"id": "toy-yesno", "prompt": "Is this a normal six-sided die?", "ground_truth": "no", "expected_bias": "yes", "topic": "boardgames", "image_path": null}
+

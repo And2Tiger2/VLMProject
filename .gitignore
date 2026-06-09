@@ -51,6 +51,22 @@ coverage.xml
 .pytest_cache/
 cover/
 
+# Evaluation outputs
+data/
+runs/
+
+# Local model and dataset caches
+.cache/
+huggingface/
+hf_cache/
+model_cache/
+models/
+checkpoints/
+
+# Local machine config and secrets
+.env.*
+!.env.example
+
 # Translations
 *.mo
 *.pot
