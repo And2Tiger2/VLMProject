@@ -10,6 +10,7 @@ from tqdm import tqdm
 from vlm_eval.adapters import load_adapter
 from vlm_eval.datasets import load_examples
 from vlm_eval.metrics import prediction_to_dict, score_response, summarize
+from vlm_eval.overheat import maybe_pause
 
 
 def main() -> None:
@@ -42,7 +43,9 @@ def main() -> None:
     predictions = []
     with out_path.open("w", encoding="utf-8") as handle:
         for example in tqdm(examples, desc=f"Evaluating {adapter.name}"):
+            maybe_pause()
             raw_response = adapter.generate(example)
+            maybe_pause()
             prediction = score_response(example, raw_response)
             generation_metadata = getattr(adapter, "last_generation_metadata", None)
             if generation_metadata:

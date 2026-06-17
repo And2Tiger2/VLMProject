@@ -13,6 +13,7 @@ from vlm_eval.naturalbench import (
     prediction_to_dict,
     summarize_naturalbench,
 )
+from vlm_eval.overheat import maybe_pause
 
 
 def main() -> None:
@@ -45,9 +46,11 @@ def main() -> None:
             total=len(remaining_calls),
             desc=f"Evaluating {adapter.name} on NaturalBench",
         ):
+            maybe_pause()
             predictions.append(prediction)
             handle.write(json.dumps(prediction_to_dict(prediction), ensure_ascii=False) + "\n")
             handle.flush()
+            maybe_pause()
 
     summary = summarize_naturalbench(predictions)
     summary_path = Path(args.summary_out) if args.summary_out else out_path.with_suffix(".summary.json")

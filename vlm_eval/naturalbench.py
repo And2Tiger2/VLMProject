@@ -8,6 +8,7 @@ from typing import Iterable
 
 from PIL import Image
 
+from vlm_eval.overheat import maybe_pause
 from vlm_eval.types import EvalExample, VLMAdapter
 
 
@@ -85,7 +86,9 @@ def evaluate_naturalbench(calls: Iterable[NaturalBenchCall], adapter: VLMAdapter
                 "source": call.source,
             },
         )
+        maybe_pause()
         raw_response = adapter.generate(example)
+        maybe_pause()
         parsed_answer = extract_naturalbench_answer(raw_response, call.question_type)
         yield NaturalBenchPrediction(
             group_id=call.group_id,
