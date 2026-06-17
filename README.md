@@ -19,6 +19,23 @@ For Qwen2.5-VL local inference:
 uv sync --extra dev --extra qwen
 ```
 
+## Fixed Eval Settings
+
+Use `adapters.qwen25_vl_eval:make_adapter` for baseline Qwen runs. This keeps
+model and decoding settings fixed across VLMBias, NaturalBench, and future
+interventions:
+
+- model: `Qwen/Qwen2.5-VL-3B-Instruct`
+- decoding: sampled, `do_sample=True`, `temperature=0.7`, `seed=0`
+- response length: `max_new_tokens=16`
+- image budget: `max_pixels=1048576`, `min_pixels=0`
+- device placement: `device_map=auto`
+
+The fixed image budget is important: uncapped NaturalBench images can create
+too many visual tokens and cause large attention allocations. The fixed seed is
+important because sampled decoding is otherwise noisy across intervention
+comparisons.
+
 ## Smoke Test
 
 Run the deterministic dummy adapter on the tiny local JSONL:
@@ -66,7 +83,7 @@ Or run Qwen2.5-VL-3B on the fixed local slice:
 ```bash
 uv run vlm-eval \
   --dataset data/vlmbias_400.jsonl \
-  --adapter adapters.qwen25_vl:make_adapter,model_id=Qwen/Qwen2.5-VL-3B-Instruct \
+  --adapter adapters.qwen25_vl_eval:make_adapter \
   --out runs/qwen25vl_3b_vlmbias_400.jsonl
 ```
 
@@ -113,7 +130,7 @@ Run Qwen2.5-VL-3B on that slice:
 ```bash
 uv run vlm-eval-naturalbench \
   --dataset data/naturalbench_100_groups.jsonl \
-  --adapter adapters.qwen25_vl:make_adapter,model_id=Qwen/Qwen2.5-VL-3B-Instruct,max_pixels=1048576 \
+  --adapter adapters.qwen25_vl_eval:make_adapter \
   --out runs/qwen25vl_3b_naturalbench_100_groups.jsonl
 ```
 
@@ -123,7 +140,7 @@ If the run is interrupted, resume it without discarding completed calls:
 uv run vlm-eval-naturalbench \
   --dataset data/naturalbench_100_groups.jsonl \
   --resume \
-  --adapter adapters.qwen25_vl:make_adapter,model_id=Qwen/Qwen2.5-VL-3B-Instruct,max_pixels=1048576 \
+  --adapter adapters.qwen25_vl_eval:make_adapter \
   --out runs/qwen25vl_3b_naturalbench_100_groups.jsonl
 ```
 

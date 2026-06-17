@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
+from dataclasses import replace
 from pathlib import Path
 
 from tqdm import tqdm
@@ -15,7 +16,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Evaluate a VLM on VLMBias-style examples.")
     parser.add_argument("--dataset", default="anvo25/vlms-are-biased")
     parser.add_argument("--split", default="main")
-    parser.add_argument("--limit", type=int, default=25)
+    parser.add_argument("--limit", type=int, default=None)
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--shuffle", action="store_true")
     parser.add_argument(
@@ -43,10 +44,29 @@ def main() -> None:
         for example in tqdm(examples, desc=f"Evaluating {adapter.name}"):
             raw_response = adapter.generate(example)
             prediction = score_response(example, raw_response)
+            generation_metadata = getattr(adapter, "last_generation_metadata", None)
+            if generation_metadata:
+                prediction = replace(
+                    prediction,
+                    metadata={
+                        **(prediction.metadata or {}),
+                        "generation": generation_metadata,
+                    },
+                )
             predictions.append(prediction)
             handle.write(json.dumps(prediction_to_dict(prediction), ensure_ascii=False) + "\n")
 
     summary = summarize(predictions)
+    summary["run_config"] = {
+        "dataset": args.dataset,
+        "split": args.split,
+        "limit": args.limit,
+        "seed": args.seed,
+        "shuffle": args.shuffle,
+        "adapter": args.adapter,
+        "adapter_name": adapter.name,
+        "adapter_config": getattr(adapter, "eval_config", None),
+    }
     summary_path = Path(args.summary_out) if args.summary_out else out_path.with_suffix(".summary.json")
     with summary_path.open("w", encoding="utf-8") as handle:
         json.dump(summary, handle, indent=2, sort_keys=True)

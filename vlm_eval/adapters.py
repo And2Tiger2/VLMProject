@@ -28,10 +28,14 @@ def load_adapter(spec: str) -> VLMAdapter:
 
 def _coerce_value(value: str):
     lowered = value.lower()
+    if lowered in {"none", "null"}:
+        return None
     if lowered in {"true", "false"}:
         return lowered == "true"
     try:
         return int(value)
     except ValueError:
-        return value
-
+        try:
+            return float(value)
+        except ValueError:
+            return value
