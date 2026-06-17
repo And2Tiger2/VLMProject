@@ -1,0 +1,9 @@
+condition	n	accuracy	bias_aligned_fraction	bias_aligned_error_rate	error_rate
+neutral_image_again	400	0.125000	0.432500	0.494286	0.875000
+neutral_description_only	400	0.125000	0.427500	0.488571	0.875000
+counterfactual_image_again	400	0.125000	0.430000	0.491429	0.875000
+counterfactual_description_only	400	0.122500	0.437500	0.498575	0.877500
+structured_image_again	400	0.107500	0.427500	0.478992	0.892500
+structured_description_only	400	0.120000	0.412500	0.468750	0.880000
+verification_image_again	400	0.142500	0.430000	0.501458	0.857500
+verification_description_only	400	0.130000	0.420000	0.482759	0.870000
