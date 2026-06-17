@@ -26,6 +26,7 @@ DATASET="${DATASET:-data/vlmbias_400.jsonl}"
 OUT_DIR="${OUT_DIR:-runs/vlmbias_two_pass_prompt_variants_fast}"
 LIMIT="${LIMIT:-}"
 CONDITIONS="${CONDITIONS:-}"
+DEVICE_MAP="${DEVICE_MAP:-cuda}"
 
 if [[ ! -f "$DATASET" ]]; then
   echo "Dataset not found: $DATASET" >&2
@@ -37,6 +38,7 @@ cmd=(
   uv run python scripts/run_vlmbias_two_pass_prompt_variants.py
   --dataset "$DATASET"
   --out-dir "$OUT_DIR"
+  --device-map "$DEVICE_MAP"
 )
 
 if [[ -n "$LIMIT" ]]; then

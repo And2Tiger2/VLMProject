@@ -32,6 +32,7 @@ def main() -> None:
     parser.add_argument("--max-pixels", type=int, default=1048576)
     parser.add_argument("--temperature", type=float, default=0.7)
     parser.add_argument("--seed", type=int, default=0)
+    parser.add_argument("--device-map", default="cuda")
     parser.add_argument("--description-max-new-tokens", type=int, default=80)
     parser.add_argument("--limit", type=int, default=None)
     parser.add_argument("--conditions", nargs="+", choices=[name for name, _, _ in CONDITIONS], default=None)
@@ -52,6 +53,7 @@ def main() -> None:
         do_sample=True,
         temperature=args.temperature,
         seed=args.seed,
+        device_map=args.device_map,
         description_max_new_tokens=args.description_max_new_tokens,
     )
 

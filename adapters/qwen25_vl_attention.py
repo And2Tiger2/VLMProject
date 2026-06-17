@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
-from adapters.qwen25_vl import Qwen25VLAdapter
+from adapters.qwen25_vl import Qwen25VLAdapter, _resolve_device_map
 
 
 ATTENTION_IMPL_NAME = "vlm_image_token_bias"
@@ -29,10 +29,11 @@ class Qwen25VLAttentionAdapter(Qwen25VLAdapter):
         self._torch = torch
         self._process_vision_info = process_vision_info
         self._processor = AutoProcessor.from_pretrained(self.model_id)
+        device_map = _resolve_device_map(self.device_map, torch)
         self._model = Qwen2_5_VLForConditionalGeneration.from_pretrained(
             self.model_id,
             torch_dtype=torch.bfloat16 if torch.cuda.is_available() else torch.float32,
-            device_map=self.device_map,
+            device_map=device_map,
             attn_implementation=ATTENTION_IMPL_NAME,
         )
         self.name = f"{self.model_id}-attention-{self.layer_selection}-alpha{self.attention_alpha}"

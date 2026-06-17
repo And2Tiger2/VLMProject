@@ -33,10 +33,11 @@ class Qwen25VLAdapter:
         self._torch = torch
         self._process_vision_info = process_vision_info
         self._processor = AutoProcessor.from_pretrained(self.model_id)
+        device_map = _resolve_device_map(self.device_map, torch)
         self._model = Qwen2_5_VLForConditionalGeneration.from_pretrained(
             self.model_id,
             torch_dtype=torch.bfloat16 if torch.cuda.is_available() else torch.float32,
-            device_map=self.device_map,
+            device_map=device_map,
         )
         self.name = self.model_id
 
@@ -220,3 +221,11 @@ def _stable_int(value: str) -> int:
     for char in value:
         total = (total * 33 + ord(char)) % 1_000_000
     return total
+
+
+def _resolve_device_map(device_map: str, torch: Any) -> Any:
+    if device_map in {"cuda", "cuda:0"}:
+        if not torch.cuda.is_available():
+            raise RuntimeError("device_map='cuda' requested, but torch.cuda.is_available() is false.")
+        return {"": "cuda:0"}
+    return device_map
