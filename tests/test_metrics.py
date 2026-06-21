@@ -6,6 +6,9 @@ from vlm_eval.naturalbench import (
     summarize_naturalbench,
 )
 from vlm_eval.types import EvalExample
+import pytest
+
+from adapters.qwen25_vl_two_pass_unified import answer_prompt_text, description_prompt
 
 
 def test_extracts_answer_prefix_and_number_words():
@@ -28,6 +31,42 @@ def test_bias_aligned_error_rate_is_conditioned_on_errors():
     summary = summarize(predictions)
     assert summary["accuracy"] == 1 / 3
     assert summary["bias_aligned_error_rate"] == 1 / 2
+
+
+def test_unified_two_pass_prompt_contract():
+    question = "Count the stars. Answer with a number in curly brackets, e.g., {9}."
+    evidence = "There are three visible stars."
+
+    with pytest.raises(ValueError):
+        description_prompt(question, "direct")
+    assert "Do not infer what is normally true" in description_prompt(question, "counterfactual")
+    assert "Return only this JSON object" in description_prompt(question, "structured")
+    assert "common assumption might be misleading" in description_prompt(question, "verification")
+
+    original_image = answer_prompt_text(question, evidence, answer_include_image=True, variant="original")
+    original_description_only = answer_prompt_text(
+        question,
+        evidence,
+        answer_include_image=False,
+        variant="original",
+    )
+    assert original_image == original_description_only
+    assert "Use the visual evidence, not what is normally true." in original_image
+    direct_original = answer_prompt_text(
+        question,
+        "",
+        answer_include_image=True,
+        variant="original",
+        include_visual_evidence=False,
+    )
+    assert "Visual evidence:" not in direct_original
+    assert "Use the visual evidence, not what is normally true." in direct_original
+
+    image_aware = answer_prompt_text(question, evidence, answer_include_image=True, variant="image_aware")
+    description_only = answer_prompt_text(question, evidence, answer_include_image=False, variant="image_aware")
+    assert image_aware != description_only
+    assert "Use the visual evidence and the image" in image_aware
+    assert "Use only the visual evidence above" in description_only
 
 
 def test_naturalbench_answer_extraction():
