@@ -50,7 +50,7 @@ def main() -> None:
     parser.add_argument("--vlmbias-limit", type=int, default=None)
     parser.add_argument("--naturalbench-limit-groups", type=int, default=None)
     parser.add_argument("--seeds", nargs="+", type=int, default=[0])
-    parser.add_argument("--alphas", nargs="+", type=float, default=[0.05, 0.1, 0.25, 0.5, 1.0])
+    parser.add_argument("--alphas", nargs="+", type=float, default=[0.05, 0.1, 0.25, 0.5, 1.0, 2.0, 3.0])
     parser.add_argument("--layer-selections", nargs="+", choices=LAYER_SELECTIONS, default=list(LAYER_SELECTIONS))
     parser.add_argument(
         "--skip-naturalbench",
