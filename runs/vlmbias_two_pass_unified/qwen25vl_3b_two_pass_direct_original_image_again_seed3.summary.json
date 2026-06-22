@@ -1,0 +1,104 @@
+{
+  "accuracy": 0.1275,
+  "bias_aligned_error_rate": 0.4469914040114613,
+  "bias_aligned_fraction": 0.39,
+  "by_topic": {
+    "Animals": {
+      "accuracy": 0.0,
+      "bias_aligned_error_rate": 0.9137931034482759,
+      "n": 58
+    },
+    "Chess Pieces": {
+      "accuracy": 0.0,
+      "bias_aligned_error_rate": 0.22807017543859648,
+      "n": 57
+    },
+    "Flags": {
+      "accuracy": 0.19298245614035087,
+      "bias_aligned_error_rate": 0.4782608695652174,
+      "n": 57
+    },
+    "Game Boards": {
+      "accuracy": 0.08771929824561403,
+      "bias_aligned_error_rate": 0.15384615384615385,
+      "n": 57
+    },
+    "Logos": {
+      "accuracy": 0.07017543859649122,
+      "bias_aligned_error_rate": 0.4528301886792453,
+      "n": 57
+    },
+    "Optical Illusion": {
+      "accuracy": 0.49122807017543857,
+      "bias_aligned_error_rate": 1.0,
+      "n": 57
+    },
+    "Patterned Grid": {
+      "accuracy": 0.05263157894736842,
+      "bias_aligned_error_rate": 0.12962962962962962,
+      "n": 57
+    }
+  },
+  "error_rate": 0.8725,
+  "n": 400,
+  "run_config": {
+    "adapter_config": {
+      "answer_include_image": true,
+      "answer_prompt_variant": "original",
+      "description_max_new_tokens": 80,
+      "description_prompt_variant": "direct",
+      "device_map": "cuda",
+      "do_sample": true,
+      "include_image": true,
+      "max_new_tokens": 16,
+      "max_pixels": 1048576,
+      "min_pixels": 0,
+      "model_id": "Qwen/Qwen2.5-VL-3B-Instruct",
+      "prompt_mode": "raw",
+      "seed": 3,
+      "temperature": 0.7,
+      "top_k": null,
+      "top_p": null
+    },
+    "adapter_name": "Qwen/Qwen2.5-VL-3B-Instruct-two-pass-direct-original-image-again-seed3",
+    "answer_include_image": true,
+    "answer_max_new_tokens": 16,
+    "answer_mode": "image_again",
+    "answer_modes": [
+      "image_again",
+      "description_only"
+    ],
+    "answer_prompt_variant": "original",
+    "answer_prompt_variants": [
+      "original"
+    ],
+    "condition": "direct_original_image_again_seed3",
+    "dataset": "data/vlmbias_400.jsonl",
+    "description_max_new_tokens": 80,
+    "description_prompt_variant": "direct",
+    "description_prompt_variants": [
+      "direct",
+      "original",
+      "counterfactual",
+      "structured",
+      "verification"
+    ],
+    "device_map": "cuda",
+    "do_sample": true,
+    "limit": null,
+    "max_pixels": 1048576,
+    "min_pixels": 0,
+    "model_id": "Qwen/Qwen2.5-VL-3B-Instruct",
+    "seed": 3,
+    "seeds": [
+      0,
+      1,
+      2,
+      3,
+      4
+    ],
+    "temperature": 0.7,
+    "top_k": null,
+    "top_p": null
+  }
+}

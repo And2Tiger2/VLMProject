@@ -1,0 +1,202 @@
+{
+  "Acc": 0.555,
+  "G_Acc": 0.05,
+  "I_Acc": 0.175,
+  "Q_Acc": 0.335,
+  "by_question_type": {
+    "multiple_choice": {
+      "Acc": 0.55,
+      "n_model_calls": 200
+    },
+    "yes_no": {
+      "Acc": 0.56,
+      "n_model_calls": 200
+    }
+  },
+  "by_source": {
+    "DOCCI": {
+      "Acc": 0.5528846153846154,
+      "n_model_calls": 208
+    },
+    "Flickr": {
+      "Acc": 0.5572916666666666,
+      "n_model_calls": 192
+    }
+  },
+  "mean_boosted_layer_image_attention_mass": 0.3344899906969298,
+  "mean_image_attention_mass": 0.12755935689450557,
+  "n_groups": 100,
+  "n_model_calls": 400,
+  "run_config": {
+    "alphas": [
+      0.05,
+      0.1,
+      0.25,
+      0.5,
+      1.0,
+      2.0,
+      3.0
+    ],
+    "attention_alpha": 2.0,
+    "benchmark": "naturalbench",
+    "condition": "alpha2_last25",
+    "conditions": [
+      {
+        "attention_alpha": 0.0,
+        "condition": "baseline",
+        "is_baseline": true,
+        "layer_selection": "baseline"
+      },
+      {
+        "attention_alpha": 0.05,
+        "condition": "alpha0p05_last25",
+        "is_baseline": false,
+        "layer_selection": "last25"
+      },
+      {
+        "attention_alpha": 0.05,
+        "condition": "alpha0p05_last50",
+        "is_baseline": false,
+        "layer_selection": "last50"
+      },
+      {
+        "attention_alpha": 0.05,
+        "condition": "alpha0p05_all",
+        "is_baseline": false,
+        "layer_selection": "all"
+      },
+      {
+        "attention_alpha": 0.1,
+        "condition": "alpha0p1_last25",
+        "is_baseline": false,
+        "layer_selection": "last25"
+      },
+      {
+        "attention_alpha": 0.1,
+        "condition": "alpha0p1_last50",
+        "is_baseline": false,
+        "layer_selection": "last50"
+      },
+      {
+        "attention_alpha": 0.1,
+        "condition": "alpha0p1_all",
+        "is_baseline": false,
+        "layer_selection": "all"
+      },
+      {
+        "attention_alpha": 0.25,
+        "condition": "alpha0p25_last25",
+        "is_baseline": false,
+        "layer_selection": "last25"
+      },
+      {
+        "attention_alpha": 0.25,
+        "condition": "alpha0p25_last50",
+        "is_baseline": false,
+        "layer_selection": "last50"
+      },
+      {
+        "attention_alpha": 0.25,
+        "condition": "alpha0p25_all",
+        "is_baseline": false,
+        "layer_selection": "all"
+      },
+      {
+        "attention_alpha": 0.5,
+        "condition": "alpha0p5_last25",
+        "is_baseline": false,
+        "layer_selection": "last25"
+      },
+      {
+        "attention_alpha": 0.5,
+        "condition": "alpha0p5_last50",
+        "is_baseline": false,
+        "layer_selection": "last50"
+      },
+      {
+        "attention_alpha": 0.5,
+        "condition": "alpha0p5_all",
+        "is_baseline": false,
+        "layer_selection": "all"
+      },
+      {
+        "attention_alpha": 1.0,
+        "condition": "alpha1_last25",
+        "is_baseline": false,
+        "layer_selection": "last25"
+      },
+      {
+        "attention_alpha": 1.0,
+        "condition": "alpha1_last50",
+        "is_baseline": false,
+        "layer_selection": "last50"
+      },
+      {
+        "attention_alpha": 1.0,
+        "condition": "alpha1_all",
+        "is_baseline": false,
+        "layer_selection": "all"
+      },
+      {
+        "attention_alpha": 2.0,
+        "condition": "alpha2_last25",
+        "is_baseline": false,
+        "layer_selection": "last25"
+      },
+      {
+        "attention_alpha": 2.0,
+        "condition": "alpha2_last50",
+        "is_baseline": false,
+        "layer_selection": "last50"
+      },
+      {
+        "attention_alpha": 2.0,
+        "condition": "alpha2_all",
+        "is_baseline": false,
+        "layer_selection": "all"
+      },
+      {
+        "attention_alpha": 3.0,
+        "condition": "alpha3_last25",
+        "is_baseline": false,
+        "layer_selection": "last25"
+      },
+      {
+        "attention_alpha": 3.0,
+        "condition": "alpha3_last50",
+        "is_baseline": false,
+        "layer_selection": "last50"
+      },
+      {
+        "attention_alpha": 3.0,
+        "condition": "alpha3_all",
+        "is_baseline": false,
+        "layer_selection": "all"
+      }
+    ],
+    "device_map": "cuda",
+    "do_sample": true,
+    "layer_selection": "last25",
+    "layer_selections": [
+      "last25",
+      "last50",
+      "all"
+    ],
+    "max_new_tokens": 16,
+    "max_pixels": 1048576,
+    "min_pixels": 0,
+    "model_id": "Qwen/Qwen2.5-VL-3B-Instruct",
+    "naturalbench_dataset": "data/naturalbench_100_groups.jsonl",
+    "naturalbench_limit_groups": null,
+    "prompt_mode": "baseline",
+    "seed": 0,
+    "seeds": [
+      0
+    ],
+    "temperature": 0.7,
+    "top_k": null,
+    "top_p": null,
+    "vlmbias_dataset": "data/vlmbias_400.jsonl",
+    "vlmbias_limit": null
+  }
+}
