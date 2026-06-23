@@ -1,0 +1,25 @@
+experiment	artifact	type	notes
+baseline_image_no_image	baselines/vlmbias_baseline_temp07_image_vs_no_image.txt	summary	temp=0.7 seed=0 one-pass image vs no-image
+baseline_image_no_image	baselines/vlmbias_baseline_temp10_image_vs_no_image.txt	summary	temp=1.0 seed=0 one-pass image vs no-image
+resolution_ablation	resolution_ablation/summary.tsv	summary	max_pixels sweep
+resolution_ablation	resolution_ablation/summary.png	figure	max_pixels sweep
+resolution_ablation	resolution_ablation/summary.svg	figure	max_pixels sweep vector
+two_pass_original	two_pass_original/summary.tsv	summary	original two-pass image-again vs description-only
+two_pass_original	two_pass_original/summary.png	figure	original two-pass image-again vs description-only
+prompt_variants_confounded	prompt_variants_confounded/notes.md	notes	confounded prompt-variant run notes
+prompt_variants_confounded	prompt_variants_confounded/fast_summary.tsv	summary	8-condition confounded prompt-variant run
+prompt_variants_confounded	prompt_variants_confounded/legacy_summary.tsv	summary	legacy generic-name copy of fast_summary.tsv
+prompt_variants_confounded	prompt_variants_confounded/comparison.tsv	summary	reference plus confounded prompt-variant comparison
+prompt_variants_confounded	prompt_variants_confounded/comparison.png	figure	reference plus confounded prompt-variant comparison
+two_pass_unified	two_pass_unified/results.png	figure	corrected unified two-pass run with vanilla references
+two_pass_unified	two_pass_unified/summary_aggregate.tsv	summary	seed-mean aggregate over seeds 0-4
+two_pass_unified	two_pass_unified/summary_by_seed.tsv	summary	per-seed rows for seeds 0-4
+two_pass_unified	two_pass_unified/summary_with_vanilla.tsv	summary	unified two-pass plus earlier vanilla references
+attention_alpha025	attention_alpha025/summary.tsv	summary	original alpha=0.25 attention ablation
+attention_alpha025	attention_alpha025/summary.png	figure	original alpha=0.25 attention ablation
+attention_alpha_sweep	attention_alpha_sweep/vlmbias.png	figure	VLMBias alpha sweep, seed 0
+attention_alpha_sweep	attention_alpha_sweep/vlmbias_summary_aggregate.tsv	summary	VLMBias alpha sweep aggregate, seed 0
+attention_alpha_sweep	attention_alpha_sweep/vlmbias_summary_by_seed.tsv	summary	VLMBias alpha sweep per-seed, current checked-in seed 0
+attention_alpha_sweep	attention_alpha_sweep/naturalbench.png	figure	NaturalBench alpha sweep sanity check, seed 0
+attention_alpha_sweep	attention_alpha_sweep/naturalbench_summary_aggregate.tsv	summary	NaturalBench alpha sweep aggregate, seed 0
+attention_alpha_sweep	attention_alpha_sweep/naturalbench_summary_by_seed.tsv	summary	NaturalBench alpha sweep per-seed, current checked-in seed 0

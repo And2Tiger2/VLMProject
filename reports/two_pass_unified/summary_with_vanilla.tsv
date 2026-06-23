@@ -1,0 +1,13 @@
+condition	source	seeds	runs	n_per_run	accuracy	bias_aligned_fraction	bias_aligned_error_rate	error_rate
+vanilla_image*	earlier_temp07_seed0	0	1	400	0.1425	0.395	0.4606413994169096	0.8575
+vanilla_no_image*	earlier_temp07_seed0	0	1	400	0.12	0.295	0.3352272727272727	0.88
+counterfactual_description_only	unified_two_pass	0,1,2,3,4	5	400	0.152000	0.190500	0.224600	0.848000
+counterfactual_image_again	unified_two_pass	0,1,2,3,4	5	400	0.137000	0.423500	0.490883	0.863000
+direct_description_only	unified_two_pass	0,1,2,3,4	5	400	0.134000	0.151000	0.174368	0.866000
+direct_image_again	unified_two_pass	0,1,2,3,4	5	400	0.133500	0.390500	0.450616	0.866500
+original_description_only	unified_two_pass	0,1,2,3,4	5	400	0.153500	0.187000	0.220884	0.846500
+original_image_again	unified_two_pass	0,1,2,3,4	5	400	0.138000	0.423500	0.491472	0.862000
+structured_description_only	unified_two_pass	0,1,2,3,4	5	400	0.148500	0.180000	0.211304	0.851500
+structured_image_again	unified_two_pass	0,1,2,3,4	5	400	0.129000	0.409500	0.470198	0.871000
+verification_description_only	unified_two_pass	0,1,2,3,4	5	400	0.138500	0.361500	0.419763	0.861500
+verification_image_again	unified_two_pass	0,1,2,3,4	5	400	0.135000	0.421000	0.486705	0.865000

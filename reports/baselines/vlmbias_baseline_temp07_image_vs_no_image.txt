@@ -1,0 +1,31 @@
+VLMBias Image vs No-Image Comparison
+
+Headline:
+Accuracy                  image=0.1425 no_image=0.1200 delta=-0.0225
+Error rate                image=0.8575 no_image=0.8800 delta=+0.0225
+Bias-aligned fraction     image=0.3950 no_image=0.2950 delta=-0.1000
+Bias-aligned error rate   image=0.4606 no_image=0.3352 delta=-0.1254
+
+Counts:
+image:    n=400 correct=57 bias_aligned=158 other_wrong=185
+no-image: n=400 correct=48 bias_aligned=118 other_wrong=234
+
+By topic:
+Animals          n= 58 acc 0.000->0.000 baf 0.931->0.759 baer 0.931->0.759
+Chess Pieces     n= 57 acc 0.018->0.018 baf 0.281->0.368 baer 0.286->0.375
+Flags            n= 57 acc 0.246->0.070 baf 0.316->0.211 baer 0.419->0.226
+Game Boards      n= 57 acc 0.070->0.088 baf 0.298->0.105 baer 0.321->0.115
+Logos            n= 57 acc 0.070->0.070 baf 0.368->0.105 baer 0.396->0.113
+Optical Illusion n= 57 acc 0.526->0.509 baf 0.474->0.491 baer 1.000->1.000
+Patterned Grid   n= 57 acc 0.070->0.088 baf 0.088->0.018 baer 0.094->0.019
+
+Transitions image -> no-image:
+bias->bias: 94
+bias->correct: 7
+bias->other_wrong: 57
+correct->bias: 6
+correct->correct: 35
+correct->other_wrong: 16
+other_wrong->bias: 18
+other_wrong->correct: 6
+other_wrong->other_wrong: 161

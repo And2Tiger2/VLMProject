@@ -1,0 +1,62 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1040" height="620" viewBox="0 0 1040 620">
+<rect width="100%" height="100%" fill="white"/>
+<style>text{font-family:Arial,Helvetica,sans-serif;fill:#222}.title{font-size:24px;font-weight:700}.axis{font-size:14px}.tick{font-size:12px;fill:#555}.label{font-size:11px;fill:#222}.legend{font-size:13px}</style>
+<text x="520.0" y="34" text-anchor="middle" class="title">Qwen2.5-VL-3B on VLMBias: Resolution Ablation</text>
+<line x1="90" y1="505.00" x2="1000" y2="505.00" stroke="#ddd" stroke-dasharray="4 4"/>
+<text x="78" y="509.00" text-anchor="end" class="tick">0.0</text>
+<line x1="90" y1="421.35" x2="1000" y2="421.35" stroke="#ddd" stroke-dasharray="4 4"/>
+<text x="78" y="425.35" text-anchor="end" class="tick">0.1</text>
+<line x1="90" y1="337.69" x2="1000" y2="337.69" stroke="#ddd" stroke-dasharray="4 4"/>
+<text x="78" y="341.69" text-anchor="end" class="tick">0.2</text>
+<line x1="90" y1="254.04" x2="1000" y2="254.04" stroke="#ddd" stroke-dasharray="4 4"/>
+<text x="78" y="258.04" text-anchor="end" class="tick">0.3</text>
+<line x1="90" y1="170.38" x2="1000" y2="170.38" stroke="#ddd" stroke-dasharray="4 4"/>
+<text x="78" y="174.38" text-anchor="end" class="tick">0.4</text>
+<line x1="90" y1="86.73" x2="1000" y2="86.73" stroke="#ddd" stroke-dasharray="4 4"/>
+<text x="78" y="90.73" text-anchor="end" class="tick">0.5</text>
+<line x1="90" y1="70" x2="90" y2="505" stroke="#333"/>
+<line x1="90" y1="505" x2="1000" y2="505" stroke="#333"/>
+<text x="545.0" y="585" text-anchor="middle" class="axis">Qwen max_pixels setting</text>
+<text x="25" y="287.5" text-anchor="middle" class="axis" transform="rotate(-90 25 287.5)">Metric value</text>
+<rect x="122.76" y="404.62" width="34.58" height="100.38" fill="#2878B5"/>
+<text x="140.05" y="398.62" text-anchor="middle" class="label">0.120</text>
+<rect x="163.71" y="176.66" width="34.58" height="328.34" fill="#D65F5F"/>
+<text x="181.00" y="170.66" text-anchor="middle" class="label">0.393</text>
+<rect x="204.66" y="131.88" width="34.58" height="373.12" fill="#6A994E"/>
+<text x="221.95" y="125.88" text-anchor="middle" class="label">0.446</text>
+<text x="181.00" y="533" text-anchor="middle" class="tick">0.26M</text>
+<rect x="304.76" y="392.07" width="34.58" height="112.93" fill="#2878B5"/>
+<text x="322.05" y="386.07" text-anchor="middle" class="label">0.135</text>
+<rect x="345.71" y="178.75" width="34.58" height="326.25" fill="#D65F5F"/>
+<text x="363.00" y="172.75" text-anchor="middle" class="label">0.390</text>
+<rect x="386.66" y="127.83" width="34.58" height="377.17" fill="#6A994E"/>
+<text x="403.95" y="121.83" text-anchor="middle" class="label">0.451</text>
+<text x="363.00" y="533" text-anchor="middle" class="tick">0.52M</text>
+<rect x="486.76" y="385.79" width="34.58" height="119.21" fill="#2878B5"/>
+<text x="504.05" y="379.79" text-anchor="middle" class="label">0.142</text>
+<rect x="527.71" y="174.57" width="34.58" height="330.43" fill="#D65F5F"/>
+<text x="545.00" y="168.57" text-anchor="middle" class="label">0.395</text>
+<rect x="568.66" y="119.66" width="34.58" height="385.34" fill="#6A994E"/>
+<text x="585.95" y="113.66" text-anchor="middle" class="label">0.461</text>
+<text x="545.00" y="533" text-anchor="middle" class="tick">1.05M</text>
+<rect x="668.76" y="385.79" width="34.58" height="119.21" fill="#2878B5"/>
+<text x="686.05" y="379.79" text-anchor="middle" class="label">0.142</text>
+<rect x="709.71" y="170.38" width="34.58" height="334.62" fill="#D65F5F"/>
+<text x="727.00" y="164.38" text-anchor="middle" class="label">0.400</text>
+<rect x="750.66" y="114.78" width="34.58" height="390.22" fill="#6A994E"/>
+<text x="767.95" y="108.78" text-anchor="middle" class="label">0.466</text>
+<text x="727.00" y="533" text-anchor="middle" class="tick">1.57M</text>
+<rect x="850.76" y="385.79" width="34.58" height="119.21" fill="#2878B5"/>
+<text x="868.05" y="379.79" text-anchor="middle" class="label">0.142</text>
+<rect x="891.71" y="170.38" width="34.58" height="334.62" fill="#D65F5F"/>
+<text x="909.00" y="164.38" text-anchor="middle" class="label">0.400</text>
+<rect x="932.66" y="114.78" width="34.58" height="390.22" fill="#6A994E"/>
+<text x="949.95" y="108.78" text-anchor="middle" class="label">0.466</text>
+<text x="909.00" y="533" text-anchor="middle" class="tick">2.10M</text>
+<rect x="90" y="42" width="14" height="14" fill="#2878B5"/>
+<text x="112" y="54" class="legend">Accuracy</text>
+<rect x="320" y="42" width="14" height="14" fill="#D65F5F"/>
+<text x="342" y="54" class="legend">Bias-aligned fraction</text>
+<rect x="550" y="42" width="14" height="14" fill="#6A994E"/>
+<text x="572" y="54" class="legend">Bias-aligned error rate</text>
+</svg>
