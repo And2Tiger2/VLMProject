@@ -2483,6 +2483,12 @@ dependencies = [
 dev = [
     { name = "pytest" },
 ]
+paligemma = [
+    { name = "accelerate" },
+    { name = "torch" },
+    { name = "torchvision" },
+    { name = "transformers" },
+]
 qwen = [
     { name = "accelerate" },
     { name = "qwen-vl-utils" },
@@ -2493,17 +2499,21 @@ qwen = [
 
 [package.metadata]
 requires-dist = [
+    { name = "accelerate", marker = "extra == 'paligemma'", specifier = ">=0.30.0" },
     { name = "accelerate", marker = "extra == 'qwen'", specifier = ">=0.30.0" },
     { name = "datasets", specifier = ">=2.19.0" },
     { name = "pillow", specifier = ">=10.0.0" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.0.0" },
     { name = "qwen-vl-utils", marker = "extra == 'qwen'", specifier = ">=0.0.8" },
+    { name = "torch", marker = "extra == 'paligemma'", specifier = ">=2.3.0" },
     { name = "torch", marker = "extra == 'qwen'", specifier = ">=2.3.0" },
+    { name = "torchvision", marker = "extra == 'paligemma'", specifier = ">=0.18.0" },
     { name = "torchvision", marker = "extra == 'qwen'", specifier = ">=0.18.0" },
     { name = "tqdm", specifier = ">=4.66.0" },
+    { name = "transformers", marker = "extra == 'paligemma'", specifier = ">=4.51.0" },
     { name = "transformers", marker = "extra == 'qwen'", specifier = ">=4.51.0" },
 ]
-provides-extras = ["qwen", "dev"]
+provides-extras = ["qwen", "paligemma", "dev"]
 
 [[package]]
 name = "xxhash"
