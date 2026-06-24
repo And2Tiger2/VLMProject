@@ -23,3 +23,15 @@ attention_alpha_sweep	attention_alpha_sweep/vlmbias_summary_by_seed.tsv	summary	
 attention_alpha_sweep	attention_alpha_sweep/naturalbench.png	figure	NaturalBench alpha sweep sanity check, seed 0
 attention_alpha_sweep	attention_alpha_sweep/naturalbench_summary_aggregate.tsv	summary	NaturalBench alpha sweep aggregate, seed 0
 attention_alpha_sweep	attention_alpha_sweep/naturalbench_summary_by_seed.tsv	summary	NaturalBench alpha sweep per-seed, current checked-in seed 0
+paligemma2_two_pass_unified	paligemma2_two_pass_unified/results.png	figure	PaliGemma2 corrected unified two-pass run, seeds 0-4
+paligemma2_two_pass_unified	paligemma2_two_pass_unified/summary_aggregate.tsv	summary	PaliGemma2 two-pass aggregate over seeds 0-4
+paligemma2_two_pass_unified	paligemma2_two_pass_unified/summary_by_seed.tsv	summary	PaliGemma2 two-pass per-seed rows
+paligemma2_two_pass_unified	paligemma2_two_pass_unified/notes.md	notes	PaliGemma2 two-pass setup and interpretation
+paligemma2_attention_alpha_sweep	paligemma2_attention_alpha_sweep/vlmbias.png	figure	PaliGemma2 VLMBias alpha sweep, seeds 0-9
+paligemma2_attention_alpha_sweep	paligemma2_attention_alpha_sweep/vlmbias_summary_aggregate.tsv	summary	PaliGemma2 VLMBias alpha sweep aggregate over seeds 0-9
+paligemma2_attention_alpha_sweep	paligemma2_attention_alpha_sweep/vlmbias_summary_by_seed.tsv	summary	PaliGemma2 VLMBias alpha sweep per-seed rows
+paligemma2_attention_alpha_sweep	paligemma2_attention_alpha_sweep/naturalbench.png	figure	PaliGemma2 NaturalBench alpha sweep sanity check, seeds 0-9
+paligemma2_attention_alpha_sweep	paligemma2_attention_alpha_sweep/naturalbench_summary_aggregate.tsv	summary	PaliGemma2 NaturalBench alpha sweep aggregate over seeds 0-9
+paligemma2_attention_alpha_sweep	paligemma2_attention_alpha_sweep/naturalbench_summary_by_seed.tsv	summary	PaliGemma2 NaturalBench alpha sweep per-seed rows
+paligemma2_attention_alpha_sweep	paligemma2_attention_alpha_sweep/notes.md	notes	PaliGemma2 attention sweep setup and interpretation
+paligemma2_vs_qwen	paligemma2_vs_qwen_notes.md	notes	Comparison notes between PaliGemma2 and current Qwen reports

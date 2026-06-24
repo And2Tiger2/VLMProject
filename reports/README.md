@@ -363,3 +363,80 @@ It regenerates:
 - `two_pass_unified/results.png`
 - `attention_alpha_sweep/vlmbias.png`
 - `attention_alpha_sweep/naturalbench.png`
+
+## PaliGemma2 Unified Two-Pass Prompt Experiment
+
+Files:
+
+- `paligemma2_two_pass_unified/results.png`
+- `paligemma2_two_pass_unified/summary_aggregate.tsv`
+- `paligemma2_two_pass_unified/summary_by_seed.tsv`
+- `paligemma2_two_pass_unified/notes.md`
+
+Question tested:
+
+Does the corrected unified two-pass structure transfer to
+`google/paligemma2-3b-mix-448`?
+
+Setup:
+
+- Model: `google/paligemma2-3b-mix-448`
+- Dataset: `data/vlmbias_400.jsonl`
+- Seeds: `0,1,2,3,4`
+- Same five description prompt policies as the Qwen unified two-pass run
+- Answer modes:
+  - `image_again`
+  - `description_only`
+
+Important PaliGemma-specific detail:
+
+PaliGemma requires an image input. The `description_only` answer mode therefore
+uses a blank white image in pass 2 rather than a true text-only call.
+
+Main observation:
+
+Image-again conditions retain more accuracy but remain much more bias-aligned.
+Blank-image description-only conditions sharply reduce bias-aligned fraction but
+also drive accuracy close to zero. This matches the direction of the Qwen
+two-pass effect on bias, but the accuracy cost is much larger for PaliGemma2.
+
+## PaliGemma2 Attention Alpha Sweep
+
+Files:
+
+- `paligemma2_attention_alpha_sweep/vlmbias.png`
+- `paligemma2_attention_alpha_sweep/vlmbias_summary_aggregate.tsv`
+- `paligemma2_attention_alpha_sweep/vlmbias_summary_by_seed.tsv`
+- `paligemma2_attention_alpha_sweep/naturalbench.png`
+- `paligemma2_attention_alpha_sweep/naturalbench_summary_aggregate.tsv`
+- `paligemma2_attention_alpha_sweep/naturalbench_summary_by_seed.tsv`
+- `paligemma2_attention_alpha_sweep/notes.md`
+
+Question tested:
+
+Does image-token attention boosting reduce PaliGemma2 VLMBias bias, and does it
+damage NaturalBench?
+
+Setup:
+
+- Model: `google/paligemma2-3b-mix-448`
+- Seeds: `0,1,2,3,4,5,6,7,8,9`
+- Alpha values: `0.05, 0.1, 0.25, 0.5, 1.0, 2.0, 3.0, 4.0, 6.0, 8.0, 10.0`
+- Layer selections: `last25`, `last50`, `all`, plus baseline
+- Benchmarks:
+  - VLMBias: `data/vlmbias_400.jsonl`
+  - NaturalBench: `data/naturalbench_100_groups.jsonl`
+
+Main observation:
+
+The intervention clearly increases image attention mass. Moderate boosts do not
+reliably reduce VLMBias bias or harm NaturalBench. Extreme all-layer boosts
+collapse performance, especially `alpha10_all`, indicating that saturating
+attention to image tokens destroys useful behavior rather than selectively
+correcting bias.
+
+Regenerate these PaliGemma2 charts with:
+
+```bash
+uv run python scripts/make_paligemma2_report_charts.py
+```
