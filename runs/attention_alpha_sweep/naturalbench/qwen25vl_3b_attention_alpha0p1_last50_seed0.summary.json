@@ -35,7 +35,11 @@
       0.5,
       1.0,
       2.0,
-      3.0
+      3.0,
+      4.0,
+      6.0,
+      8.0,
+      10.0
     ],
     "attention_alpha": 0.1,
     "benchmark": "naturalbench",
@@ -172,6 +176,78 @@
         "condition": "alpha3_all",
         "is_baseline": false,
         "layer_selection": "all"
+      },
+      {
+        "attention_alpha": 4.0,
+        "condition": "alpha4_last25",
+        "is_baseline": false,
+        "layer_selection": "last25"
+      },
+      {
+        "attention_alpha": 4.0,
+        "condition": "alpha4_last50",
+        "is_baseline": false,
+        "layer_selection": "last50"
+      },
+      {
+        "attention_alpha": 4.0,
+        "condition": "alpha4_all",
+        "is_baseline": false,
+        "layer_selection": "all"
+      },
+      {
+        "attention_alpha": 6.0,
+        "condition": "alpha6_last25",
+        "is_baseline": false,
+        "layer_selection": "last25"
+      },
+      {
+        "attention_alpha": 6.0,
+        "condition": "alpha6_last50",
+        "is_baseline": false,
+        "layer_selection": "last50"
+      },
+      {
+        "attention_alpha": 6.0,
+        "condition": "alpha6_all",
+        "is_baseline": false,
+        "layer_selection": "all"
+      },
+      {
+        "attention_alpha": 8.0,
+        "condition": "alpha8_last25",
+        "is_baseline": false,
+        "layer_selection": "last25"
+      },
+      {
+        "attention_alpha": 8.0,
+        "condition": "alpha8_last50",
+        "is_baseline": false,
+        "layer_selection": "last50"
+      },
+      {
+        "attention_alpha": 8.0,
+        "condition": "alpha8_all",
+        "is_baseline": false,
+        "layer_selection": "all"
+      },
+      {
+        "attention_alpha": 10.0,
+        "condition": "alpha10_last25",
+        "is_baseline": false,
+        "layer_selection": "last25"
+      },
+      {
+        "attention_alpha": 10.0,
+        "condition": "alpha10_last50",
+        "is_baseline": false,
+        "layer_selection": "last50"
+      },
+      {
+        "attention_alpha": 10.0,
+        "condition": "alpha10_all",
+        "is_baseline": false,
+        "layer_selection": "all"
       }
     ],
     "device_map": "cuda",
@@ -191,7 +267,16 @@
     "prompt_mode": "baseline",
     "seed": 0,
     "seeds": [
-      0
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9
     ],
     "temperature": 0.7,
     "top_k": null,

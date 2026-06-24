@@ -1,0 +1,87 @@
+{
+  "accuracy": 0.1525,
+  "bias_aligned_error_rate": 0.30383480825958703,
+  "bias_aligned_fraction": 0.2575,
+  "by_topic": {
+    "Animals": {
+      "accuracy": 0.017241379310344827,
+      "bias_aligned_error_rate": 0.43859649122807015,
+      "n": 58
+    },
+    "Chess Pieces": {
+      "accuracy": 0.0,
+      "bias_aligned_error_rate": 0.0,
+      "n": 57
+    },
+    "Flags": {
+      "accuracy": 0.17543859649122806,
+      "bias_aligned_error_rate": 0.19148936170212766,
+      "n": 57
+    },
+    "Game Boards": {
+      "accuracy": 0.22807017543859648,
+      "bias_aligned_error_rate": 0.3409090909090909,
+      "n": 57
+    },
+    "Logos": {
+      "accuracy": 0.10526315789473684,
+      "bias_aligned_error_rate": 0.3137254901960784,
+      "n": 57
+    },
+    "Optical Illusion": {
+      "accuracy": 0.5087719298245614,
+      "bias_aligned_error_rate": 1.0,
+      "n": 57
+    },
+    "Patterned Grid": {
+      "accuracy": 0.03508771929824561,
+      "bias_aligned_error_rate": 0.18181818181818182,
+      "n": 57
+    }
+  },
+  "error_rate": 0.8475,
+  "n": 400,
+  "run_config": {
+    "adapter_config": {
+      "blank_image_size": 448,
+      "device_map": "cuda",
+      "do_sample": true,
+      "include_image": true,
+      "max_new_tokens": 16,
+      "model_id": "google/paligemma2-3b-mix-448",
+      "no_image_behavior": null,
+      "prompt_mode": "baseline",
+      "seed": 3,
+      "temperature": 0.7,
+      "top_k": null,
+      "top_p": null
+    },
+    "adapter_name": "google/paligemma2-3b-mix-448-image-seed3",
+    "blank_image_behavior": "white RGB image used because PaliGemma requires an image input",
+    "blank_image_size": 448,
+    "condition": "image",
+    "conditions": [
+      "image",
+      "blank_image"
+    ],
+    "dataset": "data/vlmbias_400.jsonl",
+    "device_map": "cuda",
+    "do_sample": true,
+    "include_image": true,
+    "limit": null,
+    "max_new_tokens": 16,
+    "model_id": "google/paligemma2-3b-mix-448",
+    "prompt_mode": "baseline",
+    "seed": 3,
+    "seeds": [
+      0,
+      1,
+      2,
+      3,
+      4
+    ],
+    "temperature": 0.7,
+    "top_k": null,
+    "top_p": null
+  }
+}

@@ -1,0 +1,11 @@
+condition	seed	include_image	n	accuracy	bias_aligned_fraction	bias_aligned_error_rate	error_rate	out_path
+image	0	True	400	0.137500	0.267500	0.310145	0.862500	runs/paligemma2_vlmbias_baseline/paligemma2_3b_vlmbias_baseline_image_seed0.jsonl
+blank_image	0	False	400	0.077500	0.097500	0.105691	0.922500	runs/paligemma2_vlmbias_baseline/paligemma2_3b_vlmbias_baseline_blank_image_seed0.jsonl
+image	1	True	400	0.122500	0.290000	0.330484	0.877500	runs/paligemma2_vlmbias_baseline/paligemma2_3b_vlmbias_baseline_image_seed1.jsonl
+blank_image	1	False	400	0.062500	0.117500	0.125333	0.937500	runs/paligemma2_vlmbias_baseline/paligemma2_3b_vlmbias_baseline_blank_image_seed1.jsonl
+image	2	True	400	0.132500	0.267500	0.308357	0.867500	runs/paligemma2_vlmbias_baseline/paligemma2_3b_vlmbias_baseline_image_seed2.jsonl
+blank_image	2	False	400	0.082500	0.092500	0.100817	0.917500	runs/paligemma2_vlmbias_baseline/paligemma2_3b_vlmbias_baseline_blank_image_seed2.jsonl
+image	3	True	400	0.152500	0.257500	0.303835	0.847500	runs/paligemma2_vlmbias_baseline/paligemma2_3b_vlmbias_baseline_image_seed3.jsonl
+blank_image	3	False	400	0.080000	0.112500	0.122283	0.920000	runs/paligemma2_vlmbias_baseline/paligemma2_3b_vlmbias_baseline_blank_image_seed3.jsonl
+image	4	True	400	0.142500	0.265000	0.309038	0.857500	runs/paligemma2_vlmbias_baseline/paligemma2_3b_vlmbias_baseline_image_seed4.jsonl
+blank_image	4	False	400	0.085000	0.105000	0.114754	0.915000	runs/paligemma2_vlmbias_baseline/paligemma2_3b_vlmbias_baseline_blank_image_seed4.jsonl

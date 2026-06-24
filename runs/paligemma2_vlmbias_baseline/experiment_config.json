@@ -1,0 +1,25 @@
+{
+  "blank_image_behavior": "white RGB image used because PaliGemma requires an image input",
+  "blank_image_size": 448,
+  "conditions": [
+    "image",
+    "blank_image"
+  ],
+  "dataset": "data/vlmbias_400.jsonl",
+  "device_map": "cuda",
+  "do_sample": true,
+  "limit": null,
+  "max_new_tokens": 16,
+  "model_id": "google/paligemma2-3b-mix-448",
+  "prompt_mode": "baseline",
+  "seeds": [
+    0,
+    1,
+    2,
+    3,
+    4
+  ],
+  "temperature": 0.7,
+  "top_k": null,
+  "top_p": null
+}
