@@ -1,0 +1,302 @@
+{
+  "accuracy": 0.1275,
+  "bias_aligned_error_rate": 0.37822349570200575,
+  "bias_aligned_fraction": 0.33,
+  "by_topic": {
+    "Animals": {
+      "accuracy": 0.017241379310344827,
+      "bias_aligned_error_rate": 0.6491228070175439,
+      "n": 58
+    },
+    "Chess Pieces": {
+      "accuracy": 0.0,
+      "bias_aligned_error_rate": 0.017543859649122806,
+      "n": 57
+    },
+    "Flags": {
+      "accuracy": 0.14035087719298245,
+      "bias_aligned_error_rate": 0.1836734693877551,
+      "n": 57
+    },
+    "Game Boards": {
+      "accuracy": 0.19298245614035087,
+      "bias_aligned_error_rate": 0.32608695652173914,
+      "n": 57
+    },
+    "Logos": {
+      "accuracy": 0.14035087719298245,
+      "bias_aligned_error_rate": 0.2653061224489796,
+      "n": 57
+    },
+    "Optical Illusion": {
+      "accuracy": 0.3508771929824561,
+      "bias_aligned_error_rate": 1.0,
+      "n": 57
+    },
+    "Patterned Grid": {
+      "accuracy": 0.05263157894736842,
+      "bias_aligned_error_rate": 0.37037037037037035,
+      "n": 57
+    }
+  },
+  "error_rate": 0.8725,
+  "mean_boosted_layer_image_attention_mass": 0.8225640506455393,
+  "mean_image_attention_mass": 0.32988348592174555,
+  "n": 400,
+  "run_config": {
+    "alphas": [
+      0.05,
+      0.1,
+      0.25,
+      0.5,
+      1.0,
+      2.0,
+      3.0,
+      4.0,
+      6.0,
+      8.0,
+      10.0
+    ],
+    "attention_alpha": 4.0,
+    "benchmark": "vlmbias",
+    "blank_image_size": 448,
+    "condition": "alpha4_last25",
+    "conditions": [
+      {
+        "attention_alpha": 0.0,
+        "condition": "baseline",
+        "is_baseline": true,
+        "layer_selection": "baseline"
+      },
+      {
+        "attention_alpha": 0.05,
+        "condition": "alpha0p05_last25",
+        "is_baseline": false,
+        "layer_selection": "last25"
+      },
+      {
+        "attention_alpha": 0.05,
+        "condition": "alpha0p05_last50",
+        "is_baseline": false,
+        "layer_selection": "last50"
+      },
+      {
+        "attention_alpha": 0.05,
+        "condition": "alpha0p05_all",
+        "is_baseline": false,
+        "layer_selection": "all"
+      },
+      {
+        "attention_alpha": 0.1,
+        "condition": "alpha0p1_last25",
+        "is_baseline": false,
+        "layer_selection": "last25"
+      },
+      {
+        "attention_alpha": 0.1,
+        "condition": "alpha0p1_last50",
+        "is_baseline": false,
+        "layer_selection": "last50"
+      },
+      {
+        "attention_alpha": 0.1,
+        "condition": "alpha0p1_all",
+        "is_baseline": false,
+        "layer_selection": "all"
+      },
+      {
+        "attention_alpha": 0.25,
+        "condition": "alpha0p25_last25",
+        "is_baseline": false,
+        "layer_selection": "last25"
+      },
+      {
+        "attention_alpha": 0.25,
+        "condition": "alpha0p25_last50",
+        "is_baseline": false,
+        "layer_selection": "last50"
+      },
+      {
+        "attention_alpha": 0.25,
+        "condition": "alpha0p25_all",
+        "is_baseline": false,
+        "layer_selection": "all"
+      },
+      {
+        "attention_alpha": 0.5,
+        "condition": "alpha0p5_last25",
+        "is_baseline": false,
+        "layer_selection": "last25"
+      },
+      {
+        "attention_alpha": 0.5,
+        "condition": "alpha0p5_last50",
+        "is_baseline": false,
+        "layer_selection": "last50"
+      },
+      {
+        "attention_alpha": 0.5,
+        "condition": "alpha0p5_all",
+        "is_baseline": false,
+        "layer_selection": "all"
+      },
+      {
+        "attention_alpha": 1.0,
+        "condition": "alpha1_last25",
+        "is_baseline": false,
+        "layer_selection": "last25"
+      },
+      {
+        "attention_alpha": 1.0,
+        "condition": "alpha1_last50",
+        "is_baseline": false,
+        "layer_selection": "last50"
+      },
+      {
+        "attention_alpha": 1.0,
+        "condition": "alpha1_all",
+        "is_baseline": false,
+        "layer_selection": "all"
+      },
+      {
+        "attention_alpha": 2.0,
+        "condition": "alpha2_last25",
+        "is_baseline": false,
+        "layer_selection": "last25"
+      },
+      {
+        "attention_alpha": 2.0,
+        "condition": "alpha2_last50",
+        "is_baseline": false,
+        "layer_selection": "last50"
+      },
+      {
+        "attention_alpha": 2.0,
+        "condition": "alpha2_all",
+        "is_baseline": false,
+        "layer_selection": "all"
+      },
+      {
+        "attention_alpha": 3.0,
+        "condition": "alpha3_last25",
+        "is_baseline": false,
+        "layer_selection": "last25"
+      },
+      {
+        "attention_alpha": 3.0,
+        "condition": "alpha3_last50",
+        "is_baseline": false,
+        "layer_selection": "last50"
+      },
+      {
+        "attention_alpha": 3.0,
+        "condition": "alpha3_all",
+        "is_baseline": false,
+        "layer_selection": "all"
+      },
+      {
+        "attention_alpha": 4.0,
+        "condition": "alpha4_last25",
+        "is_baseline": false,
+        "layer_selection": "last25"
+      },
+      {
+        "attention_alpha": 4.0,
+        "condition": "alpha4_last50",
+        "is_baseline": false,
+        "layer_selection": "last50"
+      },
+      {
+        "attention_alpha": 4.0,
+        "condition": "alpha4_all",
+        "is_baseline": false,
+        "layer_selection": "all"
+      },
+      {
+        "attention_alpha": 6.0,
+        "condition": "alpha6_last25",
+        "is_baseline": false,
+        "layer_selection": "last25"
+      },
+      {
+        "attention_alpha": 6.0,
+        "condition": "alpha6_last50",
+        "is_baseline": false,
+        "layer_selection": "last50"
+      },
+      {
+        "attention_alpha": 6.0,
+        "condition": "alpha6_all",
+        "is_baseline": false,
+        "layer_selection": "all"
+      },
+      {
+        "attention_alpha": 8.0,
+        "condition": "alpha8_last25",
+        "is_baseline": false,
+        "layer_selection": "last25"
+      },
+      {
+        "attention_alpha": 8.0,
+        "condition": "alpha8_last50",
+        "is_baseline": false,
+        "layer_selection": "last50"
+      },
+      {
+        "attention_alpha": 8.0,
+        "condition": "alpha8_all",
+        "is_baseline": false,
+        "layer_selection": "all"
+      },
+      {
+        "attention_alpha": 10.0,
+        "condition": "alpha10_last25",
+        "is_baseline": false,
+        "layer_selection": "last25"
+      },
+      {
+        "attention_alpha": 10.0,
+        "condition": "alpha10_last50",
+        "is_baseline": false,
+        "layer_selection": "last50"
+      },
+      {
+        "attention_alpha": 10.0,
+        "condition": "alpha10_all",
+        "is_baseline": false,
+        "layer_selection": "all"
+      }
+    ],
+    "device_map": "cuda",
+    "do_sample": true,
+    "layer_selection": "last25",
+    "layer_selections": [
+      "last25",
+      "last50",
+      "all"
+    ],
+    "max_new_tokens": 16,
+    "model_id": "google/paligemma2-3b-mix-448",
+    "naturalbench_dataset": "data/naturalbench_100_groups.jsonl",
+    "naturalbench_limit_groups": null,
+    "prompt_mode": "baseline",
+    "seed": 1,
+    "seeds": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9
+    ],
+    "temperature": 0.7,
+    "top_k": null,
+    "top_p": null,
+    "vlmbias_dataset": "data/vlmbias_400.jsonl",
+    "vlmbias_limit": null
+  }
+}

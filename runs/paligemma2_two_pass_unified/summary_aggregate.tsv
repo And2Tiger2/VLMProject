@@ -1,0 +1,11 @@
+description_prompt_variant	answer_prompt_variant	answer_mode	answer_include_image	seeds	runs	n_per_run	accuracy_mean	accuracy_std	bias_aligned_fraction_mean	bias_aligned_fraction_std	bias_aligned_error_rate_mean	bias_aligned_error_rate_std	error_rate_mean	error_rate_std
+counterfactual	original	description_only	False	0,1,2,3,4	5	400	0.020500	0.004809	0.026500	0.006519	0.027056	0.006656	0.979500	0.004809
+counterfactual	original	image_again	True	0,1,2,3,4	5	400	0.117500	0.003953	0.233000	0.008551	0.264001	0.008820	0.882500	0.003953
+direct	original	description_only	False	0,1,2,3,4	5	400	0.047000	0.006225	0.071500	0.014534	0.074997	0.015018	0.953000	0.006225
+direct	original	image_again	True	0,1,2,3,4	5	400	0.143500	0.010093	0.318500	0.008404	0.371920	0.011414	0.856500	0.010093
+original	original	description_only	False	0,1,2,3,4	5	400	0.018000	0.002092	0.021500	0.004541	0.021893	0.004618	0.982000	0.002092
+original	original	image_again	True	0,1,2,3,4	5	400	0.120000	0.005000	0.249500	0.004108	0.283533	0.005172	0.880000	0.005000
+structured	original	description_only	False	0,1,2,3,4	5	400	0.018000	0.003260	0.022000	0.004809	0.022402	0.004879	0.982000	0.003260
+structured	original	image_again	True	0,1,2,3,4	5	400	0.124000	0.005477	0.245500	0.004809	0.280261	0.005814	0.876000	0.005477
+verification	original	description_only	False	0,1,2,3,4	5	400	0.023500	0.003791	0.026500	0.005184	0.027140	0.005322	0.976500	0.003791
+verification	original	image_again	True	0,1,2,3,4	5	400	0.120000	0.003536	0.231000	0.006755	0.262513	0.008149	0.880000	0.003536

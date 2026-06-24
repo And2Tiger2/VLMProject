@@ -1,0 +1,105 @@
+{
+  "accuracy": 0.1575,
+  "bias_aligned_error_rate": 0.37091988130563797,
+  "bias_aligned_fraction": 0.3125,
+  "by_topic": {
+    "Animals": {
+      "accuracy": 0.017241379310344827,
+      "bias_aligned_error_rate": 0.6842105263157895,
+      "n": 58
+    },
+    "Chess Pieces": {
+      "accuracy": 0.0,
+      "bias_aligned_error_rate": 0.03508771929824561,
+      "n": 57
+    },
+    "Flags": {
+      "accuracy": 0.19298245614035087,
+      "bias_aligned_error_rate": 0.21739130434782608,
+      "n": 57
+    },
+    "Game Boards": {
+      "accuracy": 0.22807017543859648,
+      "bias_aligned_error_rate": 0.4090909090909091,
+      "n": 57
+    },
+    "Logos": {
+      "accuracy": 0.14035087719298245,
+      "bias_aligned_error_rate": 0.4489795918367347,
+      "n": 57
+    },
+    "Optical Illusion": {
+      "accuracy": 0.49122807017543857,
+      "bias_aligned_error_rate": 1.0,
+      "n": 57
+    },
+    "Patterned Grid": {
+      "accuracy": 0.03508771929824561,
+      "bias_aligned_error_rate": 0.09090909090909091,
+      "n": 57
+    }
+  },
+  "error_rate": 0.8425,
+  "n": 400,
+  "run_config": {
+    "adapter_config": {
+      "answer_include_image": true,
+      "answer_no_image_behavior": null,
+      "answer_prompt_variant": "original",
+      "blank_image_size": 448,
+      "description_max_new_tokens": 80,
+      "description_prompt_variant": "direct",
+      "device_map": "cuda",
+      "do_sample": true,
+      "include_image": true,
+      "max_new_tokens": 16,
+      "model_id": "google/paligemma2-3b-mix-448",
+      "no_image_behavior": null,
+      "prompt_mode": "raw",
+      "seed": 4,
+      "temperature": 0.7,
+      "top_k": null,
+      "top_p": null
+    },
+    "adapter_name": "google/paligemma2-3b-mix-448-two-pass-direct-original-image-again-seed4",
+    "answer_include_image": true,
+    "answer_max_new_tokens": 16,
+    "answer_mode": "image_again",
+    "answer_modes": [
+      "image_again",
+      "description_only"
+    ],
+    "answer_prompt_variant": "original",
+    "answer_prompt_variants": [
+      "original"
+    ],
+    "blank_image_size": 448,
+    "condition": "direct_original_image_again_seed4",
+    "dataset": "data/vlmbias_400.jsonl",
+    "description_max_new_tokens": 80,
+    "description_only_behavior": "blank_image",
+    "description_prompt_variant": "direct",
+    "description_prompt_variants": [
+      "direct",
+      "original",
+      "counterfactual",
+      "structured",
+      "verification"
+    ],
+    "device_map": "cuda",
+    "do_sample": true,
+    "limit": null,
+    "model_id": "google/paligemma2-3b-mix-448",
+    "seed": 4,
+    "seeds": [
+      0,
+      1,
+      2,
+      3,
+      4
+    ],
+    "temperature": 0.7,
+    "top_k": null,
+    "top_p": null
+  }
+}
