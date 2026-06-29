@@ -53,8 +53,12 @@ coverage.xml
 cover/
 
 # Evaluation outputs
-data/
-runs/
+/data/
+/runs/
+segments/*/data/
+segments/*/runs/
+!segments/vlm_bias_attention/runs/
+!segments/vlm_bias_attention/runs/**
 
 # Local model and dataset caches
 .cache/

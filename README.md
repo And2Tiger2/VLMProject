@@ -7,6 +7,25 @@ This repo currently contains a basic evaluation harness for the
 benchmark. The goal is to make it easy to swap in a local checkpoint or API
 adapter and get comparable metrics before testing interventions.
 
+## Repository Layout
+
+Reusable code, environment files, adapters, scripts, tests, and examples stay at
+the repository root. Research-specific artifacts live under `segments/`, so
+paper-driven workstreams do not mix their datasets, raw outputs, and reports
+with the project environment.
+
+The current VLMBias/NaturalBench attention-intervention work is organized under
+`segments/vlm_bias_attention/`:
+
+- `papers/`: source papers for this segment.
+- `data/`: fixed slices, downloaded assets, and manifests.
+- `reports/`: curated summaries, figures, tables, and notes.
+- `runs/`: raw model outputs and run summaries.
+
+The GazeHeads replication work for Qwen2.5-VL is organized under
+`segments/gaze_heads_qwen25/`; see that segment README for the dataset export,
+gaze-head discovery, and steering-generation commands.
+
 ## Setup
 
 ```bash
@@ -44,7 +63,7 @@ Run the deterministic dummy adapter on the tiny local JSONL:
 uv run vlm-eval \
   --dataset examples/tiny_vlmbias.jsonl \
   --adapter adapters.dummy:make_adapter,mode=bias \
-  --out runs/tiny_dummy.jsonl
+  --out segments/vlm_bias_attention/runs/tiny_dummy.jsonl
 ```
 
 This should produce `accuracy = 0.0` and `bias_aligned_error_rate = 1.0`
@@ -59,12 +78,12 @@ uv run python scripts/make_vlmbias_slice.py \
   --split main \
   --n 400 \
   --seed 0 \
-  --out data/vlmbias_400.jsonl
+  --out segments/vlm_bias_attention/data/vlmbias_400.jsonl
 ```
 
-This writes `data/vlmbias_400.jsonl`, saves images under
-`data/vlmbias_400_images/`, and records the topic balance in
-`data/vlmbias_400.manifest.json`.
+This writes `segments/vlm_bias_attention/data/vlmbias_400.jsonl`, saves images under
+`segments/vlm_bias_attention/data/vlmbias_400_images/`, and records the topic balance in
+`segments/vlm_bias_attention/data/vlmbias_400.manifest.json`.
 
 Run a small random slice from Hugging Face:
 
@@ -75,16 +94,16 @@ uv run vlm-eval \
   --limit 200 \
   --shuffle \
   --adapter adapters.qwen25_vl:make_adapter,model_id=Qwen/Qwen2.5-VL-3B-Instruct \
-  --out runs/qwen25vl_3b_vlmbias_200.jsonl
+  --out segments/vlm_bias_attention/runs/qwen25vl_3b_vlmbias_200.jsonl
 ```
 
 Or run Qwen2.5-VL-3B on the fixed local slice:
 
 ```bash
 uv run vlm-eval \
-  --dataset data/vlmbias_400.jsonl \
+  --dataset segments/vlm_bias_attention/data/vlmbias_400.jsonl \
   --adapter adapters.qwen25_vl_eval:make_adapter \
-  --out runs/qwen25vl_3b_vlmbias_400.jsonl
+  --out segments/vlm_bias_attention/runs/qwen25vl_3b_vlmbias_400.jsonl
 ```
 
 The CLI writes one JSONL row per prediction and a sibling
@@ -122,26 +141,26 @@ uv run python scripts/make_naturalbench_slice.py \
   --split train \
   --groups 100 \
   --seed 0 \
-  --out data/naturalbench_100_groups.jsonl
+  --out segments/vlm_bias_attention/data/naturalbench_100_groups.jsonl
 ```
 
 Run Qwen2.5-VL-3B on that slice:
 
 ```bash
 uv run vlm-eval-naturalbench \
-  --dataset data/naturalbench_100_groups.jsonl \
+  --dataset segments/vlm_bias_attention/data/naturalbench_100_groups.jsonl \
   --adapter adapters.qwen25_vl_eval:make_adapter \
-  --out runs/qwen25vl_3b_naturalbench_100_groups.jsonl
+  --out segments/vlm_bias_attention/runs/qwen25vl_3b_naturalbench_100_groups.jsonl
 ```
 
 If the run is interrupted, resume it without discarding completed calls:
 
 ```bash
 uv run vlm-eval-naturalbench \
-  --dataset data/naturalbench_100_groups.jsonl \
+  --dataset segments/vlm_bias_attention/data/naturalbench_100_groups.jsonl \
   --resume \
   --adapter adapters.qwen25_vl_eval:make_adapter \
-  --out runs/qwen25vl_3b_naturalbench_100_groups.jsonl
+  --out segments/vlm_bias_attention/runs/qwen25vl_3b_naturalbench_100_groups.jsonl
 ```
 
 The NaturalBench summary reports:
