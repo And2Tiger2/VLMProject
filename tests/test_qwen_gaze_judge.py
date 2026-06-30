@@ -48,13 +48,16 @@ def test_judge_row_with_qwen_uses_forced_choice_prompt() -> None:
     assert judgment["correct"] is True
     assert judgment["matched_panel"] == 3
     assert "Answer to judge" in adapter.prompts[0]
+    assert adapter.example_ids == ["comic1::gaze_top20::3"]
 
 
 class _FakeAdapter:
     def __init__(self, response: str) -> None:
         self.response = response
         self.prompts: list[str] = []
+        self.example_ids: list[str] = []
 
     def generate(self, example) -> str:
+        self.example_ids.append(example.id)
         self.prompts.append(example.prompt)
         return self.response

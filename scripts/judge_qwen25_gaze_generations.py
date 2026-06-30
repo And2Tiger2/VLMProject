@@ -139,7 +139,7 @@ def judge_row_with_qwen(adapter: Qwen25VLAdapter, row: dict[str, Any], strip_ima
         }
 
     prompt = forced_choice_prompt(generated_text, baseline_text, n_panels=n_panels)
-    raw = adapter.generate(EvalExample(id=row_key(row, KEY_FIELDS), image=strip_image, prompt=prompt, ground_truth=""))
+    raw = adapter.generate(EvalExample(id=_example_id(row), image=strip_image, prompt=prompt, ground_truth=""))
     parsed = parse_qwen_panel_judgment(raw, n_panels=n_panels)
     matched_panel = parsed["matched_panel"]
     is_junk = bool(parsed["is_junk"])
@@ -165,6 +165,10 @@ def forced_choice_prompt(generated_text: str, baseline_text: str | None, *, n_pa
         "Return only compact JSON with this schema:\n"
         '{"matched_panel": <integer or null>, "is_junk": <true or false>, "reasoning": "<short reason>"}'
     )
+
+
+def _example_id(row: dict[str, Any]) -> str:
+    return "::".join(str(value) for value in row_key(row, KEY_FIELDS))
 
 
 def parse_qwen_panel_judgment(text: str, *, n_panels: int) -> dict[str, Any]:
