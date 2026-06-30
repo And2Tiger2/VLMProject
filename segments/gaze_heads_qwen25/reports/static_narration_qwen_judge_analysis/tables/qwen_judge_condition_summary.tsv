@@ -1,0 +1,9 @@
+top_k	condition	is_gaze	accuracy	ci_low	ci_high	n	junk_count	baseline_match_count	source
+1	gaze_top1	True	0.16633333333333333	0.15332500000000007	0.18	3000	0	12	segments/gaze_heads_qwen25/runs/static_narration_top1_merged_0_500/qwen_judge/aggregate_results.json
+1	non_gaze_1	False	0.16266666666666665	0.14966666666666667	0.176	3000	3	63	segments/gaze_heads_qwen25/runs/static_narration_top1_merged_0_500/qwen_judge/aggregate_results.json
+5	gaze_top5	True	0.15933333333333333	0.14633333333333334	0.17266666666666666	3000	13	4	segments/gaze_heads_qwen25/runs/static_narration_top5_merged_0_500/qwen_judge/aggregate_results.json
+5	non_gaze_5	False	0.18566666666666667	0.172	0.19933333333333333	3000	90	0	segments/gaze_heads_qwen25/runs/static_narration_top5_merged_0_500/qwen_judge/aggregate_results.json
+10	gaze_top10	True	0.16	0.147	0.17333333333333334	3000	10	4	segments/gaze_heads_qwen25/runs/static_narration_top10_merged_0_500/qwen_judge/aggregate_results.json
+10	non_gaze_10	False	0.14633333333333334	0.134	0.159	3000	79	0	segments/gaze_heads_qwen25/runs/static_narration_top10_merged_0_500/qwen_judge/aggregate_results.json
+20	gaze_top20	True	0.163	0.15	0.17633333333333334	3000	46	0	segments/gaze_heads_qwen25/runs/static_narration_top20_merged_0_500/qwen_judge/aggregate_results.json
+20	non_gaze_20	False	0.159	0.14633333333333334	0.17233333333333334	3000	34	0	segments/gaze_heads_qwen25/runs/static_narration_top20_merged_0_500/qwen_judge/aggregate_results.json

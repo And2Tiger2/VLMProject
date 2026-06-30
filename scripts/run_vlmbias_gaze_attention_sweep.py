@@ -75,6 +75,11 @@ def main() -> None:
         action="store_true",
         help="Skip a condition when both its prediction JSONL and summary JSON already exist.",
     )
+    parser.add_argument(
+        "--skip-run-summary-files",
+        action="store_true",
+        help="Do not write experiment_config.json or shared summary TSVs. Use for parallel seed array jobs.",
+    )
     args = parser.parse_args()
 
     limit = None if args.limit == 0 else args.limit
@@ -104,7 +109,8 @@ def main() -> None:
         "skip_naturalbench": args.skip_naturalbench,
         "conditions": _conditions(args.alphas, args.top_ks),
     }
-    _write_json(out_dir / "experiment_config.json", run_config)
+    if not args.skip_run_summary_files:
+        _write_json(out_dir / "experiment_config.json", run_config)
 
     vlmbias_examples = load_examples(args.dataset, limit=limit)
     naturalbench_calls = [] if args.skip_naturalbench else load_naturalbench_calls(
@@ -164,19 +170,20 @@ def main() -> None:
                     )
                 )
 
-    _write_summary_tsv(vlmbias_rows, out_dir / "vlmbias_summary_by_seed.tsv", metrics=VLMBIAS_METRICS)
-    _write_aggregate_tsv(vlmbias_rows, out_dir / "vlmbias_summary_aggregate.tsv", metrics=VLMBIAS_METRICS)
-    if naturalbench_rows:
-        _write_summary_tsv(
-            naturalbench_rows,
-            out_dir / "naturalbench_summary_by_seed.tsv",
-            metrics=NATURALBENCH_METRICS,
-        )
-        _write_aggregate_tsv(
-            naturalbench_rows,
-            out_dir / "naturalbench_summary_aggregate.tsv",
-            metrics=NATURALBENCH_METRICS,
-        )
+    if not args.skip_run_summary_files:
+        _write_summary_tsv(vlmbias_rows, out_dir / "vlmbias_summary_by_seed.tsv", metrics=VLMBIAS_METRICS)
+        _write_aggregate_tsv(vlmbias_rows, out_dir / "vlmbias_summary_aggregate.tsv", metrics=VLMBIAS_METRICS)
+        if naturalbench_rows:
+            _write_summary_tsv(
+                naturalbench_rows,
+                out_dir / "naturalbench_summary_by_seed.tsv",
+                metrics=NATURALBENCH_METRICS,
+            )
+            _write_aggregate_tsv(
+                naturalbench_rows,
+                out_dir / "naturalbench_summary_aggregate.tsv",
+                metrics=NATURALBENCH_METRICS,
+            )
 
 
 def _conditions(alphas: list[float], top_ks: list[int]) -> list[dict[str, Any]]:
