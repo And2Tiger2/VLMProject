@@ -1,0 +1,153 @@
+{
+  "accuracy": 0.16,
+  "bias_aligned_error_rate": 0.25,
+  "bias_aligned_fraction": 0.21,
+  "by_topic": {
+    "Animals": {
+      "accuracy": 0.15517241379310345,
+      "bias_aligned_error_rate": 0.7346938775510204,
+      "n": 58
+    },
+    "Chess Pieces": {
+      "accuracy": 0.017543859649122806,
+      "bias_aligned_error_rate": 0.017857142857142856,
+      "n": 57
+    },
+    "Flags": {
+      "accuracy": 0.08771929824561403,
+      "bias_aligned_error_rate": 0.23076923076923078,
+      "n": 57
+    },
+    "Game Boards": {
+      "accuracy": 0.08771929824561403,
+      "bias_aligned_error_rate": 0.07692307692307693,
+      "n": 57
+    },
+    "Logos": {
+      "accuracy": 0.10526315789473684,
+      "bias_aligned_error_rate": 0.1568627450980392,
+      "n": 57
+    },
+    "Optical Illusion": {
+      "accuracy": 0.6140350877192983,
+      "bias_aligned_error_rate": 1.0,
+      "n": 57
+    },
+    "Patterned Grid": {
+      "accuracy": 0.05263157894736842,
+      "bias_aligned_error_rate": 0.018518518518518517,
+      "n": 57
+    }
+  },
+  "error_rate": 0.84,
+  "mean_boosted_head_image_attention_mass": 0.9999950706916196,
+  "mean_boosted_layer_image_attention_mass": 0.19674122674942393,
+  "mean_image_attention_mass": 0.10379486068720915,
+  "n": 400,
+  "run_config": {
+    "alphas": [
+      10.0,
+      20.0,
+      30.0,
+      50.0,
+      100.0
+    ],
+    "attention_alpha": 20.0,
+    "benchmark": "vlmbias",
+    "condition": "gaze_top10_alpha20",
+    "conditions": [
+      {
+        "attention_alpha": 0.0,
+        "condition": "baseline",
+        "is_baseline": true,
+        "top_k_gaze": 0
+      },
+      {
+        "attention_alpha": 10.0,
+        "condition": "gaze_top10_alpha10",
+        "is_baseline": false,
+        "top_k_gaze": 10
+      },
+      {
+        "attention_alpha": 10.0,
+        "condition": "gaze_top20_alpha10",
+        "is_baseline": false,
+        "top_k_gaze": 20
+      },
+      {
+        "attention_alpha": 20.0,
+        "condition": "gaze_top10_alpha20",
+        "is_baseline": false,
+        "top_k_gaze": 10
+      },
+      {
+        "attention_alpha": 20.0,
+        "condition": "gaze_top20_alpha20",
+        "is_baseline": false,
+        "top_k_gaze": 20
+      },
+      {
+        "attention_alpha": 30.0,
+        "condition": "gaze_top10_alpha30",
+        "is_baseline": false,
+        "top_k_gaze": 10
+      },
+      {
+        "attention_alpha": 30.0,
+        "condition": "gaze_top20_alpha30",
+        "is_baseline": false,
+        "top_k_gaze": 20
+      },
+      {
+        "attention_alpha": 50.0,
+        "condition": "gaze_top10_alpha50",
+        "is_baseline": false,
+        "top_k_gaze": 10
+      },
+      {
+        "attention_alpha": 50.0,
+        "condition": "gaze_top20_alpha50",
+        "is_baseline": false,
+        "top_k_gaze": 20
+      },
+      {
+        "attention_alpha": 100.0,
+        "condition": "gaze_top10_alpha100",
+        "is_baseline": false,
+        "top_k_gaze": 10
+      },
+      {
+        "attention_alpha": 100.0,
+        "condition": "gaze_top20_alpha100",
+        "is_baseline": false,
+        "top_k_gaze": 20
+      }
+    ],
+    "dataset": "segments/vlm_bias_attention/data/vlmbias_400.jsonl",
+    "decode_only": false,
+    "device_map": "cuda",
+    "do_sample": true,
+    "gaze_ranking": "segments/gaze_heads_qwen25/runs/gaze_discovery_merged_0_500/gaze_head_ranking.json",
+    "limit": null,
+    "max_new_tokens": 16,
+    "max_pixels": 1048576,
+    "min_pixels": 0,
+    "model_id": "Qwen/Qwen2.5-VL-3B-Instruct",
+    "naturalbench_dataset": "segments/vlm_bias_attention/data/naturalbench_100_groups.jsonl",
+    "naturalbench_limit_groups": null,
+    "prompt_mode": "baseline",
+    "seed": 8,
+    "seeds": [
+      8
+    ],
+    "skip_naturalbench": false,
+    "temperature": 0.7,
+    "top_k": null,
+    "top_k_gaze": 10,
+    "top_ks": [
+      10,
+      20
+    ],
+    "top_p": null
+  }
+}
