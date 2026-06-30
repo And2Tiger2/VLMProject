@@ -1,0 +1,16 @@
+{
+  "model_id": "Qwen/Qwen2.5-VL-3B-Instruct",
+  "comics_root": "segments/gaze_heads_qwen25/data/comics",
+  "gaze_ranking": "segments/gaze_heads_qwen25/runs/gaze_discovery_merged_0_500/gaze_head_ranking.json",
+  "start_comic_idx": 150,
+  "n_comics": 50,
+  "conditions": [
+    "gaze_top1",
+    "non_gaze_1"
+  ],
+  "nongaze_score_cutoff": 0.00017440013407288762,
+  "generations": "segments/gaze_heads_qwen25/runs/static_narration_top1_150_50/generations.jsonl",
+  "resume": true,
+  "skipped_existing_rows": 0,
+  "note": "This script writes generation records. Judge scoring can be applied later without rerunning Qwen."
+}

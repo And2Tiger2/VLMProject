@@ -1,0 +1,203 @@
+{
+  "stage": "static",
+  "merged_from": [
+    "segments/gaze_heads_qwen25/runs/static_narration_top5_0_50",
+    "segments/gaze_heads_qwen25/runs/static_narration_top5_50_50",
+    "segments/gaze_heads_qwen25/runs/static_narration_top5_100_50",
+    "segments/gaze_heads_qwen25/runs/static_narration_top5_150_50",
+    "segments/gaze_heads_qwen25/runs/static_narration_top5_200_50",
+    "segments/gaze_heads_qwen25/runs/static_narration_top5_250_50",
+    "segments/gaze_heads_qwen25/runs/static_narration_top5_300_50",
+    "segments/gaze_heads_qwen25/runs/static_narration_top5_350_50",
+    "segments/gaze_heads_qwen25/runs/static_narration_top5_400_50",
+    "segments/gaze_heads_qwen25/runs/static_narration_top5_450_50"
+  ],
+  "suffixes": [
+    "_top5_0_50",
+    "_top5_50_50",
+    "_top5_100_50",
+    "_top5_150_50",
+    "_top5_200_50",
+    "_top5_250_50",
+    "_top5_300_50",
+    "_top5_350_50",
+    "_top5_400_50",
+    "_top5_450_50"
+  ],
+  "n_rows": 6000,
+  "row_counts": {
+    "segments/gaze_heads_qwen25/runs/static_narration_top5_0_50": 600,
+    "segments/gaze_heads_qwen25/runs/static_narration_top5_50_50": 600,
+    "segments/gaze_heads_qwen25/runs/static_narration_top5_100_50": 600,
+    "segments/gaze_heads_qwen25/runs/static_narration_top5_150_50": 600,
+    "segments/gaze_heads_qwen25/runs/static_narration_top5_200_50": 600,
+    "segments/gaze_heads_qwen25/runs/static_narration_top5_250_50": 600,
+    "segments/gaze_heads_qwen25/runs/static_narration_top5_300_50": 600,
+    "segments/gaze_heads_qwen25/runs/static_narration_top5_350_50": 600,
+    "segments/gaze_heads_qwen25/runs/static_narration_top5_400_50": 600,
+    "segments/gaze_heads_qwen25/runs/static_narration_top5_450_50": 600
+  },
+  "source_summaries": [
+    {
+      "model_id": "Qwen/Qwen2.5-VL-3B-Instruct",
+      "comics_root": "segments/gaze_heads_qwen25/data/comics",
+      "gaze_ranking": "segments/gaze_heads_qwen25/runs/gaze_discovery_merged_0_500/gaze_head_ranking.json",
+      "start_comic_idx": 0,
+      "n_comics": 50,
+      "conditions": [
+        "gaze_top5",
+        "non_gaze_5"
+      ],
+      "nongaze_score_cutoff": 0.00017440013407288762,
+      "generations": "segments/gaze_heads_qwen25/runs/static_narration_top5_0_50/generations.jsonl",
+      "resume": true,
+      "skipped_existing_rows": 0,
+      "note": "This script writes generation records. Judge scoring can be applied later without rerunning Qwen."
+    },
+    {
+      "model_id": "Qwen/Qwen2.5-VL-3B-Instruct",
+      "comics_root": "segments/gaze_heads_qwen25/data/comics",
+      "gaze_ranking": "segments/gaze_heads_qwen25/runs/gaze_discovery_merged_0_500/gaze_head_ranking.json",
+      "start_comic_idx": 50,
+      "n_comics": 50,
+      "conditions": [
+        "gaze_top5",
+        "non_gaze_5"
+      ],
+      "nongaze_score_cutoff": 0.00017440013407288762,
+      "generations": "segments/gaze_heads_qwen25/runs/static_narration_top5_50_50/generations.jsonl",
+      "resume": true,
+      "skipped_existing_rows": 0,
+      "note": "This script writes generation records. Judge scoring can be applied later without rerunning Qwen."
+    },
+    {
+      "model_id": "Qwen/Qwen2.5-VL-3B-Instruct",
+      "comics_root": "segments/gaze_heads_qwen25/data/comics",
+      "gaze_ranking": "segments/gaze_heads_qwen25/runs/gaze_discovery_merged_0_500/gaze_head_ranking.json",
+      "start_comic_idx": 100,
+      "n_comics": 50,
+      "conditions": [
+        "gaze_top5",
+        "non_gaze_5"
+      ],
+      "nongaze_score_cutoff": 0.00017440013407288762,
+      "generations": "segments/gaze_heads_qwen25/runs/static_narration_top5_100_50/generations.jsonl",
+      "resume": true,
+      "skipped_existing_rows": 0,
+      "note": "This script writes generation records. Judge scoring can be applied later without rerunning Qwen."
+    },
+    {
+      "model_id": "Qwen/Qwen2.5-VL-3B-Instruct",
+      "comics_root": "segments/gaze_heads_qwen25/data/comics",
+      "gaze_ranking": "segments/gaze_heads_qwen25/runs/gaze_discovery_merged_0_500/gaze_head_ranking.json",
+      "start_comic_idx": 150,
+      "n_comics": 50,
+      "conditions": [
+        "gaze_top5",
+        "non_gaze_5"
+      ],
+      "nongaze_score_cutoff": 0.00017440013407288762,
+      "generations": "segments/gaze_heads_qwen25/runs/static_narration_top5_150_50/generations.jsonl",
+      "resume": true,
+      "skipped_existing_rows": 0,
+      "note": "This script writes generation records. Judge scoring can be applied later without rerunning Qwen."
+    },
+    {
+      "model_id": "Qwen/Qwen2.5-VL-3B-Instruct",
+      "comics_root": "segments/gaze_heads_qwen25/data/comics",
+      "gaze_ranking": "segments/gaze_heads_qwen25/runs/gaze_discovery_merged_0_500/gaze_head_ranking.json",
+      "start_comic_idx": 200,
+      "n_comics": 50,
+      "conditions": [
+        "gaze_top5",
+        "non_gaze_5"
+      ],
+      "nongaze_score_cutoff": 0.00017440013407288762,
+      "generations": "segments/gaze_heads_qwen25/runs/static_narration_top5_200_50/generations.jsonl",
+      "resume": true,
+      "skipped_existing_rows": 0,
+      "note": "This script writes generation records. Judge scoring can be applied later without rerunning Qwen."
+    },
+    {
+      "model_id": "Qwen/Qwen2.5-VL-3B-Instruct",
+      "comics_root": "segments/gaze_heads_qwen25/data/comics",
+      "gaze_ranking": "segments/gaze_heads_qwen25/runs/gaze_discovery_merged_0_500/gaze_head_ranking.json",
+      "start_comic_idx": 250,
+      "n_comics": 50,
+      "conditions": [
+        "gaze_top5",
+        "non_gaze_5"
+      ],
+      "nongaze_score_cutoff": 0.00017440013407288762,
+      "generations": "segments/gaze_heads_qwen25/runs/static_narration_top5_250_50/generations.jsonl",
+      "resume": true,
+      "skipped_existing_rows": 0,
+      "note": "This script writes generation records. Judge scoring can be applied later without rerunning Qwen."
+    },
+    {
+      "model_id": "Qwen/Qwen2.5-VL-3B-Instruct",
+      "comics_root": "segments/gaze_heads_qwen25/data/comics",
+      "gaze_ranking": "segments/gaze_heads_qwen25/runs/gaze_discovery_merged_0_500/gaze_head_ranking.json",
+      "start_comic_idx": 300,
+      "n_comics": 50,
+      "conditions": [
+        "gaze_top5",
+        "non_gaze_5"
+      ],
+      "nongaze_score_cutoff": 0.00017440013407288762,
+      "generations": "segments/gaze_heads_qwen25/runs/static_narration_top5_300_50/generations.jsonl",
+      "resume": true,
+      "skipped_existing_rows": 0,
+      "note": "This script writes generation records. Judge scoring can be applied later without rerunning Qwen."
+    },
+    {
+      "model_id": "Qwen/Qwen2.5-VL-3B-Instruct",
+      "comics_root": "segments/gaze_heads_qwen25/data/comics",
+      "gaze_ranking": "segments/gaze_heads_qwen25/runs/gaze_discovery_merged_0_500/gaze_head_ranking.json",
+      "start_comic_idx": 350,
+      "n_comics": 50,
+      "conditions": [
+        "gaze_top5",
+        "non_gaze_5"
+      ],
+      "nongaze_score_cutoff": 0.00017440013407288762,
+      "generations": "segments/gaze_heads_qwen25/runs/static_narration_top5_350_50/generations.jsonl",
+      "resume": true,
+      "skipped_existing_rows": 0,
+      "note": "This script writes generation records. Judge scoring can be applied later without rerunning Qwen."
+    },
+    {
+      "model_id": "Qwen/Qwen2.5-VL-3B-Instruct",
+      "comics_root": "segments/gaze_heads_qwen25/data/comics",
+      "gaze_ranking": "segments/gaze_heads_qwen25/runs/gaze_discovery_merged_0_500/gaze_head_ranking.json",
+      "start_comic_idx": 400,
+      "n_comics": 50,
+      "conditions": [
+        "gaze_top5",
+        "non_gaze_5"
+      ],
+      "nongaze_score_cutoff": 0.00017440013407288762,
+      "generations": "segments/gaze_heads_qwen25/runs/static_narration_top5_400_50/generations.jsonl",
+      "resume": true,
+      "skipped_existing_rows": 0,
+      "note": "This script writes generation records. Judge scoring can be applied later without rerunning Qwen."
+    },
+    {
+      "model_id": "Qwen/Qwen2.5-VL-3B-Instruct",
+      "comics_root": "segments/gaze_heads_qwen25/data/comics",
+      "gaze_ranking": "segments/gaze_heads_qwen25/runs/gaze_discovery_merged_0_500/gaze_head_ranking.json",
+      "start_comic_idx": 450,
+      "n_comics": 50,
+      "conditions": [
+        "gaze_top5",
+        "non_gaze_5"
+      ],
+      "nongaze_score_cutoff": 0.00017440013407288762,
+      "generations": "segments/gaze_heads_qwen25/runs/static_narration_top5_450_50/generations.jsonl",
+      "resume": true,
+      "skipped_existing_rows": 0,
+      "note": "This script writes generation records. Judge scoring can be applied later without rerunning Qwen."
+    }
+  ],
+  "jsonl": "segments/gaze_heads_qwen25/runs/static_narration_top5_merged_0_500/generations.jsonl"
+}

@@ -1,0 +1,74 @@
+{
+  "top1": {
+    "jsonl": "segments/gaze_heads_qwen25/runs/static_narration_top1_merged_0_500/generations.jsonl",
+    "summary": "segments/gaze_heads_qwen25/runs/static_narration_top1_merged_0_500/summary.json",
+    "n_rows": 6000,
+    "expected_rows": 6000,
+    "suffixes": [
+      "_top1_0_50",
+      "_top1_50_50",
+      "_top1_100_50",
+      "_top1_150_50",
+      "_top1_200_50",
+      "_top1_250_50",
+      "_top1_300_50",
+      "_top1_350_50",
+      "_top1_400_50",
+      "_top1_450_50"
+    ]
+  },
+  "top5": {
+    "jsonl": "segments/gaze_heads_qwen25/runs/static_narration_top5_merged_0_500/generations.jsonl",
+    "summary": "segments/gaze_heads_qwen25/runs/static_narration_top5_merged_0_500/summary.json",
+    "n_rows": 6000,
+    "expected_rows": 6000,
+    "suffixes": [
+      "_top5_0_50",
+      "_top5_50_50",
+      "_top5_100_50",
+      "_top5_150_50",
+      "_top5_200_50",
+      "_top5_250_50",
+      "_top5_300_50",
+      "_top5_350_50",
+      "_top5_400_50",
+      "_top5_450_50"
+    ]
+  },
+  "top10": {
+    "jsonl": "segments/gaze_heads_qwen25/runs/static_narration_top10_merged_0_500/generations.jsonl",
+    "summary": "segments/gaze_heads_qwen25/runs/static_narration_top10_merged_0_500/summary.json",
+    "n_rows": 6000,
+    "expected_rows": 6000,
+    "suffixes": [
+      "_top10_0_50",
+      "_top10_50_50",
+      "_top10_100_50",
+      "_top10_150_50",
+      "_top10_200_50",
+      "_top10_250_50",
+      "_top10_300_50",
+      "_top10_350_50",
+      "_top10_400_50",
+      "_top10_450_50"
+    ]
+  },
+  "top20": {
+    "jsonl": "segments/gaze_heads_qwen25/runs/static_narration_top20_merged_0_500/generations.jsonl",
+    "summary": "segments/gaze_heads_qwen25/runs/static_narration_top20_merged_0_500/summary.json",
+    "n_rows": 6000,
+    "expected_rows": 6000,
+    "suffixes": [
+      "_top20_0_50",
+      "_top20_50_50",
+      "_top20_100_50",
+      "_top20_150_50",
+      "_top20_200_50",
+      "_top20_250_50",
+      "_top20_300_50",
+      "_top20_350_50",
+      "_top20_400_50",
+      "_top20_450_50"
+    ]
+  }
+}
