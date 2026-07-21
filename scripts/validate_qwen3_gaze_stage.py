@@ -24,8 +24,17 @@ def main() -> None:
     static.add_argument("--min-target-mass", type=float, default=0.95)
 
     datasets = subparsers.add_parser("datasets")
-    datasets.add_argument("--discovery-root", required=True)
-    datasets.add_argument("--eval-root", required=True)
+    datasets.add_argument(
+        "--discovery-root", default="segments/gaze_heads_qwen3_8b/data/discovery_comics"
+    )
+    datasets.add_argument("--eval-root", default="segments/gaze_heads_qwen3_8b/data/eval_comics")
+    datasets.add_argument("--expected-eval-strips", type=int, default=500)
+    datasets.add_argument("--vlmbias", default="segments/vlm_bias_attention/data/vlmbias_400.jsonl")
+    datasets.add_argument(
+        "--naturalbench", default="segments/vlm_bias_attention/data/naturalbench_100_groups.jsonl"
+    )
+    datasets.add_argument("--expected-vlmbias", type=int, default=400)
+    datasets.add_argument("--expected-naturalbench-groups", type=int, default=100)
 
     benchmark = subparsers.add_parser("benchmark")
     benchmark.add_argument("--run-dir", required=True)
@@ -38,7 +47,15 @@ def main() -> None:
         report = validate_static(Path(args.run_dir), args.max_empty_rate, args.min_target_mass)
         report_path = Path(args.run_dir) / "validation.json"
     elif args.stage == "datasets":
-        report = validate_datasets(Path(args.discovery_root), Path(args.eval_root))
+        report = validate_datasets(
+            Path(args.discovery_root),
+            Path(args.eval_root),
+            Path(args.vlmbias),
+            Path(args.naturalbench),
+            expected_eval_strips=args.expected_eval_strips,
+            expected_vlmbias=args.expected_vlmbias,
+            expected_naturalbench_groups=args.expected_naturalbench_groups,
+        )
         report_path = Path("segments/gaze_heads_qwen3_8b/reports/dataset_validation.json")
         report_path.parent.mkdir(parents=True, exist_ok=True)
     else:
@@ -50,24 +67,145 @@ def main() -> None:
         raise SystemExit(2)
 
 
-def validate_datasets(discovery_root: Path, eval_root: Path) -> dict[str, Any]:
-    discovery_names = {path.name for path in discovery_root.iterdir() if path.is_dir()}
-    eval_names = {path.name for path in eval_root.iterdir() if path.is_dir()}
-    overlap = sorted(discovery_names & eval_names)
+def validate_datasets(
+    discovery_root: Path,
+    eval_root: Path,
+    vlmbias_path: Path,
+    naturalbench_path: Path,
+    *,
+    expected_eval_strips: int = 500,
+    expected_vlmbias: int = 400,
+    expected_naturalbench_groups: int = 100,
+) -> dict[str, Any]:
     errors = []
-    if discovery_root.resolve() == eval_root.resolve():
+    discovery_names = _directory_names(discovery_root, "raw COMICS discovery root", errors)
+    eval_names = _directory_names(eval_root, "evaluation comics root", errors)
+    overlap = sorted(discovery_names & eval_names)
+    if discovery_root.exists() and eval_root.exists() and discovery_root.resolve() == eval_root.resolve():
         errors.append("discovery and evaluation roots resolve to the same directory")
     if overlap:
         errors.append(f"{len(overlap)} comic IDs overlap between discovery and evaluation")
+
+    eligible_raw_pages = _count_eligible_raw_pages(discovery_root) if discovery_root.is_dir() else 0
+    if discovery_root.is_dir() and eligible_raw_pages == 0:
+        errors.append("raw COMICS contains no page with at least six numbered panels")
+
+    complete_eval_strips = _count_complete_eval_strips(eval_root) if eval_root.is_dir() else 0
+    if complete_eval_strips < expected_eval_strips:
+        errors.append(
+            f"only {complete_eval_strips} complete six-panel evaluation strips; "
+            f"require {expected_eval_strips}"
+        )
+
+    vlmbias_rows = _safe_read_jsonl(vlmbias_path, "VLMBias slice", errors)
+    _validate_vlmbias(vlmbias_rows, vlmbias_path, expected_vlmbias, errors)
+    naturalbench_rows = _safe_read_jsonl(naturalbench_path, "NaturalBench slice", errors)
+    _validate_naturalbench(
+        naturalbench_rows, naturalbench_path, expected_naturalbench_groups, errors
+    )
     return {
         "valid": not errors,
         "stage": "datasets",
         "n_discovery_directories": len(discovery_names),
+        "n_eligible_raw_pages": eligible_raw_pages,
         "n_evaluation_directories": len(eval_names),
+        "n_complete_evaluation_strips": complete_eval_strips,
+        "n_vlmbias_rows": len(vlmbias_rows),
+        "n_naturalbench_groups": len(naturalbench_rows),
+        "n_naturalbench_model_calls": len(naturalbench_rows) * 4,
         "n_overlap": len(overlap),
         "overlap_examples": overlap[:20],
         "errors": errors,
     }
+
+
+def _directory_names(root: Path, label: str, errors: list[str]) -> set[str]:
+    if not root.is_dir():
+        errors.append(f"missing {label}: {root}")
+        return set()
+    return {path.name for path in root.iterdir() if path.is_dir()}
+
+
+def _count_eligible_raw_pages(root: Path) -> int:
+    eligible = 0
+    for comic_dir in (path for path in root.iterdir() if path.is_dir()):
+        counts: Counter[int] = Counter()
+        for image in comic_dir.iterdir():
+            parts = image.stem.split("_")
+            if not image.is_file() or len(parts) != 2:
+                continue
+            try:
+                page, panel = (int(part) for part in parts)
+            except ValueError:
+                continue
+            if panel >= 0:
+                counts[page] += 1
+        eligible += sum(count >= 6 for count in counts.values())
+    return eligible
+
+
+def _count_complete_eval_strips(root: Path) -> int:
+    suffixes = (".png", ".jpg", ".jpeg", ".webp", ".bmp")
+    return sum(
+        all(any((strip / f"p{panel}{suffix}").is_file() for suffix in suffixes) for panel in range(1, 7))
+        for strip in root.iterdir()
+        if strip.is_dir()
+    )
+
+
+def _safe_read_jsonl(path: Path, label: str, errors: list[str]) -> list[dict[str, Any]]:
+    try:
+        return _read_jsonl(path)
+    except (FileNotFoundError, json.JSONDecodeError) as exc:
+        errors.append(f"cannot read {label} {path}: {exc}")
+        return []
+
+
+def _validate_vlmbias(
+    rows: list[dict[str, Any]], path: Path, expected: int, errors: list[str]
+) -> None:
+    if len(rows) != expected:
+        errors.append(f"VLMBias has {len(rows)} rows; require exactly {expected}")
+    ids = [str(row.get("id", "")) for row in rows]
+    if any(not identifier for identifier in ids) or len(ids) != len(set(ids)):
+        errors.append("VLMBias IDs must be non-empty and unique")
+    for index, row in enumerate(rows):
+        if not str(row.get("prompt", "")).strip() or not str(row.get("ground_truth", "")).strip():
+            errors.append(f"VLMBias row {index} is missing its prompt or ground truth")
+            break
+        if not _referenced_image_exists(path, row.get("image_path")):
+            errors.append(f"VLMBias row {index} references a missing image: {row.get('image_path')}")
+            break
+
+
+def _validate_naturalbench(
+    rows: list[dict[str, Any]], path: Path, expected: int, errors: list[str]
+) -> None:
+    if len(rows) != expected:
+        errors.append(f"NaturalBench has {len(rows)} groups; require exactly {expected}")
+    ids = [str(row.get("id", "")) for row in rows]
+    if any(not identifier for identifier in ids) or len(ids) != len(set(ids)):
+        errors.append("NaturalBench group IDs must be non-empty and unique")
+    answer_keys = {"q0_i0", "q0_i1", "q1_i0", "q1_i1"}
+    for index, row in enumerate(rows):
+        if not str(row.get("question_0", "")).strip() or not str(row.get("question_1", "")).strip():
+            errors.append(f"NaturalBench group {index} is missing a question")
+            break
+        answers = row.get("answers") or {}
+        if set(answers) != answer_keys or any(not str(value).strip() for value in answers.values()):
+            errors.append(f"NaturalBench group {index} does not contain all four answers")
+            break
+        for key in ("image_0_path", "image_1_path"):
+            if not _referenced_image_exists(path, row.get(key)):
+                errors.append(f"NaturalBench group {index} references a missing image: {row.get(key)}")
+                return
+
+
+def _referenced_image_exists(dataset_path: Path, value: Any) -> bool:
+    if not value:
+        return False
+    image = Path(str(value))
+    return (image if image.is_absolute() else dataset_path.parent / image).is_file()
 
 
 def validate_discovery(run_dir: Path, min_samples: int, min_routing_accuracy: float) -> dict[str, Any]:

@@ -3,7 +3,9 @@ name = "vlmproject"
 version = "0.1.0"
 description = "Small VLM evaluation harness for VLMBias-style benchmarks."
 readme = "README.md"
-requires-python = ">=3.10"
+# PyTorch 2.7.x does not publish CPython 3.14 wheels. Keep the project from
+# silently selecting Neuronic's current system Python 3.14.
+requires-python = ">=3.10,<3.14"
 dependencies = [
     "datasets>=2.19.0",
     "numpy>=1.26.0",

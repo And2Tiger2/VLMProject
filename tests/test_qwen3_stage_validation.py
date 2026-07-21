@@ -1,12 +1,76 @@
 import json
 from pathlib import Path
 
-from scripts.validate_qwen3_gaze_stage import validate_benchmark, validate_static
+from scripts.validate_qwen3_gaze_stage import validate_benchmark, validate_datasets, validate_static
 
 
 def _write_json(path: Path, value: dict) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(value), encoding="utf-8")
+
+
+def _write_jsonl(path: Path, rows: list[dict]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text("".join(json.dumps(row) + "\n" for row in rows), encoding="utf-8")
+
+
+def test_dataset_validation_checks_subsets_prompts_answers_and_images(tmp_path: Path) -> None:
+    discovery = tmp_path / "discovery"
+    evaluation = tmp_path / "evaluation"
+    for panel in range(1, 7):
+        image = discovery / "raw-comic" / f"1_{panel}.jpg"
+        image.parent.mkdir(parents=True, exist_ok=True)
+        image.touch()
+        panel_image = evaluation / "eval-comic" / f"p{panel}.png"
+        panel_image.parent.mkdir(parents=True, exist_ok=True)
+        panel_image.touch()
+
+    vlmbias = tmp_path / "vlmbias.jsonl"
+    vlmbias_image = tmp_path / "vlmbias.png"
+    vlmbias_image.touch()
+    _write_jsonl(
+        vlmbias,
+        [{"id": "v1", "prompt": "Question?", "ground_truth": "Answer", "image_path": "vlmbias.png"}],
+    )
+
+    naturalbench = tmp_path / "naturalbench.jsonl"
+    for name in ("natural-0.jpg", "natural-1.jpg"):
+        (tmp_path / name).touch()
+    natural_row = {
+        "id": "n1",
+        "question_0": "Question zero?",
+        "question_1": "Question one?",
+        "image_0_path": "natural-0.jpg",
+        "image_1_path": "natural-1.jpg",
+        "answers": {"q0_i0": "yes", "q0_i1": "no", "q1_i0": "no", "q1_i1": "yes"},
+    }
+    _write_jsonl(naturalbench, [natural_row])
+
+    report = validate_datasets(
+        discovery,
+        evaluation,
+        vlmbias,
+        naturalbench,
+        expected_eval_strips=1,
+        expected_vlmbias=1,
+        expected_naturalbench_groups=1,
+    )
+    assert report["valid"] is True
+    assert report["n_naturalbench_model_calls"] == 4
+
+    natural_row["answers"].pop("q1_i1")
+    _write_jsonl(naturalbench, [natural_row])
+    report = validate_datasets(
+        discovery,
+        evaluation,
+        vlmbias,
+        naturalbench,
+        expected_eval_strips=1,
+        expected_vlmbias=1,
+        expected_naturalbench_groups=1,
+    )
+    assert report["valid"] is False
+    assert any("four answers" in error for error in report["errors"])
 
 
 def test_benchmark_validation_requires_boosted_head_telemetry(tmp_path: Path) -> None:

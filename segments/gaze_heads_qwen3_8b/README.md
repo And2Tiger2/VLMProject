@@ -25,7 +25,9 @@ bash scripts/setup_neuronic_qwen3.sh
 This installs the `qwen` and test extras and downloads the Qwen3-VL 8B weights
 to the shared repository cache *before* a GPU is allocated. GPU jobs set
 `HF_HUB_OFFLINE=1`, so a missing model fails immediately instead of holding an
-idle GPU while downloading.
+idle GPU while downloading. The script provisions a repository-cached Python
+3.12 interpreter with `uv`; it does not use Neuronic's incompatible system
+Python 3.14.
 
 Prepare the OpenAI comics, VLMBias, and NaturalBench slices in one command:
 
@@ -48,6 +50,17 @@ segments/gaze_heads_qwen3_8b/data/eval_comics/<strip_id>/p1.png ... p6.png
 segments/vlm_bias_attention/data/vlmbias_400.jsonl
 segments/vlm_bias_attention/data/naturalbench_100_groups.jsonl
 ```
+
+Validate all existing comics, images, prompts, ground-truth answers, counts,
+and discovery/evaluation disjointness without downloading or submitting jobs:
+
+```bash
+uv run python scripts/validate_qwen3_gaze_stage.py datasets
+```
+
+The benchmark inputs are intentionally fixed subsets, not the entire upstream
+benchmarks: 400 topic-balanced VLMBias rows and 100 question-type-balanced
+NaturalBench groups (400 NaturalBench model calls), both sampled with seed 0.
 
 The discovery and evaluation roots must be disjoint. The launcher rejects an
 identical root or overlapping directory IDs.
@@ -163,7 +176,8 @@ Defaults:
 - top-k 10, 50, and 100 gaze heads;
 - alpha 0.25, 0.5, 1, 2, 5, and 10;
 - an independent baseline for every seed;
-- full VLMBias and NaturalBench slices;
+- all 400 prepared VLMBias rows and all 100 prepared NaturalBench groups (not
+  the complete upstream benchmarks);
 - full-sequence alpha boosting as the primary intervention;
 - strict aggregation that fails if any expected seed/condition is absent.
 
