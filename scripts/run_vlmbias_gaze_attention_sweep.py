@@ -11,7 +11,7 @@ from typing import Any
 from PIL import Image
 from tqdm import tqdm
 
-from adapters.qwen25_vl_gaze_attention import make_adapter
+from adapters.qwen_gaze_factory import QWEN3_GAZE_MODEL, make_image_attention_adapter
 from vlm_eval.datasets import load_examples
 from vlm_eval.metrics import prediction_to_dict, score_response, summarize
 from vlm_eval.naturalbench import (
@@ -39,12 +39,12 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Sweep image-token attention boosts on discovered Qwen gaze heads.")
     parser.add_argument("--dataset", default="segments/vlm_bias_attention/data/vlmbias_400.jsonl")
     parser.add_argument("--naturalbench-dataset", default="segments/vlm_bias_attention/data/naturalbench_100_groups.jsonl")
-    parser.add_argument("--out-dir", default="segments/vlm_bias_attention/runs/vlmbias_gaze_attention_sweep")
+    parser.add_argument("--out-dir", default="segments/gaze_heads_qwen3_8b/runs/benchmark_attention_sweep")
     parser.add_argument(
         "--gaze-ranking",
-        default="segments/gaze_heads_qwen25/runs/gaze_discovery_merged_0_500/gaze_head_ranking.json",
+        default="segments/gaze_heads_qwen3_8b/runs/gaze_discovery_seed42_merged/gaze_head_ranking.json",
     )
-    parser.add_argument("--model-id", default="Qwen/Qwen2.5-VL-3B-Instruct")
+    parser.add_argument("--model-id", default=QWEN3_GAZE_MODEL)
     parser.add_argument("--max-pixels", type=int, default=1048576)
     parser.add_argument("--min-pixels", type=int, default=0)
     parser.add_argument("--temperature", type=float, default=0.7)
@@ -117,7 +117,7 @@ def main() -> None:
         args.naturalbench_dataset,
         limit_groups=naturalbench_limit_groups,
     )
-    adapter = make_adapter(
+    adapter = make_image_attention_adapter(
         model_id=args.model_id,
         max_pixels=args.max_pixels,
         min_pixels=args.min_pixels,
@@ -233,11 +233,13 @@ def _run_vlmbias_condition(
     resume: bool,
 ) -> dict:
     condition_name = condition["condition"]
-    out_path = out_dir / "vlmbias" / f"qwen25vl_3b_vlmbias_gaze_attention_{condition_name}_seed{seed}.jsonl"
+    model_slug = _model_slug(adapter.model_id)
+    out_path = out_dir / "vlmbias" / f"{model_slug}_vlmbias_gaze_attention_{condition_name}_seed{seed}.jsonl"
     out_path.parent.mkdir(parents=True, exist_ok=True)
     summary_path = out_path.with_suffix(".summary.json")
     if resume and out_path.exists() and summary_path.exists():
         summary = json.loads(summary_path.read_text(encoding="utf-8"))
+        _validate_resume_summary(summary, run_config, condition, seed, benchmark="vlmbias", path=summary_path)
         return _summary_row("vlmbias", condition, seed, summary, out_path)
 
     predictions = []
@@ -280,11 +282,15 @@ def _run_naturalbench_condition(
     resume: bool,
 ) -> dict:
     condition_name = condition["condition"]
-    out_path = out_dir / "naturalbench" / f"qwen25vl_3b_naturalbench_gaze_attention_{condition_name}_seed{seed}.jsonl"
+    model_slug = _model_slug(adapter.model_id)
+    out_path = out_dir / "naturalbench" / f"{model_slug}_naturalbench_gaze_attention_{condition_name}_seed{seed}.jsonl"
     out_path.parent.mkdir(parents=True, exist_ok=True)
     summary_path = out_path.with_suffix(".summary.json")
     if resume and out_path.exists() and summary_path.exists():
         summary = json.loads(summary_path.read_text(encoding="utf-8"))
+        _validate_resume_summary(
+            summary, run_config, condition, seed, benchmark="naturalbench", path=summary_path
+        )
         return _summary_row("naturalbench", condition, seed, summary, out_path)
 
     predictions = []
@@ -293,7 +299,7 @@ def _run_naturalbench_condition(
         for call in tqdm(calls, desc=f"NaturalBench {condition_name} seed{seed}"):
             maybe_pause()
             example = EvalExample(
-                id=call.call_id,
+                id=f"{call.group_id}_{call.call_id}",
                 prompt=call.prompt,
                 ground_truth=call.ground_truth,
                 image=Image.open(call.image_path).convert("RGB"),
@@ -365,6 +371,29 @@ def _condition_run_config(run_config: dict, condition: dict[str, Any], seed: int
         "attention_alpha": condition["attention_alpha"],
         "top_k_gaze": condition["top_k_gaze"],
     }
+
+
+def _validate_resume_summary(
+    summary: dict[str, Any],
+    run_config: dict[str, Any],
+    condition: dict[str, Any],
+    seed: int,
+    *,
+    benchmark: str,
+    path: Path,
+) -> None:
+    expected = _condition_run_config(run_config, condition, seed, benchmark)
+    existing = summary.get("run_config")
+    if existing != expected:
+        changed = sorted(
+            key
+            for key in set(existing or {}) | set(expected)
+            if (existing or {}).get(key) != expected.get(key)
+        )
+        raise RuntimeError(
+            f"Cannot resume {path}: condition configuration changed in {changed}. "
+            "Use a new --out-dir or remove the stale condition artifacts."
+        )
 
 
 def _summary_row(benchmark: str, condition: dict[str, Any], seed: int, summary: dict, out_path: Path) -> dict:
@@ -453,6 +482,10 @@ def _write_json(path: Path, data: dict) -> None:
 def _alpha_label(alpha: float) -> str:
     text = f"{alpha:g}"
     return text.replace("-", "m").replace(".", "p")
+
+
+def _model_slug(model_id: str) -> str:
+    return "".join(character.lower() if character.isalnum() else "_" for character in model_id).strip("_")
 
 
 if __name__ == "__main__":

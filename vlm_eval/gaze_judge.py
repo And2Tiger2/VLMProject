@@ -47,6 +47,14 @@ def judge_match_target_panel_anthropic(
     model_name: str = DEFAULT_JUDGE_MODEL,
     treat_baseline_match_as_miss: bool = True,
 ) -> dict[str, Any]:
+    if not str(segment_text or "").strip():
+        return {
+            "matched_panel": None,
+            "is_junk": True,
+            "correct": False,
+            "matches_baseline": False,
+            "reasoning": "generated answer is empty",
+        }
     if treat_baseline_match_as_miss and steered_matches_baseline(segment_text, baseline_text):
         return {
             "matched_panel": None,
@@ -101,7 +109,18 @@ def judge_match_target_panel_anthropic(
             }
         ],
     )
-    result = _extract_json(response.content[0].text.strip())
+    response_text = response.content[0].text.strip()
+    try:
+        result = _extract_json(response_text)
+    except ValueError:
+        return {
+            "matched_panel": None,
+            "is_junk": True,
+            "correct": False,
+            "matches_baseline": False,
+            "reasoning": "judge response was not valid JSON",
+            "raw_judge_text": response_text,
+        }
     matched_panel = _coerce_panel(result.get("matched_panel"), n_panels=n_panels)
     is_junk = bool(result.get("is_junk", False))
     return {

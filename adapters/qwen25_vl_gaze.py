@@ -5,12 +5,14 @@ from typing import Any
 
 import numpy as np
 
-from adapters.qwen25_vl import Qwen25VLAdapter, _resolve_device_map
+from adapters.qwen25_vl import Qwen25VLAdapter, _resolve_device_map, _resolve_torch_dtype
 from vlm_eval.gaze_regions import assign_panels_to_tokens, region_positions_from_ids
 
 
 ATTENTION_IMPL_NAME = "vlm_gaze_panel_bias"
 IMAGE_PAD_TOKEN = "<|image_pad|>"
+PAPER_DECODE_ONLY = False
+DYNAMIC_DECODE_ONLY = True
 
 
 @dataclass
@@ -34,7 +36,7 @@ class Qwen25VLGazeAdapter(Qwen25VLAdapter):
         device_map = _resolve_device_map(self.device_map, torch)
         self._model = Qwen2_5_VLForConditionalGeneration.from_pretrained(
             self.model_id,
-            torch_dtype=torch.bfloat16 if torch.cuda.is_available() else torch.float32,
+            torch_dtype=_resolve_torch_dtype(torch),
             device_map=device_map,
             attn_implementation=self.attention_impl,
         )
@@ -126,7 +128,7 @@ class Qwen25VLGazeAdapter(Qwen25VLAdapter):
         *,
         max_new_tokens: int,
         swap_bias: float = 10000.0,
-        decode_only: bool = False,
+        decode_only: bool = PAPER_DECODE_ONLY,
     ) -> str:
         self._clear_attention_state()
         self._set_panel_bias(
@@ -260,7 +262,11 @@ class Qwen25VLGazeAdapter(Qwen25VLAdapter):
 
         for layer_idx, layer in enumerate(_language_layers(self._model)):
             layer.self_attn._vlm_gaze_decode_only = decode_only
-            layer.self_attn._vlm_gaze_attention_masks = {f"panel_{target_panel + 1}": target_mask}
+            selected_heads = by_layer.get(layer_idx, [])
+            layer.self_attn._vlm_gaze_attention_masks = (
+                {f"panel_{target_panel + 1}": target_mask} if selected_heads else {}
+            )
+            layer.self_attn._vlm_gaze_track_heads = selected_heads
             layer.self_attn._vlm_gaze_bias_by_head = {
                 head_idx: {
                     "boost_mask": target_mask,
@@ -287,10 +293,15 @@ class Qwen25VLGazeAdapter(Qwen25VLAdapter):
             by_layer.setdefault(int(layer_idx), []).append(int(head_idx))
 
         for layer_idx, layer in enumerate(_language_layers(self._model)):
+            layer.self_attn._vlm_gaze_decode_only = DYNAMIC_DECODE_ONLY
             layer.self_attn._vlm_gaze_prompt_length = int(prompt_length)
-            layer.self_attn._vlm_gaze_attention_masks = {
-                f"panel_{panel_idx + 1}": panel_masks[panel_idx] for _, panel_idx in normalized_schedule
-            }
+            selected_heads = by_layer.get(layer_idx, [])
+            layer.self_attn._vlm_gaze_attention_masks = (
+                {f"panel_{panel_idx + 1}": panel_masks[panel_idx] for _, panel_idx in normalized_schedule}
+                if selected_heads
+                else {}
+            )
+            layer.self_attn._vlm_gaze_track_heads = selected_heads
             layer.self_attn._vlm_gaze_dynamic_bias_by_head = {
                 head_idx: {
                     "panel_masks": panel_masks,
@@ -340,10 +351,9 @@ def _gaze_attention_forward(
 ) -> tuple[Any, Any]:
     import torch
     from torch import nn
-    from transformers.models.qwen2_5_vl.modeling_qwen2_5_vl import repeat_kv
 
-    key_states = repeat_kv(key, module.num_key_value_groups)
-    value_states = repeat_kv(value, module.num_key_value_groups)
+    key_states = _repeat_kv(key, module.num_key_value_groups)
+    value_states = _repeat_kv(value, module.num_key_value_groups)
 
     attn_weights = torch.matmul(query, key_states.transpose(2, 3)) * scaling
     if attention_mask is not None:
@@ -423,6 +433,17 @@ def _token_mask_for_key_length(token_mask: Any | None, key_len: int) -> Any | No
     return torch.cat([token_mask, padding], dim=0)
 
 
+def _repeat_kv(hidden_states: Any, n_rep: int) -> Any:
+    """Expand KV heads without depending on one Transformers model module."""
+    batch, n_kv_heads, sequence_length, head_dim = hidden_states.shape
+    if n_rep == 1:
+        return hidden_states
+    expanded = hidden_states[:, :, None, :, :].expand(
+        batch, n_kv_heads, n_rep, sequence_length, head_dim
+    )
+    return expanded.reshape(batch, n_kv_heads * n_rep, sequence_length, head_dim)
+
+
 def _current_schedule_target(schedule: list[tuple[int, int]], decode_step: int) -> int | None:
     if not schedule:
         return None
@@ -467,8 +488,13 @@ def _summarize_attention_records(records: list[dict[str, float | int]]) -> dict[
     mass_keys = sorted({key for record in records for key in record if key.endswith("_attention_mass")})
     summary = {"n_records": len(records)}
     for key in mass_keys:
-        values = [float(record[key]) for record in records if key in record]
-        summary[f"mean_{key}"] = sum(values) / len(values) if values else None
+        matching = [record for record in records if key in record]
+        summary[f"mean_{key}"] = _weighted_record_mean(matching, key) if matching else None
+        decode_matching = [record for record in matching if int(record.get("query_len", 0)) == 1]
+        summary[f"mean_decode_{key}"] = (
+            _weighted_record_mean(decode_matching, key) if decode_matching else None
+        )
+    summary["n_decode_records"] = sum(int(record.get("query_len", 0)) == 1 for record in records)
     return summary
 
 
@@ -487,8 +513,8 @@ def _trajectory_from_records(records: list[dict[str, float | int]]) -> dict[str,
     for step_idx, key_len in enumerate(sorted(by_key_len)):
         layer_records = by_key_len[key_len]
         panel_masses = {
-            key.removesuffix("_attention_mass"): _mean(
-                [float(record[key]) for record in layer_records if key in record]
+            key.removesuffix("_attention_mass"): _weighted_record_mean(
+                [record for record in layer_records if key in record], key
             )
             for key in mass_keys
         }
@@ -507,5 +533,11 @@ def _trajectory_from_records(records: list[dict[str, float | int]]) -> dict[str,
     }
 
 
-def _mean(values: list[float]) -> float:
-    return sum(values) / len(values) if values else 0.0
+def _weighted_record_mean(records: list[dict[str, float | int]], key: str) -> float:
+    weighted_sum = 0.0
+    total_weight = 0
+    for record in records:
+        weight = max(1, int(record.get("tracked_heads", 1)))
+        weighted_sum += float(record[key]) * weight
+        total_weight += weight
+    return weighted_sum / total_weight if total_weight else 0.0

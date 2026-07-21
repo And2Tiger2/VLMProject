@@ -7,10 +7,10 @@ from pathlib import Path
 import numpy as np
 from tqdm.auto import tqdm
 
-from adapters.qwen25_vl_gaze import Qwen25VLGazeAdapter
+from adapters.qwen_gaze_factory import QWEN3_GAZE_MODEL, make_panel_gaze_adapter
 from scripts.run_qwen25_gaze_static_narration import load_head_ranking, sample_non_gaze_heads
 from vlm_eval.gaze_comics import DEFAULT_N_PANELS, build_strip, list_comic_dirs
-from vlm_eval.gaze_resume import load_completed_keys, row_key
+from vlm_eval.gaze_resume import ensure_resume_config, load_completed_keys, row_key
 
 
 PROMPT = (
@@ -20,11 +20,11 @@ PROMPT = (
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Track Qwen2.5-VL gaze-head panel attention during narration.")
-    parser.add_argument("--comics-root", default="segments/gaze_heads_qwen25/data/comics")
-    parser.add_argument("--gaze-ranking", default="segments/gaze_heads_qwen25/runs/gaze_discovery/gaze_head_ranking.json")
-    parser.add_argument("--out-dir", default="segments/gaze_heads_qwen25/runs/narration_trajectory")
-    parser.add_argument("--model-id", default="Qwen/Qwen2.5-VL-3B-Instruct")
+    parser = argparse.ArgumentParser(description="Track Qwen-VL gaze-head panel attention during narration.")
+    parser.add_argument("--comics-root", default="segments/gaze_heads_qwen3_8b/data/eval_comics")
+    parser.add_argument("--gaze-ranking", default="segments/gaze_heads_qwen3_8b/runs/gaze_discovery_seed42_merged/gaze_head_ranking.json")
+    parser.add_argument("--out-dir", default="segments/gaze_heads_qwen3_8b/runs/narration_trajectory")
+    parser.add_argument("--model-id", default=QWEN3_GAZE_MODEL)
     parser.add_argument("--device-map", default="auto")
     parser.add_argument("--max-comics", type=int, default=5)
     parser.add_argument("--start-comic-idx", type=int, default=0)
@@ -57,7 +57,7 @@ def main() -> None:
     if not comic_dirs:
         raise FileNotFoundError(f"No valid six-panel comics found under {args.comics_root}.")
 
-    adapter = Qwen25VLGazeAdapter(
+    adapter = make_panel_gaze_adapter(
         model_id=args.model_id,
         max_new_tokens=args.max_new_tokens,
         max_pixels=args.max_pixels,
@@ -86,6 +86,25 @@ def main() -> None:
         f"gaze_top{args.top_k_gaze}": gaze_heads,
         f"non_gaze_{len(control_heads)}": control_heads,
     }
+    experiment_config = {
+        "task": "narration_trajectory",
+        "model_id": args.model_id,
+        "comics_root": str(Path(args.comics_root)),
+        "gaze_ranking": str(ranking_path),
+        "start_comic_idx": args.start_comic_idx,
+        "max_comics": args.max_comics,
+        "comic_name": args.comic_name,
+        "top_k_gaze": args.top_k_gaze,
+        "control_heads": args.control_heads,
+        "nongaze_percentile": args.nongaze_percentile,
+        "max_new_tokens": args.max_new_tokens,
+        "max_pixels": args.max_pixels,
+        "min_pixels": args.min_pixels,
+        "seed": args.seed,
+        "gap": args.gap,
+        "prompt": PROMPT,
+    }
+    ensure_resume_config(out_dir, experiment_config, resume=args.resume, artifact_name="trajectories.jsonl")
     trajectories_path = out_dir / "trajectories.jsonl"
     key_fields = ["strip_name", "condition"]
     completed = load_completed_keys(trajectories_path, key_fields) if args.resume else set()
@@ -121,6 +140,7 @@ def main() -> None:
                     )
                     + "\n"
                 )
+                handle.flush()
                 completed.add(row_key(row_stub, key_fields))
 
     summary = {
@@ -132,6 +152,7 @@ def main() -> None:
         "n_comics": len(comic_dirs),
         "conditions": sorted(conditions),
         "nongaze_score_cutoff": cutoff,
+        "experiment_config": str(out_dir / "experiment_config.json"),
         "trajectories": str(trajectories_path),
         "resume": args.resume,
         "skipped_existing_rows": skipped,

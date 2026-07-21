@@ -5,7 +5,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from adapters.qwen25_vl import Qwen25VLAdapter, _resolve_device_map
+from adapters.qwen25_vl import Qwen25VLAdapter, _resolve_device_map, _resolve_torch_dtype
 
 
 ATTENTION_IMPL_NAME = "vlm_gaze_head_image_bias"
@@ -37,7 +37,7 @@ class Qwen25VLGazeAttentionAdapter(Qwen25VLAdapter):
         device_map = _resolve_device_map(self.device_map, torch)
         self._model = Qwen2_5_VLForConditionalGeneration.from_pretrained(
             self.model_id,
-            torch_dtype=torch.bfloat16 if torch.cuda.is_available() else torch.float32,
+            torch_dtype=_resolve_torch_dtype(torch),
             device_map=device_map,
             attn_implementation=ATTENTION_IMPL_NAME,
         )
@@ -150,10 +150,9 @@ def _gaze_image_bias_attention_forward(
 ) -> tuple[Any, Any]:
     import torch
     from torch import nn
-    from transformers.models.qwen2_5_vl.modeling_qwen2_5_vl import repeat_kv
 
-    key_states = repeat_kv(key, module.num_key_value_groups)
-    value_states = repeat_kv(value, module.num_key_value_groups)
+    key_states = _repeat_kv(key, module.num_key_value_groups)
+    value_states = _repeat_kv(value, module.num_key_value_groups)
 
     attn_weights = torch.matmul(query, key_states.transpose(2, 3)) * scaling
     if attention_mask is not None:
@@ -169,8 +168,12 @@ def _gaze_image_bias_attention_forward(
     decode_only = bool(getattr(module, "_vlm_gaze_image_decode_only", False))
     should_bias = image_mask is not None and alpha != 0.0 and head_indices and not (decode_only and query.shape[-2] > 1)
     if should_bias:
+        # Full-sequence mode must affect every prefill query, just like the
+        # reference steering mask which broadcasts over the query dimension.
+        # ``query_slice`` remains last-query-only below for compact telemetry.
+        bias_query_slice = slice(None)
         for head_idx in head_indices:
-            attn_weights[:, head_idx, query_slice, image_mask] += alpha
+            attn_weights[:, head_idx, bias_query_slice, image_mask] += alpha
 
     attn_weights = nn.functional.softmax(attn_weights, dim=-1, dtype=torch.float32).to(query.dtype)
     attn_weights = nn.functional.dropout(attn_weights, p=dropout, training=module.training)
@@ -230,6 +233,17 @@ def _token_mask_for_key_length(token_mask: Any | None, key_len: int) -> Any | No
 
     padding = torch.zeros(key_len - token_mask.numel(), dtype=torch.bool, device=token_mask.device)
     return torch.cat([token_mask, padding], dim=0)
+
+
+def _repeat_kv(hidden_states: Any, n_rep: int) -> Any:
+    """Expand KV heads without depending on one Transformers model module."""
+    batch, n_kv_heads, sequence_length, head_dim = hidden_states.shape
+    if n_rep == 1:
+        return hidden_states
+    expanded = hidden_states[:, :, None, :, :].expand(
+        batch, n_kv_heads, n_rep, sequence_length, head_dim
+    )
+    return expanded.reshape(batch, n_kv_heads * n_rep, sequence_length, head_dim)
 
 
 def _language_layers(model: Any) -> Any:

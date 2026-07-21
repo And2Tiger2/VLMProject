@@ -247,6 +247,23 @@ uv run python scripts/run_qwen25_gaze_static_narration.py \
 The static steering script writes `generations.jsonl` so judging/scoring can be
 applied without rerunning Qwen.
 
+The official static and VQA protocols steer both prompt prefill and decoding;
+dynamic narration alone defaults to decode-only steering. The corrected Qwen
+adapters and scripts now use those defaults explicitly.
+
+Do not treat the legacy `static_narration_top*` panel-sweep artifacts as valid
+results. Auditing found empty generations, empty outputs accepted by the old
+judge, discovery/evaluation overlap, and weak queried-panel routing. Use
+`scripts/audit_gaze_panel_sweep.py` to inspect those artifacts for provenance,
+then run the clean Qwen3 pipeline documented in
+`segments/gaze_heads_qwen3_8b/README.md` for new results.
+
+For a strict paper replication, discover heads on a dataset disjoint from the
+OpenAI strips used for steering evaluation. The paper uses random six-panel
+windows from the COMICS corpus for discovery and the 500 OpenAI strips only for
+evaluation. Reusing `data/comics` for both stages is convenient for smoke tests,
+but it is not a strict replication protocol.
+
 Run VQA steering generations:
 
 ```bash

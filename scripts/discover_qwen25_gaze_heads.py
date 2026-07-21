@@ -7,8 +7,14 @@ from pathlib import Path
 import numpy as np
 from tqdm.auto import tqdm
 
-from adapters.qwen25_vl_gaze import Qwen25VLGazeAdapter
-from vlm_eval.gaze_comics import DEFAULT_N_PANELS, build_strip, list_comic_dirs
+from adapters.qwen_gaze_factory import QWEN3_GAZE_MODEL, make_panel_gaze_adapter
+from vlm_eval.gaze_comics import (
+    DEFAULT_N_PANELS,
+    build_strip,
+    build_strip_from_paths,
+    list_comic_dirs,
+    sample_raw_comics_windows,
+)
 
 
 NUMBER_WORDS = {2: "two", 3: "three", 4: "four", 5: "five", 6: "six", 7: "seven", 8: "eight"}
@@ -38,11 +44,31 @@ def rank_heads_by_score(scores: np.ndarray) -> list[dict[str, float]]:
     return ranked
 
 
+def gaze_routing_diagnostics(mean_panel_attention: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+    """Return diagonal advantage and panel-routing accuracy for every head."""
+    n_panels = int(mean_panel_attention.shape[0])
+    diagonal = np.stack(
+        [mean_panel_attention[panel_idx, :, :, panel_idx] for panel_idx in range(n_panels)],
+        axis=0,
+    )
+    off_diagonal_mean = (mean_panel_attention.sum(axis=-1) - diagonal) / max(1, n_panels - 1)
+    selectivity = (diagonal - off_diagonal_mean).mean(axis=0)
+    attended_panel = mean_panel_attention.argmax(axis=-1)
+    targets = np.arange(n_panels, dtype=int)[:, None, None]
+    routing_accuracy = (attended_panel == targets).mean(axis=0)
+    return selectivity, routing_accuracy
+
+
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Discover Qwen2.5-VL gaze heads on six-panel comic strips.")
-    parser.add_argument("--comics-root", default="segments/gaze_heads_qwen25/data/comics")
-    parser.add_argument("--out-dir", default="segments/gaze_heads_qwen25/runs/gaze_discovery")
-    parser.add_argument("--model-id", default="Qwen/Qwen2.5-VL-3B-Instruct")
+    parser = argparse.ArgumentParser(description="Discover Qwen-VL gaze heads on six-panel comic strips.")
+    parser.add_argument("--comics-root", default="segments/gaze_heads_qwen3_8b/data/discovery_comics")
+    parser.add_argument(
+        "--use-raw",
+        action="store_true",
+        help="Sample consecutive windows from raw COMICS <comic_id>/<page>_<panel>.jpg (paper protocol).",
+    )
+    parser.add_argument("--out-dir", default="segments/gaze_heads_qwen3_8b/runs/gaze_discovery")
+    parser.add_argument("--model-id", default=QWEN3_GAZE_MODEL)
     parser.add_argument("--device-map", default="auto")
     parser.add_argument("--n-samples", type=int, default=500)
     parser.add_argument("--start-comic-idx", type=int, default=0)
@@ -59,18 +85,23 @@ def main() -> None:
     out_dir = Path(args.out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    comic_dirs = list_comic_dirs(Path(args.comics_root), n_panels=args.n_panels)
+    if args.use_raw:
+        comic_items = sample_raw_comics_windows(
+            Path(args.comics_root), n_panels=args.n_panels, n_samples=args.n_samples, seed=args.seed
+        )
+    else:
+        comic_items = [(path.name, path) for path in list_comic_dirs(Path(args.comics_root), n_panels=args.n_panels)]
     if args.start_comic_idx > 0:
-        comic_dirs = comic_dirs[args.start_comic_idx :]
+        comic_items = comic_items[args.start_comic_idx :]
     limit = args.max_comics if args.max_comics > 0 else args.n_samples
-    comic_dirs = comic_dirs[:limit]
-    if not comic_dirs:
+    comic_items = comic_items[:limit]
+    if not comic_items:
         raise FileNotFoundError(
             f"No valid {args.n_panels}-panel comics found under {args.comics_root}. "
             "Run scripts/download_gaze_comics.py first or provide --comics-root."
         )
 
-    adapter = Qwen25VLGazeAdapter(
+    adapter = make_panel_gaze_adapter(
         model_id=args.model_id,
         max_new_tokens=1,
         max_pixels=args.max_pixels,
@@ -86,8 +117,15 @@ def main() -> None:
     valid_samples = 0
     sampled_names = []
 
-    for comic_dir in tqdm(comic_dirs, desc="Discovering gaze heads"):
-        strip = build_strip(comic_dir, n_panels=args.n_panels, target_height=args.target_height, gap=args.gap)
+    for comic_name, comic_source in tqdm(comic_items, desc="Discovering gaze heads"):
+        if args.use_raw:
+            strip = build_strip_from_paths(
+                comic_source, name=comic_name, target_height=args.target_height, gap=args.gap
+            )
+        else:
+            strip = build_strip(
+                comic_source, n_panels=args.n_panels, target_height=args.target_height, gap=args.gap
+            )
         per_prompt = []
         ok = True
         for panel_idx in range(args.n_panels):
@@ -114,11 +152,14 @@ def main() -> None:
     for panel_idx in range(args.n_panels):
         gaze_scores += mean_panel_attention[panel_idx, :, :, panel_idx]
     gaze_scores /= float(args.n_panels)
+    gaze_selectivity, gaze_routing_accuracy = gaze_routing_diagnostics(mean_panel_attention)
 
     ranking = rank_heads_by_score(gaze_scores)
     np.save(out_dir / "gaze_sum.npy", gaze_sum)
     np.save(out_dir / "mean_panel_attention.npy", mean_panel_attention)
     np.save(out_dir / "gaze_scores.npy", gaze_scores)
+    np.save(out_dir / "gaze_selectivity.npy", gaze_selectivity)
+    np.save(out_dir / "gaze_routing_accuracy.npy", gaze_routing_accuracy)
     (out_dir / "gaze_head_ranking.json").write_text(json.dumps(ranking, indent=2))
     (out_dir / "summary.json").write_text(
         json.dumps(
@@ -127,11 +168,19 @@ def main() -> None:
                 "comics_root": args.comics_root,
                 "start_comic_idx": args.start_comic_idx,
                 "max_comics": args.max_comics,
-                "n_requested": len(comic_dirs),
+                "n_requested": len(comic_items),
+                "use_raw": args.use_raw,
                 "valid_samples": valid_samples,
                 "n_layers": n_layers,
                 "n_heads": n_heads,
                 "top_head": ranking[0],
+                "top_head_selectivity": float(
+                    gaze_selectivity[int(ranking[0]["layer"]), int(ranking[0]["head"])]
+                ),
+                "top_head_routing_accuracy": float(
+                    gaze_routing_accuracy[int(ranking[0]["layer"]), int(ranking[0]["head"])]
+                ),
+                "max_head_routing_accuracy": float(gaze_routing_accuracy.max()),
                 "sampled_names": sampled_names,
             },
             indent=2,

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
+import re
 
 from PIL import Image, ImageDraw
 
@@ -61,6 +62,76 @@ def build_strip(
     )
 
 
+def build_strip_from_paths(
+    panel_paths: list[Path],
+    *,
+    name: str,
+    target_height: int = DEFAULT_TARGET_HEIGHT,
+    gap: int = DEFAULT_GAP,
+) -> ComicStrip:
+    if not panel_paths:
+        raise ValueError("A comic strip needs at least one panel path.")
+    images = [_open_rgb(path) for path in panel_paths]
+    resized, panel_widths = _resize_panels(images, target_height)
+    strip = _assemble_strip(resized, panel_widths, gap)
+    return ComicStrip(
+        name=name,
+        strip=strip,
+        panels=resized,
+        panel_widths=panel_widths,
+        panel_paths=list(panel_paths),
+        target_height=int(strip.size[1]),
+    )
+
+
+def sample_raw_comics_windows(
+    root: Path,
+    *,
+    n_panels: int = DEFAULT_N_PANELS,
+    n_samples: int = 500,
+    seed: int = 42,
+) -> list[tuple[str, list[Path]]]:
+    """Reproduce the official raw-COMICS sampling protocol.
+
+    Each sample chooses a random comic, then a random page containing at least
+    ``n_panels`` panels, then a consecutive within-page window. For comics with
+    more than ten pages, the first and last five pages are excluded when
+    possible. Sampling is with replacement, matching the reference code.
+    """
+    samples: list[tuple[str, list[Path]]] = []
+    if not root.exists():
+        return samples
+    comic_dirs = sorted(path for path in root.iterdir() if path.is_dir())
+    if not comic_dirs:
+        return samples
+
+    import numpy as np
+
+    rng = np.random.RandomState(seed)
+    requested = max(0, int(n_samples))
+    for _ in range(requested):
+        for _attempt in range(200):
+            comic_dir = comic_dirs[int(rng.randint(len(comic_dirs)))]
+            by_page = _group_raw_panels_by_page(comic_dir)
+            pages = sorted(by_page)
+            interior_pages = pages[5:-5] if len(pages) > 10 else pages
+            eligible = [page for page in interior_pages if len(by_page[page]) >= n_panels]
+            if not eligible:
+                eligible = [page for page in pages if len(by_page[page]) >= n_panels]
+            if not eligible:
+                continue
+            page = int(eligible[int(rng.randint(len(eligible)))])
+            panel_paths = by_page[page]
+            max_start = len(panel_paths) - n_panels
+            start = int(rng.randint(max_start + 1)) if max_start > 0 else 0
+            window = panel_paths[start : start + n_panels]
+            samples.append((f"{comic_dir.name}_page{page}_start{start}", window))
+            break
+        else:
+            raise RuntimeError(f"Could not sample a valid {n_panels}-panel strip from {root}.")
+    return samples
+
+
 def _find_panel_file(panel_dir: Path, panel_index: int) -> Path | None:
     stem = f"p{panel_index}"
     for suffix in IMAGE_SUFFIXES:
@@ -68,6 +139,29 @@ def _find_panel_file(panel_dir: Path, panel_index: int) -> Path | None:
         if candidate.exists():
             return candidate
     return None
+
+
+def _raw_panel_sort_key(path: Path) -> tuple[int, int]:
+    numbers = [int(value) for value in re.findall(r"\d+", path.stem)]
+    if len(numbers) < 2:
+        raise ValueError(f"Raw COMICS panel must be named <page>_<panel>: {path}")
+    return numbers[-2], numbers[-1]
+
+
+def _group_raw_panels_by_page(comic_dir: Path) -> dict[int, list[Path]]:
+    grouped: dict[int, list[tuple[int, Path]]] = {}
+    for path in sorted(comic_dir.iterdir()):
+        if not path.is_file() or path.suffix.lower() not in IMAGE_SUFFIXES:
+            continue
+        try:
+            page, panel = _raw_panel_sort_key(path)
+        except ValueError:
+            continue
+        grouped.setdefault(page, []).append((panel, path))
+    return {
+        page: [path for _, path in sorted(items)]
+        for page, items in sorted(grouped.items())
+    }
 
 
 def _open_rgb(path: Path) -> Image.Image:

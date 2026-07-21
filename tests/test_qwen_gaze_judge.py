@@ -51,6 +51,24 @@ def test_judge_row_with_qwen_uses_forced_choice_prompt() -> None:
     assert adapter.example_ids == ["comic1::gaze_top20::3"]
 
 
+def test_judge_row_with_qwen_marks_empty_without_calling_model() -> None:
+    row = {
+        "strip_name": "comic1",
+        "condition": "gaze_top1",
+        "target_panel": 2,
+        "generated_text": "   ",
+        "baseline_text": "A hero jumps over a building.",
+    }
+    adapter = _FakeAdapter('{"matched_panel": 2, "is_junk": false}')
+
+    judgment = judge.judge_row_with_qwen(adapter, row, strip_image=object(), n_panels=6)
+
+    assert judgment["matched_panel"] is None
+    assert judgment["is_junk"] is True
+    assert judgment["correct"] is False
+    assert adapter.prompts == []
+
+
 class _FakeAdapter:
     def __init__(self, response: str) -> None:
         self.response = response

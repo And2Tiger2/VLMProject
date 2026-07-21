@@ -15,9 +15,12 @@ dependencies = [
 qwen = [
     "accelerate>=0.30.0",
     "qwen-vl-utils>=0.0.8",
-    "torch>=2.3.0",
-    "torchvision>=0.18.0",
-    "transformers>=4.51.0",
+    # Keep Linux wheels on CUDA 12.x. Newer unconstrained PyTorch releases
+    # currently resolve to CUDA 13, which is not portable across Neuronic's
+    # heterogeneous driver/GPU fleet.
+    "torch>=2.4.0,<2.8.0",
+    "torchvision>=0.19.0,<0.23.0",
+    "transformers>=4.57.0",
 ]
 paligemma = [
     "accelerate>=0.30.0",

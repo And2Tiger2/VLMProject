@@ -9,20 +9,22 @@ from typing import Any
 from tqdm.auto import tqdm
 
 from adapters.qwen25_vl import Qwen25VLAdapter
+from adapters.qwen_gaze_factory import QWEN3_GAZE_MODEL, make_qwen_adapter
 from vlm_eval.gaze_comics import DEFAULT_N_PANELS, build_strip
 from vlm_eval.gaze_judge import aggregate_judgments, steered_matches_baseline
-from vlm_eval.gaze_resume import load_completed_keys, row_key
+from vlm_eval.gaze_resume import ensure_resume_config, load_completed_keys, row_key
 from vlm_eval.types import EvalExample
 
 
 KEY_FIELDS = ["strip_name", "condition", "target_panel"]
+JUDGMENT_SCHEMA_VERSION = 2
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Judge static GazeHeads generations with Qwen2.5-VL forced panel matching.")
+    parser = argparse.ArgumentParser(description="Judge static Gaze Heads generations with Qwen-VL forced panel matching.")
     parser.add_argument("--generations", required=True)
     parser.add_argument("--out-dir", default="")
-    parser.add_argument("--model-id", default="Qwen/Qwen2.5-VL-3B-Instruct")
+    parser.add_argument("--model-id", default=QWEN3_GAZE_MODEL)
     parser.add_argument("--device-map", default="auto")
     parser.add_argument("--max-pixels", type=int, default=1048576)
     parser.add_argument("--min-pixels", type=int, default=0)
@@ -69,7 +71,28 @@ def judge_generations_qwen(
     if limit > 0:
         rows = rows[:limit]
 
-    adapter = Qwen25VLAdapter(
+    judgments_path = out_dir / "judgments.jsonl"
+    ensure_resume_config(
+        out_dir,
+        {
+            "task": "judge_gaze_generations_qwen",
+            "judgment_schema_version": JUDGMENT_SCHEMA_VERSION,
+            "generations": str(generations_path),
+            "model_id": model_id,
+            "device_map": device_map,
+            "max_pixels": max_pixels,
+            "min_pixels": min_pixels,
+            "max_new_tokens": max_new_tokens,
+            "n_panels": n_panels,
+            "limit": limit,
+            "seed": seed,
+        },
+        resume=resume,
+        artifact_name="judgments.jsonl",
+        config_name="judgment_config.json",
+    )
+
+    adapter = make_qwen_adapter(
         model_id=model_id,
         max_new_tokens=max_new_tokens,
         max_pixels=max_pixels,
@@ -81,27 +104,25 @@ def judge_generations_qwen(
         seed=seed,
     )
 
-    judgments_path = out_dir / "judgments.jsonl"
     existing_rows = _read_jsonl(judgments_path) if resume and judgments_path.exists() else []
     completed = load_completed_keys(judgments_path, KEY_FIELDS) if resume else set()
     strip_cache: dict[Path, Any] = {}
     new_rows = []
 
-    for row in tqdm(rows, desc="Qwen forced-choice judging"):
-        if row_key(row, KEY_FIELDS) in completed:
-            continue
-        comic_dir = Path(row["comic_dir"])
-        if comic_dir not in strip_cache:
-            strip_cache[comic_dir] = build_strip(comic_dir, n_panels=n_panels)
-        judgment = judge_row_with_qwen(adapter, row, strip_cache[comic_dir].strip, n_panels=n_panels)
-        judged = dict(row)
-        judged["judgment"] = judgment
-        new_rows.append(judged)
-        completed.add(row_key(judged, KEY_FIELDS))
-
     with judgments_path.open("a" if resume else "w", encoding="utf-8") as handle:
-        for row in new_rows:
-            handle.write(json.dumps(row) + "\n")
+        for row in tqdm(rows, desc="Qwen forced-choice judging"):
+            if row_key(row, KEY_FIELDS) in completed:
+                continue
+            comic_dir = Path(row["comic_dir"])
+            if comic_dir not in strip_cache:
+                strip_cache[comic_dir] = build_strip(comic_dir, n_panels=n_panels)
+            judgment = judge_row_with_qwen(adapter, row, strip_cache[comic_dir].strip, n_panels=n_panels)
+            judged = dict(row)
+            judged["judgment"] = judgment
+            handle.write(json.dumps(judged) + "\n")
+            handle.flush()
+            new_rows.append(judged)
+            completed.add(row_key(judged, KEY_FIELDS))
 
     judged_rows = [*existing_rows, *new_rows] if resume else new_rows
     aggregate = aggregate_judgments(judged_rows, seed=seed)
@@ -109,7 +130,7 @@ def judge_generations_qwen(
     aggregate_path.write_text(
         json.dumps(
             {
-                "judge": "qwen2.5-vl",
+                "judge": "qwen-vl",
                 "judge_model": model_id,
                 "generations": str(generations_path),
                 "resume": resume,
@@ -128,6 +149,15 @@ def judge_generations_qwen(
 def judge_row_with_qwen(adapter: Qwen25VLAdapter, row: dict[str, Any], strip_image: Any, *, n_panels: int) -> dict[str, Any]:
     generated_text = row.get("generated_text", "")
     baseline_text = row.get("baseline_text")
+    if not str(generated_text or "").strip():
+        return {
+            "matched_panel": None,
+            "is_junk": True,
+            "correct": False,
+            "matches_baseline": False,
+            "raw_judge_text": "",
+            "reasoning": "generated answer is empty",
+        }
     if steered_matches_baseline(generated_text, baseline_text):
         return {
             "matched_panel": None,

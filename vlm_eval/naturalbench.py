@@ -72,7 +72,10 @@ def load_naturalbench_calls(source: str, limit_groups: int | None = None) -> lis
 def evaluate_naturalbench(calls: Iterable[NaturalBenchCall], adapter: VLMAdapter) -> Iterable[NaturalBenchPrediction]:
     for call in calls:
         example = EvalExample(
-            id=call.call_id,
+            # call_id is only q0_i0/q0_i1/q1_i0/q1_i1 within a group. Include
+            # group_id in the adapter ID so seeded sampling is independent
+            # across NaturalBench groups while the metric keys stay canonical.
+            id=f"{call.group_id}_{call.call_id}",
             prompt=call.prompt,
             ground_truth=call.ground_truth,
             image=Image.open(call.image_path).convert("RGB"),

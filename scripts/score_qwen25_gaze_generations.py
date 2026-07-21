@@ -15,11 +15,12 @@ from vlm_eval.gaze_judge import (
     split_dynamic_segments,
     steered_matches_baseline,
 )
-from vlm_eval.gaze_resume import load_completed_keys, row_key
+from vlm_eval.gaze_resume import ensure_resume_config, load_completed_keys, row_key
 
 
 STATIC_KEY_FIELDS = ["strip_name", "condition", "target_panel"]
 DYNAMIC_KEY_FIELDS = ["strip_name", "condition"]
+JUDGMENT_SCHEMA_VERSION = 2
 
 
 def _score_dynamic_row(row: dict, args: argparse.Namespace, strip_cache: dict[Path, object]) -> dict:
@@ -121,6 +122,13 @@ def score_generations(
     out_dir.mkdir(parents=True, exist_ok=True)
     rows = [json.loads(line) for line in generations_path.read_text(encoding="utf-8").splitlines() if line.strip()]
     judged_path = out_dir / "judgments.jsonl"
+    ensure_resume_config(
+        out_dir,
+        _score_config(generations_path, judge, claude_model, n_panels, seed),
+        resume=resume,
+        artifact_name="judgments.jsonl",
+        config_name="judgment_config.json",
+    )
     is_dynamic_run = bool(rows) and all(row.get("task") == "dynamic_narration" for row in rows)
     key_fields = DYNAMIC_KEY_FIELDS if is_dynamic_run else STATIC_KEY_FIELDS
     existing_rows = _read_jsonl(judged_path) if resume and judged_path.exists() else []
@@ -129,20 +137,19 @@ def score_generations(
     strip_cache = {}
     score_args = argparse.Namespace(judge=judge, claude_model=claude_model, n_panels=n_panels)
 
-    for row in tqdm(rows, desc="Scoring generations"):
-        if row_key(row, key_fields) in completed:
-            continue
-        if row.get("task") == "dynamic_narration":
-            judged_row = _score_dynamic_row(row, score_args, strip_cache)
-        else:
-            judged_row = _score_static_or_vqa_row(row, score_args, strip_cache)
-        new_rows.append(judged_row)
-        completed.add(row_key(judged_row, key_fields))
-
     mode = "a" if resume else "w"
     with judged_path.open(mode, encoding="utf-8") as handle:
-        for row in new_rows:
-            handle.write(json.dumps(row) + "\n")
+        for row in tqdm(rows, desc="Scoring generations"):
+            if row_key(row, key_fields) in completed:
+                continue
+            if row.get("task") == "dynamic_narration":
+                judged_row = _score_dynamic_row(row, score_args, strip_cache)
+            else:
+                judged_row = _score_static_or_vqa_row(row, score_args, strip_cache)
+            handle.write(json.dumps(judged_row) + "\n")
+            handle.flush()
+            new_rows.append(judged_row)
+            completed.add(row_key(judged_row, key_fields))
 
     judged_rows = [*existing_rows, *new_rows] if resume else new_rows
     aggregate_key, aggregate = _aggregate_judged_rows(judged_rows, seed=seed)
@@ -172,14 +179,18 @@ def score_generations(
 
 def _score_static_or_vqa_row(row: dict, args: argparse.Namespace, strip_cache: dict[Path, object]) -> dict:
     if args.judge == "baseline-only":
-        matches_baseline = steered_matches_baseline(row.get("generated_text", ""), row.get("baseline_text"))
+        generated_text = str(row.get("generated_text", "") or "")
+        is_empty = not generated_text.strip()
+        matches_baseline = (not is_empty) and steered_matches_baseline(generated_text, row.get("baseline_text"))
         judgment = {
             "matched_panel": None,
-            "is_junk": False,
+            "is_junk": is_empty,
             "correct": False,
             "matches_baseline": matches_baseline,
             "reasoning": (
-                "baseline-only mode marks identical-to-baseline generations as no steering effect; "
+                "generated answer is empty"
+                if is_empty
+                else "baseline-only mode marks identical-to-baseline generations as no steering effect; "
                 "it does not assign panel matches"
             ),
         }
@@ -212,6 +223,24 @@ def _aggregate_judged_rows(judged_rows: list[dict], *, seed: int) -> tuple[str, 
 
 def _read_jsonl(path: Path) -> list[dict]:
     return [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
+
+
+def _score_config(
+    generations_path: Path,
+    judge: str,
+    claude_model: str,
+    n_panels: int,
+    seed: int,
+) -> dict[str, object]:
+    return {
+        "task": "score_gaze_generations",
+        "judgment_schema_version": JUDGMENT_SCHEMA_VERSION,
+        "generations": str(generations_path),
+        "judge": judge,
+        "claude_model": claude_model,
+        "n_panels": n_panels,
+        "seed": seed,
+    }
 
 
 if __name__ == "__main__":

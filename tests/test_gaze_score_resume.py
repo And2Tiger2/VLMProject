@@ -3,7 +3,11 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from scripts.score_qwen25_gaze_generations import score_generations
+import pytest
+
+import scripts.score_qwen25_gaze_generations as scorer
+from scripts.score_qwen25_gaze_generations import DEFAULT_JUDGE_MODEL, _score_config, score_generations
+from vlm_eval.gaze_resume import ensure_resume_config
 
 
 def test_score_generations_resume_skips_static_rows(tmp_path: Path) -> None:
@@ -17,6 +21,13 @@ def test_score_generations_resume_skips_static_rows(tmp_path: Path) -> None:
     out_dir.mkdir()
     existing = dict(rows[0])
     existing["judgment"] = {"correct": False, "matches_baseline": True}
+    ensure_resume_config(
+        out_dir,
+        _score_config(generations, "baseline-only", DEFAULT_JUDGE_MODEL, 6, 0),
+        resume=False,
+        artifact_name="judgments.jsonl",
+        config_name="judgment_config.json",
+    )
     _write_jsonl(out_dir / "judgments.jsonl", [existing])
 
     result = score_generations(generations_path=generations, out_dir=out_dir, resume=True, seed=0)
@@ -46,6 +57,13 @@ def test_score_generations_resume_skips_dynamic_rows(tmp_path: Path) -> None:
         {"target_panel": 1, "matched_panel": None, "correct": False},
         {"target_panel": 2, "matched_panel": None, "correct": False},
     ]
+    ensure_resume_config(
+        out_dir,
+        _score_config(generations, "baseline-only", DEFAULT_JUDGE_MODEL, 6, 0),
+        resume=False,
+        artifact_name="judgments.jsonl",
+        config_name="judgment_config.json",
+    )
     _write_jsonl(out_dir / "judgments.jsonl", [existing])
 
     score_generations(generations_path=generations, out_dir=out_dir, resume=True, seed=0)
@@ -57,6 +75,35 @@ def test_score_generations_resume_skips_dynamic_rows(tmp_path: Path) -> None:
     assert aggregate["n_new_rows"] == 1
     assert aggregate["n_skipped_existing_rows"] == 1
     assert "dynamic_aggregate" in aggregate
+
+
+def test_score_generations_flushes_each_judgment_before_failure(tmp_path: Path, monkeypatch) -> None:
+    generations = tmp_path / "generations.jsonl"
+    out_dir = tmp_path / "out"
+    rows = [
+        _generation_row("comic1", "gaze_top5", 1, "first", "baseline"),
+        _generation_row("comic1", "gaze_top5", 2, "second", "baseline"),
+    ]
+    _write_jsonl(generations, rows)
+    calls = 0
+
+    def fail_on_second(row, args, strip_cache):
+        nonlocal calls
+        calls += 1
+        if calls == 2:
+            raise RuntimeError("simulated API failure")
+        judged = dict(row)
+        judged["judgment"] = {"correct": False}
+        return judged
+
+    monkeypatch.setattr(scorer, "_score_static_or_vqa_row", fail_on_second)
+
+    with pytest.raises(RuntimeError, match="simulated API failure"):
+        score_generations(generations_path=generations, out_dir=out_dir)
+
+    assert _read_jsonl(out_dir / "judgments.jsonl") == [
+        {**rows[0], "judgment": {"correct": False}}
+    ]
 
 
 def _generation_row(strip_name: str, condition: str, target_panel: int, generated: str, baseline: str) -> dict:

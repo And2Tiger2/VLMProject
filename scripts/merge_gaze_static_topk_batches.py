@@ -10,6 +10,7 @@ from scripts.merge_gaze_run_shards import merge_shards
 
 DEFAULT_TOP_KS = [1, 5, 10, 20]
 DEFAULT_STARTS = [0, 50, 100, 150, 200, 250, 300, 350, 400, 450]
+DEFAULT_RUN_TAG = ""
 
 
 def main() -> None:
@@ -19,6 +20,7 @@ def main() -> None:
     parser.add_argument("--starts", type=int, nargs="+", default=DEFAULT_STARTS)
     parser.add_argument("--batch-size", type=int, default=50)
     parser.add_argument("--targets-per-strip", type=int, default=6)
+    parser.add_argument("--run-tag", default=DEFAULT_RUN_TAG)
     args = parser.parse_args()
 
     results = merge_static_topk_batches(
@@ -27,6 +29,7 @@ def main() -> None:
         starts=args.starts,
         batch_size=args.batch_size,
         targets_per_strip=args.targets_per_strip,
+        run_tag=args.run_tag,
     )
     print(json.dumps(results, indent=2))
 
@@ -38,11 +41,17 @@ def merge_static_topk_batches(
     starts: list[int],
     batch_size: int,
     targets_per_strip: int,
+    run_tag: str = "",
 ) -> dict[str, Any]:
     merged: dict[str, Any] = {}
+    tag_prefix = f"_{run_tag}" if run_tag else ""
     for top_k in top_ks:
-        suffixes = [f"_top{top_k}_{start}_{batch_size}" for start in starts]
-        out_dir = segment_root / "runs" / f"static_narration_top{top_k}_merged_0_{len(starts) * batch_size}"
+        suffixes = [f"{tag_prefix}_top{top_k}_{start}_{batch_size}" for start in starts]
+        out_dir = (
+            segment_root
+            / "runs"
+            / f"static_narration{tag_prefix}_top{top_k}_merged_0_{len(starts) * batch_size}"
+        )
         result = merge_shards(segment_root, "static", suffixes, out_dir=out_dir)
         expected_rows = len(starts) * batch_size * targets_per_strip * 2
         if int(result["n_rows"]) != expected_rows:
@@ -56,7 +65,7 @@ def merge_static_topk_batches(
             "suffixes": suffixes,
         }
 
-    summary_path = segment_root / "runs" / "static_narration_topk_merged_summary.json"
+    summary_path = segment_root / "runs" / f"static_narration{tag_prefix}_topk_merged_summary.json"
     summary_path.write_text(json.dumps(merged, indent=2), encoding="utf-8")
     merged["summary"] = str(summary_path)
     return merged

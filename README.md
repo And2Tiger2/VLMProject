@@ -22,9 +22,11 @@ The current VLMBias/NaturalBench attention-intervention work is organized under
 - `reports/`: curated summaries, figures, tables, and notes.
 - `runs/`: raw model outputs and run summaries.
 
-The GazeHeads replication work for Qwen2.5-VL is organized under
-`segments/gaze_heads_qwen25/`; see that segment README for the dataset export,
-gaze-head discovery, and steering-generation commands.
+The current Gaze Heads replication targets `Qwen/Qwen3-VL-8B-Instruct`; see
+[the Qwen3 Neuronic runbook](segments/gaze_heads_qwen3_8b/README.md) for setup
+plus one-line Slurm launchers for discovery, static steering, and the
+VLMBias/NaturalBench alpha sweep. The earlier Qwen2.5 artifacts remain under
+`segments/gaze_heads_qwen25/` for provenance.
 
 ## Setup
 

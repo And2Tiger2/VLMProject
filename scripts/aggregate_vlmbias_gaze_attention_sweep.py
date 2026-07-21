@@ -125,7 +125,7 @@ def _load_rows(out_dir: Path, benchmark: str) -> list[dict[str, Any]]:
 
 def _condition_from_filename(path: Path) -> str:
     name = path.name
-    name = re.sub(r"^qwen25vl_3b_(vlmbias|naturalbench)_gaze_attention_", "", name)
+    name = re.sub(r"^.*?_(vlmbias|naturalbench)_gaze_attention_", "", name)
     name = re.sub(r"_seed\d+\.summary\.json$", "", name)
     return name
 

@@ -7,7 +7,7 @@ from typing import Any
 
 import numpy as np
 
-from scripts.discover_qwen25_gaze_heads import rank_heads_by_score
+from scripts.discover_qwen25_gaze_heads import gaze_routing_diagnostics, rank_heads_by_score
 
 
 def main() -> None:
@@ -77,6 +77,7 @@ def merge_discovery_shards(shard_dirs: list[Path], out_dir: Path, *, top_k: int 
     for panel_idx in range(n_panels):
         gaze_scores += mean_panel_attention[panel_idx, :, :, panel_idx]
     gaze_scores /= float(n_panels)
+    gaze_selectivity, gaze_routing_accuracy = gaze_routing_diagnostics(mean_panel_attention)
 
     final_ranking = rank_heads_by_score(gaze_scores)
     stability = _stability(final_ranking, batch_rankings, top_k=top_k)
@@ -84,6 +85,8 @@ def merge_discovery_shards(shard_dirs: list[Path], out_dir: Path, *, top_k: int 
     np.save(out_dir / "gaze_sum.npy", merged_sum)
     np.save(out_dir / "mean_panel_attention.npy", mean_panel_attention)
     np.save(out_dir / "gaze_scores.npy", gaze_scores)
+    np.save(out_dir / "gaze_selectivity.npy", gaze_selectivity)
+    np.save(out_dir / "gaze_routing_accuracy.npy", gaze_routing_accuracy)
     (out_dir / "gaze_head_ranking.json").write_text(json.dumps(final_ranking, indent=2), encoding="utf-8")
     (out_dir / "summary.json").write_text(
         json.dumps(
@@ -93,6 +96,13 @@ def merge_discovery_shards(shard_dirs: list[Path], out_dir: Path, *, top_k: int 
                 "n_heads": n_heads,
                 "n_panels": n_panels,
                 "top_head": final_ranking[0],
+                "top_head_selectivity": float(
+                    gaze_selectivity[int(final_ranking[0]["layer"]), int(final_ranking[0]["head"])]
+                ),
+                "top_head_routing_accuracy": float(
+                    gaze_routing_accuracy[int(final_ranking[0]["layer"]), int(final_ranking[0]["head"])]
+                ),
+                "max_head_routing_accuracy": float(gaze_routing_accuracy.max()),
                 "merged_from": shard_records,
             },
             indent=2,

@@ -36,7 +36,7 @@ class Qwen25VLAdapter:
         device_map = _resolve_device_map(self.device_map, torch)
         self._model = Qwen2_5_VLForConditionalGeneration.from_pretrained(
             self.model_id,
-            torch_dtype=torch.bfloat16 if torch.cuda.is_available() else torch.float32,
+            torch_dtype=_resolve_torch_dtype(torch),
             device_map=device_map,
         )
         self.name = self.model_id
@@ -229,3 +229,12 @@ def _resolve_device_map(device_map: str, torch: Any) -> Any:
             raise RuntimeError("device_map='cuda' requested, but torch.cuda.is_available() is false.")
         return {"": "cuda:0"}
     return device_map
+
+
+def _resolve_torch_dtype(torch: Any) -> Any:
+    """Use BF16 where it is real hardware support, FP16 on older CUDA GPUs."""
+    if not torch.cuda.is_available():
+        return torch.float32
+    if hasattr(torch.cuda, "is_bf16_supported") and torch.cuda.is_bf16_supported():
+        return torch.bfloat16
+    return torch.float16
