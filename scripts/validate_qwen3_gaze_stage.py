@@ -127,7 +127,10 @@ def _directory_names(root: Path, label: str, errors: list[str]) -> set[str]:
 
 
 def _count_eligible_raw_pages(root: Path) -> int:
-    eligible = 0
+    # This corpus contains millions of panel files on shared storage. Dataset
+    # validation only needs proof that the expected raw layout is present, so
+    # stop at the first page with six numbered panels instead of traversing the
+    # entire corpus.
     for comic_dir in (path for path in root.iterdir() if path.is_dir()):
         counts: Counter[int] = Counter()
         for image in comic_dir.iterdir():
@@ -140,8 +143,9 @@ def _count_eligible_raw_pages(root: Path) -> int:
                 continue
             if panel >= 0:
                 counts[page] += 1
-        eligible += sum(count >= 6 for count in counts.values())
-    return eligible
+                if counts[page] >= 6:
+                    return 1
+    return 0
 
 
 def _count_complete_eval_strips(root: Path) -> int:

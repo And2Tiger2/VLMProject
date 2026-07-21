@@ -56,6 +56,7 @@ def test_dataset_validation_checks_subsets_prompts_answers_and_images(tmp_path: 
         expected_naturalbench_groups=1,
     )
     assert report["valid"] is True
+    assert report["n_eligible_raw_pages"] == 1
     assert report["n_naturalbench_model_calls"] == 4
 
     natural_row["answers"].pop("q1_i1")
