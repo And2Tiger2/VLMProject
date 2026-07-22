@@ -125,6 +125,29 @@ def main() -> None:
     static.add_argument("--discovery-root", default=f"{DEFAULT_SEGMENT_ROOT}/data/discovery_comics")
     static.add_argument("--ranking", default="", help="Override the merged gaze-head ranking path.")
 
+    paper_control = subparsers.add_parser(
+        "static-paper-control",
+        help="Rerun only the paper's layers-20--35 non-gaze control and pair it with saved gaze rows.",
+    )
+    _seed_args(paper_control, default_base_seed=42)
+    paper_control.add_argument("--ranking-seed", type=_nonnegative_int, default=42)
+    paper_control.add_argument("--shards", type=_positive_int, default=1)
+    paper_control.add_argument("--shard-size", type=_positive_int, default=50)
+    paper_control.add_argument("--source-gaze-comics", type=_positive_int, default=500)
+    paper_control.add_argument("--top-ks", nargs="+", type=_positive_int, default=[100])
+    paper_control.add_argument(
+        "--max-parallel", type=_nonnegative_int, default=0,
+        help="Maximum concurrent one-GPU Qwen control jobs; 0 leaves all tasks eligible.",
+    )
+    paper_control.add_argument(
+        "--judge-parallel", type=_positive_int, default=2,
+        help="Maximum concurrent one-GPU Kimi judge jobs.",
+    )
+    paper_control.add_argument("--judge", choices=["kimi", "none"], default="none")
+    paper_control.add_argument("--judge-limit", type=_nonnegative_int, default=0)
+    paper_control.add_argument("--eval-root", default=f"{DEFAULT_SEGMENT_ROOT}/data/eval_comics")
+    paper_control.add_argument("--ranking", default="", help="Override the merged gaze-head ranking path.")
+
     benchmark = subparsers.add_parser("benchmark", help="Run and aggregate VLMBias + NaturalBench alpha sweeps.")
     _seed_args(benchmark, default_base_seed=0)
     benchmark.add_argument("--ranking-seed", type=_nonnegative_int, default=42)
@@ -161,6 +184,8 @@ def main() -> None:
         final_job = submit_discovery(args, submitter, dependency)
     elif args.experiment == "static":
         final_job = submit_static(args, submitter, dependency)
+    elif args.experiment == "static-paper-control":
+        final_job = submit_static_paper_control(args, submitter, dependency)
     else:
         final_job = submit_benchmark(args, submitter, dependency)
     print(f"final_job={final_job}", flush=True)
@@ -285,6 +310,77 @@ def submit_static(args: argparse.Namespace, submitter: Submitter, dependency: st
         array_count=args.seeds * len(args.top_ks),
         max_parallel=args.judge_parallel,
         dependency=merged,
+        exports=exports,
+    )
+
+
+def submit_static_paper_control(
+    args: argparse.Namespace, submitter: Submitter, dependency: str | None
+) -> str:
+    n_comics = args.shards * args.shard_size
+    if n_comics > args.source_gaze_comics:
+        raise SystemExit(
+            f"paper-control run requests {n_comics} comics but saved gaze source has "
+            f"only {args.source_gaze_comics}"
+        )
+    _require_path(Path(args.eval_root), "OpenAI evaluation comics root", args)
+    if not args.skip_preflight:
+        _require_eval_comics(Path(args.eval_root), n_comics)
+    ranking = args.ranking or (
+        f"{DEFAULT_SEGMENT_ROOT}/runs/gaze_discovery_seed{args.ranking_seed}_merged/gaze_head_ranking.json"
+    )
+    _require_path(Path(ranking), "merged gaze-head ranking", args)
+    if not args.skip_preflight:
+        _require_ranking(Path(ranking), max(args.top_ks))
+        for seed_index in range(args.seeds):
+            seed = args.base_seed + seed_index
+            for top_k in args.top_ks:
+                source = Path(
+                    f"{DEFAULT_SEGMENT_ROOT}/runs/static_narration_seed{seed}_top{top_k}_"
+                    f"merged_0_{args.source_gaze_comics}/generations.jsonl"
+                )
+                if not source.exists():
+                    raise SystemExit(f"Missing saved gaze generations: {source}")
+    if args.judge == "kimi" and not args.dry_run and not args.skip_preflight:
+        _require_kimi_judge_cache(repo=Path.cwd())
+
+    exports = _common_exports(args) | {
+        "EVAL_COMICS_ROOT": args.eval_root,
+        "GAZE_RANKING": ranking,
+        "RANKING_SEED": args.ranking_seed,
+        "N_SEEDS": args.seeds,
+        "BASE_SEED": args.base_seed,
+        "N_SHARDS": args.shards,
+        "SHARD_SIZE": args.shard_size,
+        "SOURCE_GAZE_COMICS": args.source_gaze_comics,
+        "TOP_KS_COLON": _colon(args.top_ks),
+        "JUDGE_LIMIT": args.judge_limit,
+        "STATIC_RUN_PREFIX": "static_paper_replication",
+        "KIMI_MODEL": "moonshotai/Kimi-VL-A3B-Instruct",
+        "KIMI_REVISION": "cc6452511d00c99f3b3bed213e96ab7802c415c8",
+        "KIMI_MIN_GPU_MEMORY_GB": max(40.0, args.min_gpu_memory_gb),
+    }
+    workers = submitter.submit(
+        "scripts/slurm_neuronic_qwen3_static_paper_control.sh",
+        array_count=args.seeds * args.shards * len(args.top_ks),
+        max_parallel=args.max_parallel,
+        dependency=dependency,
+        exports=exports,
+    )
+    assembled = submitter.submit(
+        "scripts/slurm_neuronic_qwen3_assemble_paper_control.sh",
+        array_count=args.seeds,
+        max_parallel=args.seeds,
+        dependency=workers,
+        exports=exports,
+    )
+    if args.judge == "none":
+        return assembled
+    return submitter.submit(
+        "scripts/slurm_neuronic_qwen3_judge_static_kimi.sh",
+        array_count=args.seeds * len(args.top_ks),
+        max_parallel=args.judge_parallel,
+        dependency=assembled,
         exports=exports,
     )
 

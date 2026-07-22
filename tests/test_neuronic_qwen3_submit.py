@@ -68,3 +68,24 @@ def test_static_merge_only_submits_cpu_merge_without_gpu_or_judge() -> None:
     assert "slurm_neuronic_qwen3_static_full.sh" not in output
     assert "slurm_neuronic_qwen3_judge_static_kimi.sh" not in output
     assert "--array=0-2%3" in output
+
+
+def test_static_paper_control_pilot_reruns_only_control_then_assembles() -> None:
+    output = _run(
+        "static-paper-control", "--seeds", "1", "--shards", "1", "--shard-size", "50"
+    )
+    assert "slurm_neuronic_qwen3_static_paper_control.sh" in output
+    assert "slurm_neuronic_qwen3_assemble_paper_control.sh" in output
+    assert "slurm_neuronic_qwen3_static_full.sh" not in output
+    assert "slurm_neuronic_qwen3_judge_static_kimi.sh" not in output
+    assert "TOP_KS_COLON=100" in output
+    assert "--array=0-0" in output
+
+
+def test_static_paper_control_full_has_thirty_gpu_tasks() -> None:
+    output = _run(
+        "static-paper-control", "--seeds", "3", "--shards", "10", "--shard-size", "50"
+    )
+    assert "--array=0-29" in output
+    assert "--array=0-2%3" in output
+    assert "SOURCE_GAZE_COMICS=500" in output

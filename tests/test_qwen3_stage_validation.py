@@ -133,6 +133,34 @@ def test_static_validation_rejects_incomplete_configured_run(tmp_path: Path) -> 
     assert any("row count" in error for error in report["errors"])
 
 
+def test_static_validation_accepts_configured_control_only_run(tmp_path: Path) -> None:
+    rows = []
+    for panel in range(1, 7):
+        rows.append(
+            {
+                "strip_name": "comic1",
+                "condition": "non_gaze_paper_100",
+                "target_panel": panel,
+                "generated_text": f"panel {panel}",
+                "metadata": {"attention": {f"mean_decode_panel_{panel}_attention_mass": 1.0}},
+            }
+        )
+    _write_jsonl(tmp_path / "generations.jsonl", rows)
+    _write_json(
+        tmp_path / "experiment_config.json",
+        {
+            "targets_per_strip": 6,
+            "include_all_heads": False,
+            "condition_labels": ["non_gaze_paper_100"],
+        },
+    )
+    _write_json(tmp_path / "summary.json", {"n_comics": 1})
+
+    report = validate_static(tmp_path, max_empty_rate=0.05, min_target_mass=0.95)
+    assert report["valid"] is True
+    assert report["expected_rows"] == 6
+
+
 def test_static_validation_allows_missing_decode_telemetry_on_empty_output(tmp_path: Path) -> None:
     rows = [
         {

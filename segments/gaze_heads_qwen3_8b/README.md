@@ -128,8 +128,8 @@ Defaults:
 - 500 disjoint evaluation strips;
 - all six target panels;
 - top-k 1, 10, 50, and 100;
-- paper-exact non-gaze controls sampled strictly from the bottom 5% of gaze
-  scores (so the control can contain fewer than `K` heads when `K` is large);
+- paper-exact non-gaze controls: exactly `K` uniformly sampled heads from
+  inclusive layers 20--35, excluding the selected gaze heads;
 - greedy generation, 100 tokens;
 - `boost_suppress` intervention with bias 10,000;
 - **full-sequence steering** during prefill and decode, matching the official
@@ -143,12 +143,55 @@ Generation and validation can still be submitted without judging:
 python3 scripts/submit_neuronic_qwen3.py static --judge none
 ```
 
-For the scientifically useful equal-cardinality control ablation, backfill
-with the lowest-scoring remaining heads:
+The public repository's bottom-five-percent behavior remains available only
+as an explicitly named ablation. It is not the paper's headline control:
+
+```bash
+python3 scripts/submit_neuronic_qwen3.py static --control-mode bottom5
+```
+
+The older global low-score exact-cardinality fallback is also retained as a
+separate `matched` ablation:
 
 ```bash
 python3 scripts/submit_neuronic_qwen3.py static --control-mode matched
 ```
+
+### Correct only the control without rerunning saved gaze outputs
+
+Runs produced before the paper-control correction contain the bottom-5% (58
+head) repository control. Preserve those as an ablation and generate a new
+control-only artifact. First run a 50-comic, top-100, seed-42 pilot:
+
+```bash
+bash scripts/run_neuronic_qwen3_paper_control.sh pilot
+```
+
+After it finishes, validate the newly assembled paired artifact:
+
+```bash
+bash scripts/run_neuronic_qwen3_paper_control.sh verify-pilot
+```
+
+This pairs the new `non_gaze_paper_100` rows with the existing
+`gaze_top100` rows; it does not regenerate the gaze condition. If the pilot's
+empty rate and outputs are healthy, submit all 500 comics for seeds 42--44:
+
+```bash
+bash scripts/run_neuronic_qwen3_paper_control.sh full
+```
+
+Then validate all three completed paired runs:
+
+```bash
+bash scripts/run_neuronic_qwen3_paper_control.sh verify-full
+```
+
+Each control shard records its exact selected head IDs, inclusive layer band,
+Git commit, and Slurm provenance. The assembly job rejects the result unless
+there are exactly 100 unique control heads, all in layers 20--35, with no
+overlap with the top-100 gaze set. Judging is intentionally not submitted by
+these wrapper commands; inspect the pilot and calibrate the judge first.
 
 After CPU merging finishes, verify the complete three-seed discovery and
 static-generation state before spending more GPU time:

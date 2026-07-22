@@ -3,7 +3,11 @@ from __future__ import annotations
 import numpy as np
 
 from adapters.qwen25_vl_gaze import PAPER_DECODE_ONLY, Qwen25VLGazeAdapter, _weighted_record_mean
-from scripts.run_qwen25_gaze_static_narration import DEFAULT_DECODE_ONLY, sample_non_gaze_heads
+from scripts.run_qwen25_gaze_static_narration import (
+    DEFAULT_DECODE_ONLY,
+    sample_non_gaze_heads,
+    select_control_heads,
+)
 from scripts.run_qwen25_gaze_vqa_steering import DEFAULT_DECODE_ONLY as VQA_DEFAULT_DECODE_ONLY
 from scripts.discover_qwen25_gaze_heads import gaze_routing_diagnostics
 
@@ -42,6 +46,41 @@ def test_sample_non_gaze_heads_can_backfill_to_requested_count() -> None:
     assert len(set(heads)) == 10
     assert (0, 0) not in heads
     assert (0, 1) not in heads
+
+
+def test_paper_control_is_exact_k_from_inclusive_layers_20_to_35() -> None:
+    gaze_heads = [(20, 0), (24, 29), (35, 31)]
+    heads, cutoff = select_control_heads(
+        control_mode="paper",
+        n_layers=36,
+        n_heads=32,
+        gaze_heads=gaze_heads,
+        n_select=100,
+        seed=42,
+        gaze_scores=None,
+        nongaze_percentile=5.0,
+    )
+
+    assert cutoff is None
+    assert len(heads) == len(set(heads)) == 100
+    assert all(20 <= layer <= 35 for layer, _ in heads)
+    assert not set(heads).intersection(gaze_heads)
+
+
+def test_paper_control_is_deterministic_for_seed() -> None:
+    kwargs = dict(
+        control_mode="paper",
+        n_layers=36,
+        n_heads=32,
+        gaze_heads=[(24, 29)],
+        n_select=100,
+        seed=43,
+        gaze_scores=None,
+        nongaze_percentile=5.0,
+    )
+    first, _ = select_control_heads(**kwargs)
+    second, _ = select_control_heads(**kwargs)
+    assert first == second
 
 
 def test_static_paper_protocol_steers_prefill_and_decode_by_default() -> None:

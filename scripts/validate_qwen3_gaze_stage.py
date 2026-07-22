@@ -307,7 +307,11 @@ def validate_static(
     if config is not None and summary is not None:
         n_comics = int(summary.get("n_comics", 0))
         targets = max(1, min(int(config.get("targets_per_strip", 0)), 6))
-        n_conditions = 2 + int(bool(config.get("include_all_heads", False)))
+        configured_labels = config.get("condition_labels")
+        if isinstance(configured_labels, list) and configured_labels:
+            n_conditions = len(configured_labels)
+        else:
+            n_conditions = 2 + int(bool(config.get("include_all_heads", False)))
         expected_rows = n_comics * targets * n_conditions
         if len(rows) != expected_rows:
             errors.append(f"row count {len(rows)} does not match expected {expected_rows}")
@@ -316,6 +320,11 @@ def validate_static(
             errors.append(
                 f"condition counts are incomplete: {dict(sorted(counts.items()))}; "
                 f"expected {n_conditions} conditions with {expected_per_condition} rows each"
+            )
+        if isinstance(configured_labels, list) and set(counts) != set(configured_labels):
+            errors.append(
+                f"condition labels {sorted(counts)} do not match configured labels "
+                f"{sorted(str(label) for label in configured_labels)}"
             )
     if any(rate > max_empty_rate for rate in empty_rates.values()):
         errors.append(f"empty-generation rate exceeds {max_empty_rate:.1%}: {empty_rates}")

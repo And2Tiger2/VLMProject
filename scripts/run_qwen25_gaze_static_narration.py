@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
+import subprocess
 from pathlib import Path
 
 import numpy as np
@@ -14,6 +16,8 @@ from vlm_eval.gaze_resume import ensure_resume_config, load_completed_keys, row_
 
 PROMPT = "What is happening in this panel of the comic strip?"
 DEFAULT_DECODE_ONLY = False
+PAPER_CONTROL_MIN_LAYER = 20
+PAPER_CONTROL_MAX_LAYER = 35
 
 
 def load_head_ranking(path: Path, top_k: int) -> list[tuple[int, int]]:
@@ -30,10 +34,18 @@ def sample_non_gaze_heads(
     scores: np.ndarray | None = None,
     max_score: float | None = None,
     backfill: bool = False,
+    min_layer: int = 0,
+    max_layer: int | None = None,
 ) -> list[tuple[int, int]]:
+    if max_layer is None:
+        max_layer = n_layers - 1
+    if min_layer < 0 or max_layer >= n_layers or min_layer > max_layer:
+        raise ValueError(
+            f"invalid layer range [{min_layer}, {max_layer}] for {n_layers} layers"
+        )
     preferred = []
     fallback = []
-    for layer_idx in range(n_layers):
+    for layer_idx in range(min_layer, max_layer + 1):
         for head_idx in range(n_heads):
             head = (layer_idx, head_idx)
             if head in exclude:
@@ -57,6 +69,71 @@ def sample_non_gaze_heads(
     return candidates[: min(n_select, len(candidates))]
 
 
+def select_control_heads(
+    *,
+    control_mode: str,
+    n_layers: int,
+    n_heads: int,
+    gaze_heads: list[tuple[int, int]],
+    n_select: int,
+    seed: int,
+    gaze_scores: np.ndarray | None,
+    nongaze_percentile: float,
+) -> tuple[list[tuple[int, int]], float | None]:
+    """Select the static-narration control heads.
+
+    The paper control is exactly K uniformly sampled non-gaze heads from
+    inclusive layers 20--35. ``bottom5`` preserves the current public
+    repository's bottom-five-percent implementation as an explicit ablation.
+    ``matched`` preserves the prior exact-K global low-score fallback.
+    """
+    cutoff = (
+        float(np.percentile(gaze_scores, nongaze_percentile))
+        if gaze_scores is not None
+        else None
+    )
+    common = {
+        "n_layers": n_layers,
+        "n_heads": n_heads,
+        "exclude": set(gaze_heads),
+        "n_select": n_select,
+        "seed": seed,
+    }
+    if control_mode == "paper":
+        heads = sample_non_gaze_heads(
+            **common,
+            min_layer=PAPER_CONTROL_MIN_LAYER,
+            max_layer=PAPER_CONTROL_MAX_LAYER,
+        )
+        if len(heads) != n_select:
+            raise RuntimeError(
+                f"paper control requested {n_select} heads but only {len(heads)} are available "
+                f"in layers {PAPER_CONTROL_MIN_LAYER}--{PAPER_CONTROL_MAX_LAYER}"
+            )
+        return heads, None
+    if gaze_scores is None:
+        raise FileNotFoundError(
+            f"control mode {control_mode!r} requires gaze_scores.npy next to the ranking"
+        )
+    heads = sample_non_gaze_heads(
+        **common,
+        scores=gaze_scores,
+        max_score=cutoff,
+        backfill=control_mode == "matched",
+    )
+    return heads, cutoff
+
+
+def _git_commit() -> str | None:
+    result = subprocess.run(
+        ["git", "rev-parse", "HEAD"],
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    return result.stdout.strip() if result.returncode == 0 else None
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Run Qwen-VL static Gaze Heads steering generations.")
     parser.add_argument("--comics-root", default="segments/gaze_heads_qwen3_8b/data/eval_comics")
@@ -75,12 +152,19 @@ def main() -> None:
     parser.add_argument("--nongaze-percentile", type=float, default=5.0)
     parser.add_argument(
         "--control-mode",
-        choices=["paper", "matched"],
+        choices=["paper", "bottom5", "matched"],
         default="paper",
         help=(
-            "paper keeps controls strictly inside the bottom gaze-score percentile, matching the "
-            "reference implementation; matched backfills the lowest remaining heads to exactly K."
+            "paper samples exactly K non-gaze heads uniformly from layers 20--35; bottom5 "
+            "preserves the public repository's bottom-score-percentile ablation; matched "
+            "backfills that low-score pool to exactly K."
         ),
+    )
+    parser.add_argument(
+        "--condition-set",
+        choices=["both", "gaze", "control"],
+        default="both",
+        help="Generate both conditions, gaze only, or control only.",
     )
     parser.add_argument("--targets-per-strip", type=int, default=DEFAULT_N_PANELS)
     parser.add_argument("--max-new-tokens", type=int, default=100)
@@ -119,31 +203,6 @@ def main() -> None:
     if not comic_dirs:
         raise FileNotFoundError(f"No valid six-panel comics found under {args.comics_root}.")
 
-    experiment_config = {
-        "task": "static_narration",
-        "model_id": args.model_id,
-        "comics_root": str(Path(args.comics_root)),
-        "gaze_ranking": str(ranking_path),
-        "start_comic_idx": args.start_comic_idx,
-        "max_comics": args.max_comics,
-        "comic_name": args.comic_name,
-        "top_k_gaze": args.top_k_gaze,
-        "top_k_random": args.top_k_random,
-        "nongaze_percentile": args.nongaze_percentile,
-        "control_mode": args.control_mode,
-        "targets_per_strip": args.targets_per_strip,
-        "max_new_tokens": args.max_new_tokens,
-        "swap_bias": args.swap_bias,
-        "decode_only": args.decode_only,
-        "include_all_heads": args.include_all_heads,
-        "max_pixels": args.max_pixels,
-        "min_pixels": args.min_pixels,
-        "seed": args.seed,
-        "gap": args.gap,
-        "prompt": PROMPT,
-    }
-    ensure_resume_config(out_dir, experiment_config, resume=args.resume, artifact_name="generations.jsonl")
-
     adapter = make_panel_gaze_adapter(
         model_id=args.model_id,
         max_new_tokens=args.max_new_tokens,
@@ -159,24 +218,68 @@ def main() -> None:
     gaze_heads = load_head_ranking(ranking_path, args.top_k_gaze)
     scores_path = ranking_path.parent / "gaze_scores.npy"
     gaze_scores = np.load(scores_path) if scores_path.exists() else None
-    cutoff = float(np.percentile(gaze_scores, args.nongaze_percentile)) if gaze_scores is not None else None
-    random_heads = sample_non_gaze_heads(
+    random_heads, cutoff = select_control_heads(
+        control_mode=args.control_mode,
         n_layers=n_layers,
         n_heads=n_heads,
-        exclude=set(gaze_heads),
+        gaze_heads=gaze_heads,
         n_select=args.top_k_random,
         seed=args.seed,
-        scores=gaze_scores,
-        max_score=cutoff,
-        backfill=args.control_mode == "matched",
+        gaze_scores=gaze_scores,
+        nongaze_percentile=args.nongaze_percentile,
     )
 
-    conditions = {
+    control_label = f"non_gaze_{args.control_mode}_{len(random_heads)}"
+    all_conditions = {
         f"gaze_top{args.top_k_gaze}": gaze_heads,
-        f"non_gaze_{len(random_heads)}": random_heads,
+        control_label: random_heads,
     }
+    if args.condition_set == "both":
+        conditions = all_conditions
+    elif args.condition_set == "gaze":
+        conditions = {f"gaze_top{args.top_k_gaze}": gaze_heads}
+    else:
+        conditions = {control_label: random_heads}
     if args.include_all_heads:
         conditions["all_heads"] = [(layer_idx, head_idx) for layer_idx in range(n_layers) for head_idx in range(n_heads)]
+
+    experiment_config = {
+        "task": "static_narration",
+        "model_id": args.model_id,
+        "comics_root": str(Path(args.comics_root)),
+        "gaze_ranking": str(ranking_path),
+        "start_comic_idx": args.start_comic_idx,
+        "max_comics": args.max_comics,
+        "comic_name": args.comic_name,
+        "top_k_gaze": args.top_k_gaze,
+        "top_k_random": args.top_k_random,
+        "nongaze_percentile": args.nongaze_percentile,
+        "control_mode": args.control_mode,
+        "paper_control_layers": [PAPER_CONTROL_MIN_LAYER, PAPER_CONTROL_MAX_LAYER],
+        "condition_set": args.condition_set,
+        "condition_labels": sorted(conditions),
+        "selected_gaze_heads": [list(head) for head in gaze_heads],
+        "selected_control_heads": [list(head) for head in random_heads],
+        "targets_per_strip": args.targets_per_strip,
+        "max_new_tokens": args.max_new_tokens,
+        "swap_bias": args.swap_bias,
+        "decode_only": args.decode_only,
+        "include_all_heads": args.include_all_heads,
+        "max_pixels": args.max_pixels,
+        "min_pixels": args.min_pixels,
+        "seed": args.seed,
+        "gap": args.gap,
+        "prompt": PROMPT,
+        "git_commit": _git_commit(),
+    }
+    ensure_resume_config(out_dir, experiment_config, resume=args.resume, artifact_name="generations.jsonl")
+    provenance = {
+        "git_commit": experiment_config["git_commit"],
+        "slurm_job_id": os.environ.get("SLURM_JOB_ID"),
+        "slurm_array_job_id": os.environ.get("SLURM_ARRAY_JOB_ID"),
+        "slurm_array_task_id": os.environ.get("SLURM_ARRAY_TASK_ID"),
+    }
+    (out_dir / "provenance.json").write_text(json.dumps(provenance, indent=2), encoding="utf-8")
 
     rng = np.random.RandomState(args.seed)
     generations_path = out_dir / "generations.jsonl"
@@ -239,6 +342,8 @@ def main() -> None:
         "start_comic_idx": args.start_comic_idx,
         "n_comics": len(comic_dirs),
         "conditions": sorted(conditions),
+        "condition_set": args.condition_set,
+        "selected_control_heads": [list(head) for head in random_heads],
         "nongaze_score_cutoff": cutoff,
         "control_mode": args.control_mode,
         "decode_only": args.decode_only,
