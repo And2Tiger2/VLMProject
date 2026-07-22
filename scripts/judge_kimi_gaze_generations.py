@@ -4,6 +4,7 @@ import argparse
 import json
 import os
 import re
+import time
 from pathlib import Path
 from typing import Any
 
@@ -17,7 +18,7 @@ from vlm_eval.gaze_resume import ensure_resume_config, load_completed_keys, row_
 DEFAULT_KIMI_MODEL = "moonshotai/Kimi-VL-A3B-Instruct"
 DEFAULT_KIMI_REVISION = "cc6452511d00c99f3b3bed213e96ab7802c415c8"
 KEY_FIELDS = ["strip_name", "condition", "target_panel"]
-JUDGMENT_SCHEMA_VERSION = 3
+JUDGMENT_SCHEMA_VERSION = 4
 
 
 def main() -> None:
@@ -28,7 +29,9 @@ def main() -> None:
     parser.add_argument("--out-dir", required=True)
     parser.add_argument("--model-id", default=DEFAULT_KIMI_MODEL)
     parser.add_argument("--revision", default=DEFAULT_KIMI_REVISION)
-    parser.add_argument("--max-new-tokens", type=int, default=64)
+    parser.add_argument("--max-new-tokens", type=int, default=2)
+    parser.add_argument("--batch-size", type=int, default=4)
+    parser.add_argument("--image-token-limit", type=int, default=1024)
     parser.add_argument("--n-panels", type=int, default=DEFAULT_N_PANELS)
     parser.add_argument("--limit", type=int, default=0)
     parser.add_argument("--max-parse-failure-rate", type=float, default=0.01)
@@ -42,6 +45,8 @@ def main() -> None:
         model_id=args.model_id,
         revision=args.revision,
         max_new_tokens=args.max_new_tokens,
+        batch_size=args.batch_size,
+        image_token_limit=args.image_token_limit,
         n_panels=args.n_panels,
         limit=args.limit,
         max_parse_failure_rate=args.max_parse_failure_rate,
@@ -59,7 +64,9 @@ def judge_generations_kimi(
     out_dir: Path,
     model_id: str = DEFAULT_KIMI_MODEL,
     revision: str = DEFAULT_KIMI_REVISION,
-    max_new_tokens: int = 64,
+    max_new_tokens: int = 2,
+    batch_size: int = 4,
+    image_token_limit: int = 1024,
     n_panels: int = DEFAULT_N_PANELS,
     limit: int = 0,
     max_parse_failure_rate: float = 0.01,
@@ -67,6 +74,10 @@ def judge_generations_kimi(
     resume: bool = False,
     generator: Any | None = None,
 ) -> dict[str, Any]:
+    if batch_size <= 0:
+        raise ValueError("batch_size must be positive")
+    if image_token_limit <= 0:
+        raise ValueError("image_token_limit must be positive")
     out_dir.mkdir(parents=True, exist_ok=True)
     rows = _read_jsonl(generations_path)
     if limit > 0:
@@ -79,6 +90,8 @@ def judge_generations_kimi(
         "model_id": model_id,
         "revision": revision,
         "max_new_tokens": max_new_tokens,
+        "batch_size": batch_size,
+        "image_token_limit": image_token_limit,
         "n_panels": n_panels,
         "limit": limit,
         "max_parse_failure_rate": max_parse_failure_rate,
@@ -101,26 +114,37 @@ def judge_generations_kimi(
             model_id=model_id,
             revision=revision,
             max_new_tokens=max_new_tokens,
+            image_token_limit=image_token_limit,
         )
 
     strip_cache: dict[Path, Any] = {}
     new_rows: list[dict[str, Any]] = []
     with judgments_path.open("a" if resume else "w", encoding="utf-8") as handle:
-        for row in tqdm(pending_rows, desc="Kimi-VL forced-choice judging"):
-            comic_dir = Path(row["comic_dir"])
-            if comic_dir not in strip_cache:
-                strip_cache[comic_dir] = build_strip(comic_dir, n_panels=n_panels).strip
-            judgment = judge_row_with_kimi(
+        progress = tqdm(total=len(pending_rows), desc="Kimi-VL forced-choice judging")
+        for start in range(0, len(pending_rows), batch_size):
+            batch_rows = pending_rows[start : start + batch_size]
+            batch_images = []
+            for row in batch_rows:
+                comic_dir = Path(row["comic_dir"])
+                if comic_dir not in strip_cache:
+                    strip_cache[comic_dir] = build_strip(
+                        comic_dir, n_panels=n_panels
+                    ).strip
+                batch_images.append(strip_cache[comic_dir])
+            judgments = judge_rows_with_kimi(
                 generator,
-                row,
-                strip_image=strip_cache[comic_dir],
+                batch_rows,
+                strip_images=batch_images,
                 n_panels=n_panels,
             )
-            judged = dict(row)
-            judged["judgment"] = judgment
-            handle.write(json.dumps(judged) + "\n")
-            handle.flush()
-            new_rows.append(judged)
+            for row, judgment in zip(batch_rows, judgments, strict=True):
+                judged = dict(row)
+                judged["judgment"] = judgment
+                handle.write(json.dumps(judged) + "\n")
+                handle.flush()
+                new_rows.append(judged)
+            progress.update(len(batch_rows))
+        progress.close()
 
     judged_rows = [*existing_rows, *new_rows] if resume else new_rows
     duplicate_count = len(judged_rows) - len(
@@ -181,7 +205,14 @@ def judge_generations_kimi(
 
 
 class KimiVLGenerator:
-    def __init__(self, *, model_id: str, revision: str, max_new_tokens: int) -> None:
+    def __init__(
+        self,
+        *,
+        model_id: str,
+        revision: str,
+        max_new_tokens: int,
+        image_token_limit: int,
+    ) -> None:
         import torch
         from transformers import AutoModelForCausalLM, AutoProcessor
 
@@ -191,17 +222,19 @@ class KimiVLGenerator:
         self.max_new_tokens = max_new_tokens
         dtype = torch.bfloat16 if torch.cuda.is_bf16_supported() else torch.float16
         model_source = resolve_local_snapshot(model_id, revision)
-        source_kwargs = (
-            {}
-            if model_source != model_id
-            else {"revision": revision}
-        )
+        source_kwargs = {} if model_source != model_id else {"revision": revision}
         self.processor = AutoProcessor.from_pretrained(
             model_source,
             trust_remote_code=True,
             local_files_only=True,
             **source_kwargs,
         )
+        image_processor = getattr(self.processor, "image_processor", None)
+        if image_processor is None or not hasattr(image_processor, "in_token_limit"):
+            raise RuntimeError("Kimi processor does not expose image in_token_limit")
+        image_processor.in_token_limit = image_token_limit
+        if hasattr(self.processor, "tokenizer"):
+            self.processor.tokenizer.padding_side = "left"
         self.model = AutoModelForCausalLM.from_pretrained(
             model_source,
             trust_remote_code=True,
@@ -212,41 +245,106 @@ class KimiVLGenerator:
         ).eval()
 
     def generate(self, image: Any, prompt: str) -> str:
-        messages = [
-            {
-                "role": "user",
-                "content": [
-                    {"type": "image", "image": ""},
-                    {"type": "text", "text": prompt},
-                ],
-            }
-        ]
-        text = self.processor.apply_chat_template(
-            messages,
-            add_generation_prompt=True,
-            tokenize=False,
-        )
+        return self.generate_many([image], [prompt])[0]
+
+    def generate_many(self, images: list[Any], prompts: list[str]) -> list[str]:
+        if len(images) != len(prompts):
+            raise ValueError("images and prompts must have the same length")
+        texts = []
+        for prompt in prompts:
+            messages = [
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "image", "image": ""},
+                        {"type": "text", "text": prompt},
+                    ],
+                }
+            ]
+            texts.append(
+                self.processor.apply_chat_template(
+                    messages,
+                    add_generation_prompt=True,
+                    tokenize=False,
+                )
+            )
         inputs = self.processor(
-            images=image,
-            text=text,
+            images=images,
+            text=texts,
             return_tensors="pt",
             padding=True,
             truncation=True,
         ).to(self.model.device)
         input_len = int(inputs["input_ids"].shape[-1])
+        image_patches = int(inputs["pixel_values"].shape[0])
+        started = time.monotonic()
         with self.torch.inference_mode():
             generated = self.model.generate(
                 **inputs,
                 max_new_tokens=self.max_new_tokens,
                 do_sample=False,
+                temperature=None,
+                top_p=None,
+                top_k=None,
                 use_cache=True,
             )
+        elapsed = time.monotonic() - started
+        print(
+            f"kimi_batch size={len(images)} input_tokens={input_len} "
+            f"image_patches={image_patches} seconds={elapsed:.2f}",
+            flush=True,
+        )
         generated = generated[:, input_len:]
-        return self.processor.batch_decode(
-            generated,
-            skip_special_tokens=True,
-            clean_up_tokenization_spaces=False,
-        )[0].strip()
+        return [
+            text.strip()
+            for text in self.processor.batch_decode(
+                generated,
+                skip_special_tokens=True,
+                clean_up_tokenization_spaces=False,
+            )
+        ]
+
+
+def judge_rows_with_kimi(
+    generator: Any,
+    rows: list[dict[str, Any]],
+    strip_images: list[Any],
+    *,
+    n_panels: int,
+) -> list[dict[str, Any]]:
+    judgments: list[dict[str, Any] | None] = []
+    model_indices: list[int] = []
+    model_images: list[Any] = []
+    model_prompts: list[str] = []
+    for index, (row, image) in enumerate(zip(rows, strip_images, strict=True)):
+        early = _prejudge_without_model(row)
+        judgments.append(early)
+        if early is None:
+            model_indices.append(index)
+            model_images.append(image)
+            model_prompts.append(
+                forced_choice_prompt(
+                    str(row.get("generated_text", "") or ""),
+                    row.get("baseline_text"),
+                    n_panels=n_panels,
+                )
+            )
+
+    if model_indices:
+        if hasattr(generator, "generate_many"):
+            raw_outputs = generator.generate_many(model_images, model_prompts)
+        else:
+            raw_outputs = [
+                generator.generate(image, prompt)
+                for image, prompt in zip(model_images, model_prompts, strict=True)
+            ]
+        if len(raw_outputs) != len(model_indices):
+            raise RuntimeError("Kimi returned the wrong number of batched outputs")
+        for index, raw in zip(model_indices, raw_outputs, strict=True):
+            judgments[index] = _judgment_from_raw(rows[index], raw, n_panels=n_panels)
+    if any(judgment is None for judgment in judgments):
+        raise RuntimeError("internal error: a Kimi judgment was not populated")
+    return [judgment for judgment in judgments if judgment is not None]
 
 
 def judge_row_with_kimi(
@@ -256,6 +354,35 @@ def judge_row_with_kimi(
     *,
     n_panels: int,
 ) -> dict[str, Any]:
+    early = _prejudge_without_model(row)
+    if early is not None:
+        return early
+
+    generated_text = str(row.get("generated_text", "") or "")
+    baseline_text = row.get("baseline_text")
+    prompt = forced_choice_prompt(generated_text, baseline_text, n_panels=n_panels)
+    raw = generator.generate(strip_image, prompt)
+    return _judgment_from_raw(row, raw, n_panels=n_panels)
+
+
+def _judgment_from_raw(
+    row: dict[str, Any], raw: str, *, n_panels: int
+) -> dict[str, Any]:
+    parsed = parse_panel_judgment(raw, n_panels=n_panels)
+    matched_panel = parsed["matched_panel"]
+    is_junk = bool(parsed["is_junk"])
+    return {
+        "matched_panel": matched_panel,
+        "is_junk": is_junk,
+        "correct": (not is_junk and matched_panel == int(row["target_panel"])),
+        "matches_baseline": False,
+        "parse_failed": bool(parsed["parse_failed"]),
+        "raw_judge_text": raw,
+        "reasoning": parsed["reasoning"],
+    }
+
+
+def _prejudge_without_model(row: dict[str, Any]) -> dict[str, Any] | None:
     generated_text = str(row.get("generated_text", "") or "")
     baseline_text = row.get("baseline_text")
     if not generated_text.strip():
@@ -278,21 +405,7 @@ def judge_row_with_kimi(
             "raw_judge_text": "",
             "reasoning": "steered text is essentially identical to baseline",
         }
-
-    prompt = forced_choice_prompt(generated_text, baseline_text, n_panels=n_panels)
-    raw = generator.generate(strip_image, prompt)
-    parsed = parse_panel_judgment(raw, n_panels=n_panels)
-    matched_panel = parsed["matched_panel"]
-    is_junk = bool(parsed["is_junk"])
-    return {
-        "matched_panel": matched_panel,
-        "is_junk": is_junk,
-        "correct": (not is_junk and matched_panel == int(row["target_panel"])),
-        "matches_baseline": False,
-        "parse_failed": bool(parsed["parse_failed"]),
-        "raw_judge_text": raw,
-        "reasoning": parsed["reasoning"],
-    }
+    return None
 
 
 def forced_choice_prompt(generated_text: str, baseline_text: str | None, *, n_panels: int) -> str:
@@ -307,9 +420,8 @@ def forced_choice_prompt(generated_text: str, baseline_text: str | None, *, n_pa
         "best describes.\n"
         "If the answer is empty, incoherent, repetitive, only symbols, or not about the comic, "
         "mark it as junk.\n\n"
-        "Return only compact JSON with this schema:\n"
-        '{"matched_panel": <integer or null>, "is_junk": <true or false>, '
-        '"reasoning": "<short reason>"}'
+        "Return exactly one digit and nothing else:\n"
+        "0 if the answer is junk; otherwise the matching panel number."
     )
 
 
@@ -327,8 +439,16 @@ def parse_panel_judgment(text: str, *, n_panels: int) -> dict[str, Any]:
 
     # Accept an unambiguous short fallback such as "panel 2", but flag every
     # other non-JSON response so a silently broken model/template cannot pass.
-    match = re.fullmatch(r"\s*(?:panel\s*)?([1-6])[.!]?\s*", text, flags=re.IGNORECASE)
-    panel = _coerce_panel(match.group(1), n_panels=n_panels) if match else None
+    match = re.fullmatch(r"\s*(?:panel\s*)?([0-9])[.!]?\s*", text, flags=re.IGNORECASE)
+    raw_class = int(match.group(1)) if match else None
+    if raw_class == 0:
+        return {
+            "matched_panel": None,
+            "is_junk": True,
+            "parse_failed": False,
+            "reasoning": "judge classified output as junk",
+        }
+    panel = _coerce_panel(raw_class, n_panels=n_panels)
     return {
         "matched_panel": panel,
         "is_junk": panel is None,

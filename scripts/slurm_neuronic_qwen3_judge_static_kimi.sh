@@ -28,7 +28,7 @@ TOP_K="${TOP_KS_ARRAY[$TOP_K_INDEX]}"
 RUN_DIR="$SEGMENT_ROOT/runs/static_narration_seed${SEED}_top${TOP_K}_merged_0_$((N_SHARDS * SHARD_SIZE))"
 JUDGE_DIR="$RUN_DIR/kimi_judge"
 if ((JUDGE_LIMIT > 0)); then
-  JUDGE_DIR="${JUDGE_DIR}_smoke_${JUDGE_LIMIT}"
+  JUDGE_DIR="${JUDGE_DIR}_smoke_${JUDGE_LIMIT}_fast"
 fi
 
 if [[ ! -x "$KIMI_VENV/bin/python" ]]; then

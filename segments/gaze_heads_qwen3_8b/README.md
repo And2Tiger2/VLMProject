@@ -134,8 +134,8 @@ Defaults:
 - `boost_suppress` intervention with bias 10,000;
 - **full-sequence steering** during prefill and decode, matching the official
   static/VQA scripts;
-- Kimi-VL forced 1-of-6 judging; empty, junk, and baseline-identical outputs are
-  misses.
+- Kimi-VL forced 1-of-6 judging with batched, single-class-token decoding;
+  empty, junk, and baseline-identical outputs are misses.
 
 Generation and validation can still be submitted without judging:
 

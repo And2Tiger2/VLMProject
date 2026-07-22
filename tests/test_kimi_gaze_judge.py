@@ -29,6 +29,17 @@ def test_parse_kimi_panel_judgment_flags_unparseable_output() -> None:
     assert parsed["parse_failed"] is True
 
 
+def test_parse_kimi_single_token_classes() -> None:
+    panel = judge.parse_panel_judgment("4", n_panels=6)
+    junk = judge.parse_panel_judgment("0", n_panels=6)
+
+    assert panel["matched_panel"] == 4
+    assert panel["parse_failed"] is False
+    assert junk["matched_panel"] is None
+    assert junk["is_junk"] is True
+    assert junk["parse_failed"] is False
+
+
 def test_judge_row_with_kimi_uses_image_and_forced_choice() -> None:
     row = {
         "strip_name": "comic1",
@@ -64,6 +75,28 @@ def test_judge_row_with_kimi_skips_empty_output() -> None:
     assert result["correct"] is False
     assert result["is_junk"] is True
     assert generator.prompts == []
+
+
+def test_judge_rows_with_kimi_batches_model_calls() -> None:
+    rows = [
+        {
+            "strip_name": f"comic{panel}",
+            "condition": "gaze_top1",
+            "target_panel": panel,
+            "generated_text": f"Description of panel {panel}",
+            "baseline_text": "Different baseline text",
+        }
+        for panel in (1, 2, 3, 4)
+    ]
+    generator = _FakeBatchGenerator(["1", "2", "3", "4"])
+    images = [object() for _ in rows]
+
+    results = judge.judge_rows_with_kimi(
+        generator, rows, images, n_panels=6
+    )
+
+    assert all(result["correct"] for result in results)
+    assert generator.batch_sizes == [4]
 
 
 def test_kimi_judge_writes_complete_valid_artifacts(tmp_path: Path) -> None:
@@ -133,3 +166,14 @@ class _FakeGenerator:
         self.images.append(image)
         self.prompts.append(prompt)
         return self.response
+
+
+class _FakeBatchGenerator:
+    def __init__(self, responses: list[str]) -> None:
+        self.responses = responses
+        self.batch_sizes: list[int] = []
+
+    def generate_many(self, images: list[object], prompts: list[str]) -> list[str]:
+        assert len(images) == len(prompts)
+        self.batch_sizes.append(len(images))
+        return self.responses
