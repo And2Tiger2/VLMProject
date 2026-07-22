@@ -104,9 +104,14 @@ def main() -> None:
     )
     static.add_argument("--judge-parallel", type=_positive_int, default=2)
     static.add_argument("--judge", choices=["anthropic", "none"], default="anthropic")
-    static.add_argument(
+    static_recovery = static.add_mutually_exclusive_group()
+    static_recovery.add_argument(
         "--judge-only", action="store_true",
         help="Retry paper-style judging from existing merged generations without allocating GPUs.",
+    )
+    static_recovery.add_argument(
+        "--merge-only", action="store_true",
+        help="Merge and validate existing shard generations without allocating GPUs.",
     )
     static.add_argument("--control-mode", choices=["paper", "matched"], default="paper")
     static.add_argument("--eval-root", default=f"{DEFAULT_SEGMENT_ROOT}/data/eval_comics")
@@ -187,7 +192,12 @@ def submit_static(args: argparse.Namespace, submitter: Submitter, dependency: st
     if not args.skip_preflight:
         _require_disjoint_roots(Path(args.discovery_root), Path(args.eval_root))
         _require_eval_comics(Path(args.eval_root), args.shards * args.shard_size)
-    if args.judge == "anthropic" and not args.dry_run and not os.environ.get("ANTHROPIC_API_KEY"):
+    if (
+        args.judge == "anthropic"
+        and not args.merge_only
+        and not args.dry_run
+        and not os.environ.get("ANTHROPIC_API_KEY")
+    ):
         raise SystemExit("ANTHROPIC_API_KEY is required for --judge anthropic; export it or pass --judge none.")
     ranking = args.ranking or (
         f"{DEFAULT_SEGMENT_ROOT}/runs/gaze_discovery_seed{args.ranking_seed}_merged/gaze_head_ranking.json"
@@ -207,6 +217,26 @@ def submit_static(args: argparse.Namespace, submitter: Submitter, dependency: st
         "TOP_KS_COLON": _colon(args.top_ks),
         "CONTROL_MODE": args.control_mode,
     }
+    if args.merge_only:
+        if not args.skip_preflight:
+            for seed_index in range(args.seeds):
+                seed = args.base_seed + seed_index
+                for top_k in args.top_ks:
+                    for shard in range(args.shards):
+                        start = shard * args.shard_size
+                        generations = Path(
+                            f"{DEFAULT_SEGMENT_ROOT}/runs/static_narration_seed{seed}_top{top_k}_"
+                            f"{start}_{args.shard_size}/generations.jsonl"
+                        )
+                        if not generations.exists():
+                            raise SystemExit(f"Missing shard generations for --merge-only: {generations}")
+        return submitter.submit(
+            "scripts/slurm_neuronic_qwen3_merge_static.sh",
+            array_count=args.seeds,
+            max_parallel=args.seeds,
+            dependency=dependency,
+            exports=exports,
+        )
     if args.judge_only:
         if args.judge != "anthropic":
             raise SystemExit("--judge-only requires --judge anthropic.")
@@ -310,7 +340,10 @@ def _base_preflight(repo: Path, args: argparse.Namespace) -> None:
     (repo / DEFAULT_SEGMENT_ROOT / "runs" / "slurm").mkdir(parents=True, exist_ok=True)
     if not args.dry_run and shutil.which("sbatch") is None:
         raise SystemExit("sbatch is not available. Run this launcher on a Neuronic login node.")
-    if not args.dry_run and not args.skip_preflight and not getattr(args, "judge_only", False):
+    cpu_only_static_recovery = bool(
+        getattr(args, "judge_only", False) or getattr(args, "merge_only", False)
+    )
+    if not args.dry_run and not args.skip_preflight and not cpu_only_static_recovery:
         _require_model_cache(repo)
 
 

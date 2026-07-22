@@ -131,3 +131,50 @@ def test_static_validation_rejects_incomplete_configured_run(tmp_path: Path) -> 
     assert report["valid"] is False
     assert report["expected_rows"] == 12
     assert any("row count" in error for error in report["errors"])
+
+
+def test_static_validation_allows_missing_decode_telemetry_on_empty_output(tmp_path: Path) -> None:
+    rows = [
+        {
+            "strip_name": "comic1",
+            "condition": "gaze_top1",
+            "target_panel": 1,
+            "generated_text": "",
+            "metadata": {"attention": {}},
+        },
+        {
+            "strip_name": "comic1",
+            "condition": "non_gaze_1",
+            "target_panel": 1,
+            "generated_text": "A person runs.",
+            "metadata": {"attention": {"mean_decode_panel_1_attention_mass": 1.0}},
+        },
+    ]
+    _write_jsonl(tmp_path / "generations.jsonl", rows)
+
+    report = validate_static(tmp_path, max_empty_rate=1.0, min_target_mass=0.95)
+    assert report["valid"] is True
+    assert report["target_attention_mass"]["missing_on_empty_outputs"] == 1
+    assert report["target_attention_mass"]["missing_on_nonempty_outputs"] == 0
+    assert any("scored as misses" in warning for warning in report["warnings"])
+
+
+def test_static_validation_rejects_missing_decode_telemetry_on_nonempty_output(
+    tmp_path: Path,
+) -> None:
+    _write_jsonl(
+        tmp_path / "generations.jsonl",
+        [
+            {
+                "strip_name": "comic1",
+                "condition": "gaze_top1",
+                "target_panel": 1,
+                "generated_text": "A person runs.",
+                "metadata": {"attention": {}},
+            }
+        ],
+    )
+
+    report = validate_static(tmp_path, max_empty_rate=0.50, min_target_mass=0.95)
+    assert report["valid"] is False
+    assert any("non-empty rows" in error for error in report["errors"])

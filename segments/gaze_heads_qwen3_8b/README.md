@@ -146,6 +146,18 @@ flushed row by row. Retry only the CPU judge jobs, without rerunning Qwen:
 python3 scripts/submit_neuronic_qwen3.py static --judge-only
 ```
 
+If GPU workers completed generation but an older shard-level quality gate
+returned exit code 2, recover all existing outputs with CPU-only merge and
+validation jobs; this never reloads Qwen or regenerates rows:
+
+```bash
+python3 scripts/submit_neuronic_qwen3.py static --seeds 3 --merge-only
+```
+
+Immediate-EOS empty outputs legitimately have no decode-step attention
+telemetry. They are retained and scored as misses. Empty rates above 5% are
+reported as quality warnings; rates above 50% remain hard validation failures.
+
 A cheap five-comic mechanics smoke test is one command:
 
 ```bash

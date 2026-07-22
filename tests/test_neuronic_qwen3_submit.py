@@ -49,3 +49,13 @@ def test_static_judge_only_submits_no_gpu_or_merge_jobs() -> None:
     assert "slurm_neuronic_qwen3_static_full.sh" not in output
     assert "slurm_neuronic_qwen3_merge_static.sh" not in output
     assert "--array=0-3%2" in output
+
+
+def test_static_merge_only_submits_cpu_merge_without_gpu_or_judge() -> None:
+    output = _run(
+        "static", "--seeds", "3", "--top-ks", "1", "10", "50", "100", "--merge-only"
+    )
+    assert "slurm_neuronic_qwen3_merge_static.sh" in output
+    assert "slurm_neuronic_qwen3_static_full.sh" not in output
+    assert "slurm_neuronic_qwen3_judge_static.sh" not in output
+    assert "--array=0-2%3" in output

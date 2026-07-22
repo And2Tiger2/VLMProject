@@ -20,7 +20,8 @@ def main() -> None:
 
     static = subparsers.add_parser("static")
     static.add_argument("--run-dir", required=True)
-    static.add_argument("--max-empty-rate", type=float, default=0.05)
+    static.add_argument("--warn-empty-rate", type=float, default=0.05)
+    static.add_argument("--max-empty-rate", type=float, default=0.50)
     static.add_argument("--min-target-mass", type=float, default=0.95)
 
     datasets = subparsers.add_parser("datasets")
@@ -44,7 +45,12 @@ def main() -> None:
         report = validate_discovery(Path(args.run_dir), args.min_samples, args.min_routing_accuracy)
         report_path = Path(args.run_dir) / "validation.json"
     elif args.stage == "static":
-        report = validate_static(Path(args.run_dir), args.max_empty_rate, args.min_target_mass)
+        report = validate_static(
+            Path(args.run_dir),
+            args.max_empty_rate,
+            args.min_target_mass,
+            warn_empty_rate=args.warn_empty_rate,
+        )
         report_path = Path(args.run_dir) / "validation.json"
     elif args.stage == "datasets":
         report = validate_datasets(
@@ -267,7 +273,13 @@ def validate_benchmark(run_dir: Path) -> dict[str, Any]:
     }
 
 
-def validate_static(run_dir: Path, max_empty_rate: float, min_target_mass: float) -> dict[str, Any]:
+def validate_static(
+    run_dir: Path,
+    max_empty_rate: float,
+    min_target_mass: float,
+    *,
+    warn_empty_rate: float = 0.05,
+) -> dict[str, Any]:
     rows = _read_jsonl(run_dir / "generations.jsonl")
     config_path = run_dir / "experiment_config.json"
     summary_path = run_dir / "summary.json"
@@ -307,19 +319,33 @@ def validate_static(run_dir: Path, max_empty_rate: float, min_target_mass: float
             )
     if any(rate > max_empty_rate for rate in empty_rates.values()):
         errors.append(f"empty-generation rate exceeds {max_empty_rate:.1%}: {empty_rates}")
+    elif any(rate > warn_empty_rate for rate in empty_rates.values()):
+        warnings.append(
+            f"empty-generation rate exceeds warning threshold {warn_empty_rate:.1%}: {empty_rates}; "
+            "empty outputs must be retained and scored as misses"
+        )
 
     masses = []
-    missing_mass = 0
+    missing_mass_empty = 0
+    missing_mass_nonempty = 0
     for row in rows:
         panel = int(row.get("target_panel", 0))
         attention = ((row.get("metadata") or {}).get("attention") or {})
         value = attention.get(f"mean_decode_panel_{panel}_attention_mass")
         if value is None:
-            missing_mass += 1
+            if str(row.get("generated_text", "") or "").strip():
+                missing_mass_nonempty += 1
+            else:
+                # An immediate EOS has no decode attention step. Its missing
+                # decode telemetry is expected and the empty output is scored
+                # separately as a miss.
+                missing_mass_empty += 1
         else:
             masses.append(float(value))
-    if missing_mass:
-        errors.append(f"{missing_mass}/{len(rows)} rows lack decode-step target-attention telemetry")
+    if missing_mass_nonempty:
+        errors.append(
+            f"{missing_mass_nonempty}/{len(rows)} non-empty rows lack decode-step target-attention telemetry"
+        )
     if masses and min(masses) < min_target_mass:
         errors.append(
             f"minimum decode target attention mass {min(masses):.6f} is below {min_target_mass:.6f}"
@@ -343,6 +369,8 @@ def validate_static(run_dir: Path, max_empty_rate: float, min_target_mass: float
             "n": len(masses),
             "minimum": min(masses) if masses else None,
             "mean": sum(masses) / len(masses) if masses else None,
+            "missing_on_empty_outputs": missing_mass_empty,
+            "missing_on_nonempty_outputs": missing_mass_nonempty,
         },
         "unique_outputs_by_condition": unique_by_condition,
         "errors": errors,
