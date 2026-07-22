@@ -17,3 +17,18 @@ def test_neuronic_setup_pins_supported_python() -> None:
     assert 'UV_PYTHON_INSTALL_DIR="$CACHE_ROOT/python"' in setup
     assert 'uv python install "$PYTHON_VERSION"' in setup
     assert 'uv sync --locked --python "$PYTHON_VERSION"' in setup
+
+
+def test_kimi_judge_setup_is_isolated_pinned_and_keyless() -> None:
+    setup = (ROOT / "scripts/setup_neuronic_kimi_judge.sh").read_text(encoding="utf-8")
+    requirements = (ROOT / "scripts/requirements_kimi_judge.txt").read_text(encoding="utf-8")
+
+    assert 'PYTHON_VERSION="3.10"' in setup
+    assert 'KIMI_VENV="${KIMI_VENV:-$CACHE_ROOT/kimi-judge-venv}"' in setup
+    assert 'KIMI_MODEL="moonshotai/Kimi-VL-A3B-Instruct"' in setup
+    assert 'KIMI_REVISION="cc6452511d00c99f3b3bed213e96ab7802c415c8"' in setup
+    assert "snapshot_download(" in setup
+    assert "ANTHROPIC_API_KEY" not in setup
+    assert "HF_TOKEN" not in setup
+    assert "torch==2.5.1" in requirements
+    assert "transformers==4.51.3" in requirements

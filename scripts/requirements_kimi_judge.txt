@@ -1,0 +1,10 @@
+# Keep Kimi-VL in a separate environment from Qwen3-VL.  The upstream
+# checkpoint's remote modeling code is tested against this exact stack.
+torch==2.5.1
+torchvision==0.20.1
+transformers==4.51.3
+accelerate>=1.0,<2
+blobfile>=3.0
+pillow>=10
+tiktoken>=0.9
+tqdm>=4.66

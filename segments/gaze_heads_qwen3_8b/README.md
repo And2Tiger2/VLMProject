@@ -58,6 +58,17 @@ and discovery/evaluation disjointness without downloading or submitting jobs:
 uv run python scripts/validate_qwen3_gaze_stage.py datasets
 ```
 
+Kimi-VL judging uses a separate pinned environment so its upstream
+Transformers dependency cannot alter the working Qwen3 environment. Prepare it
+once on the login node (no GPU allocation and no API key required):
+
+```bash
+bash scripts/setup_neuronic_kimi_judge.sh
+```
+
+The checkpoint is public. A Hugging Face token is optional and only helps with
+Hub rate limits.
+
 The benchmark inputs are intentionally fixed subsets, not the entire upstream
 benchmarks: 400 topic-balanced VLMBias rows and 100 question-type-balanced
 NaturalBench groups (400 NaturalBench model calls), both sampled with seed 0.
@@ -93,17 +104,18 @@ when possible.
 
 ## Experiment 2: static narration steering
 
-Export the judge key once, then submit the entire generation, merge,
-validation, and paper-style Claude judging pipeline:
+Submit the entire generation, merge, validation, and local Kimi-VL judging
+pipeline:
 
 ```bash
 python3 scripts/submit_neuronic_qwen3.py static
 ```
 
 The full defaults produce 24,000 judged generations per seed (500 strips ×
-6 targets × 2 conditions × 4 top-k runs), so check the current Anthropic rate
-limits and budget first. `--judge none` avoids all API calls without weakening
-the generation/attention validation gates.
+6 targets × 2 conditions × 4 top-k runs). Judging uses the public
+`moonshotai/Kimi-VL-A3B-Instruct` checkpoint locally on one GPU per array task;
+there are no API calls or per-call charges. `--judge none` skips judging without
+weakening the generation/attention validation gates.
 
 Multiple random-control seeds require only `--seeds`:
 
@@ -122,11 +134,10 @@ Defaults:
 - `boost_suppress` intervention with bias 10,000;
 - **full-sequence steering** during prefill and decode, matching the official
   static/VQA scripts;
-- Claude forced 1-of-6 judging; empty, junk, and baseline-identical outputs are
+- Kimi-VL forced 1-of-6 judging; empty, junk, and baseline-identical outputs are
   misses.
 
-If the API key is intentionally unavailable, generation and validation can be
-submitted without judging:
+Generation and validation can still be submitted without judging:
 
 ```bash
 python3 scripts/submit_neuronic_qwen3.py static --judge none
@@ -139,12 +150,32 @@ with the lowest-scoring remaining heads:
 python3 scripts/submit_neuronic_qwen3.py static --control-mode matched
 ```
 
-If an API/rate-limit failure interrupts judging, completed judgments are
-flushed row by row. Retry only the CPU judge jobs, without rerunning Qwen:
+After CPU merging finishes, verify the complete three-seed discovery and
+static-generation state before spending more GPU time:
 
 ```bash
-python3 scripts/submit_neuronic_qwen3.py static --judge-only
+uv run python scripts/verify_neuronic_qwen3_prejudge.py --seeds 3
 ```
+
+The command exits 0 only when the datasets, all three discovery rankings, and
+all twelve merged static runs are complete and valid.
+
+Before the full judge array, run a 24-row Kimi mechanics smoke test in a
+separate output directory:
+
+```bash
+python3 scripts/submit_neuronic_qwen3.py static --top-ks 1 --judge-only --judge-limit 24
+```
+
+Then judge all merged runs for three seeds without rerunning Qwen:
+
+```bash
+python3 scripts/submit_neuronic_qwen3.py static --seeds 3 --judge-only
+```
+
+Judgments are flushed row by row and can be resumed by submitting the same
+command again. Full outputs are written beneath each merged run in
+`kimi_judge/`.
 
 If GPU workers completed generation but an older shard-level quality gate
 returned exit code 2, recover all existing outputs with CPU-only merge and
@@ -217,7 +248,9 @@ python3 scripts/submit_neuronic_qwen3.py --account MY_ACCOUNT --partition MY_PAR
 Every seed and shard is eligible to run in parallel by default; Slurm starts
 them as resources permit. Use `--max-parallel N` when you intentionally want
 to cap simultaneously running GPU array tasks. Static judging separately
-defaults to two concurrent API clients (`--judge-parallel`).
+defaults to two concurrent one-GPU Kimi workers (`--judge-parallel`). Each
+judge worker fails early below 40 GiB of VRAM, selecting the smallest Neuronic
+GPU class that safely holds this BF16 checkpoint.
 
 GPU workers immediately exercise their allocated CUDA device and default to
 requiring at least 20 GiB of VRAM. They use BF16 on supported GPUs and FP16 on

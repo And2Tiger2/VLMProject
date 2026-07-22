@@ -45,10 +45,19 @@ def test_benchmark_seed_count_and_smoke_output_are_automatic() -> None:
 
 def test_static_judge_only_submits_no_gpu_or_merge_jobs() -> None:
     output = _run("static", "--seeds", "2", "--top-ks", "10", "100", "--judge-only")
-    assert "slurm_neuronic_qwen3_judge_static.sh" in output
+    assert "slurm_neuronic_qwen3_judge_static_kimi.sh" in output
     assert "slurm_neuronic_qwen3_static_full.sh" not in output
     assert "slurm_neuronic_qwen3_merge_static.sh" not in output
     assert "--array=0-3%2" in output
+    assert "KIMI_MIN_GPU_MEMORY_GB=40.0" in output
+
+
+def test_static_kimi_smoke_uses_separate_limit() -> None:
+    output = _run(
+        "static", "--top-ks", "1", "--judge-only", "--judge-limit", "24"
+    )
+    assert "JUDGE_LIMIT=24" in output
+    assert "--array=0-0%2" in output
 
 
 def test_static_merge_only_submits_cpu_merge_without_gpu_or_judge() -> None:
@@ -57,5 +66,5 @@ def test_static_merge_only_submits_cpu_merge_without_gpu_or_judge() -> None:
     )
     assert "slurm_neuronic_qwen3_merge_static.sh" in output
     assert "slurm_neuronic_qwen3_static_full.sh" not in output
-    assert "slurm_neuronic_qwen3_judge_static.sh" not in output
+    assert "slurm_neuronic_qwen3_judge_static_kimi.sh" not in output
     assert "--array=0-2%3" in output

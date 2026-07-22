@@ -102,12 +102,19 @@ def main() -> None:
         "--max-parallel", type=_nonnegative_int, default=0,
         help="Maximum concurrent GPU array tasks; 0 leaves all tasks eligible (default).",
     )
-    static.add_argument("--judge-parallel", type=_positive_int, default=2)
-    static.add_argument("--judge", choices=["anthropic", "none"], default="anthropic")
+    static.add_argument(
+        "--judge-parallel", type=_positive_int, default=2,
+        help="Maximum concurrent one-GPU Kimi judge jobs (default: 2).",
+    )
+    static.add_argument("--judge", choices=["kimi", "none"], default="kimi")
+    static.add_argument(
+        "--judge-limit", type=_nonnegative_int, default=0,
+        help="Judge only the first N rows per merged run in a separate smoke directory; 0 judges all rows.",
+    )
     static_recovery = static.add_mutually_exclusive_group()
     static_recovery.add_argument(
         "--judge-only", action="store_true",
-        help="Retry paper-style judging from existing merged generations without allocating GPUs.",
+        help="Run local Kimi-VL judging from existing merged generations without rerunning Qwen.",
     )
     static_recovery.add_argument(
         "--merge-only", action="store_true",
@@ -192,13 +199,8 @@ def submit_static(args: argparse.Namespace, submitter: Submitter, dependency: st
     if not args.skip_preflight:
         _require_disjoint_roots(Path(args.discovery_root), Path(args.eval_root))
         _require_eval_comics(Path(args.eval_root), args.shards * args.shard_size)
-    if (
-        args.judge == "anthropic"
-        and not args.merge_only
-        and not args.dry_run
-        and not os.environ.get("ANTHROPIC_API_KEY")
-    ):
-        raise SystemExit("ANTHROPIC_API_KEY is required for --judge anthropic; export it or pass --judge none.")
+    if args.judge == "kimi" and not args.merge_only and not args.dry_run and not args.skip_preflight:
+        _require_kimi_judge_cache(repo=Path.cwd())
     ranking = args.ranking or (
         f"{DEFAULT_SEGMENT_ROOT}/runs/gaze_discovery_seed{args.ranking_seed}_merged/gaze_head_ranking.json"
     )
@@ -216,6 +218,10 @@ def submit_static(args: argparse.Namespace, submitter: Submitter, dependency: st
         "SHARD_SIZE": args.shard_size,
         "TOP_KS_COLON": _colon(args.top_ks),
         "CONTROL_MODE": args.control_mode,
+        "JUDGE_LIMIT": args.judge_limit,
+        "KIMI_MODEL": "moonshotai/Kimi-VL-A3B-Instruct",
+        "KIMI_REVISION": "cc6452511d00c99f3b3bed213e96ab7802c415c8",
+        "KIMI_MIN_GPU_MEMORY_GB": max(40.0, args.min_gpu_memory_gb),
     }
     if args.merge_only:
         if not args.skip_preflight:
@@ -238,8 +244,8 @@ def submit_static(args: argparse.Namespace, submitter: Submitter, dependency: st
             exports=exports,
         )
     if args.judge_only:
-        if args.judge != "anthropic":
-            raise SystemExit("--judge-only requires --judge anthropic.")
+        if args.judge != "kimi":
+            raise SystemExit("--judge-only requires --judge kimi.")
         if not args.skip_preflight:
             for seed_index in range(args.seeds):
                 seed = args.base_seed + seed_index
@@ -251,7 +257,7 @@ def submit_static(args: argparse.Namespace, submitter: Submitter, dependency: st
                     if not generations.exists():
                         raise SystemExit(f"Missing merged generations for --judge-only: {generations}")
         return submitter.submit(
-            "scripts/slurm_neuronic_qwen3_judge_static.sh",
+            "scripts/slurm_neuronic_qwen3_judge_static_kimi.sh",
             array_count=args.seeds * len(args.top_ks),
             max_parallel=args.judge_parallel,
             dependency=dependency,
@@ -275,7 +281,7 @@ def submit_static(args: argparse.Namespace, submitter: Submitter, dependency: st
     if args.judge == "none":
         return merged
     return submitter.submit(
-        "scripts/slurm_neuronic_qwen3_judge_static.sh",
+        "scripts/slurm_neuronic_qwen3_judge_static_kimi.sh",
         array_count=args.seeds * len(args.top_ks),
         max_parallel=args.judge_parallel,
         dependency=merged,
@@ -340,10 +346,10 @@ def _base_preflight(repo: Path, args: argparse.Namespace) -> None:
     (repo / DEFAULT_SEGMENT_ROOT / "runs" / "slurm").mkdir(parents=True, exist_ok=True)
     if not args.dry_run and shutil.which("sbatch") is None:
         raise SystemExit("sbatch is not available. Run this launcher on a Neuronic login node.")
-    cpu_only_static_recovery = bool(
+    qwen_free_static_recovery = bool(
         getattr(args, "judge_only", False) or getattr(args, "merge_only", False)
     )
-    if not args.dry_run and not args.skip_preflight and not cpu_only_static_recovery:
+    if not args.dry_run and not args.skip_preflight and not qwen_free_static_recovery:
         _require_model_cache(repo)
 
 
@@ -454,6 +460,29 @@ def _require_model_cache(repo: Path) -> None:
         raise SystemExit(
             f"A complete Qwen3-VL 8B snapshot is not present in the worker cache {cache_root}. "
             "Run `bash scripts/setup_neuronic_qwen3.sh` first."
+        )
+
+
+def _require_kimi_judge_cache(repo: Path) -> None:
+    cache_root = Path(os.environ.get("CACHE_ROOT", str(repo / ".cache" / "vlmproject")))
+    kimi_venv = Path(os.environ.get("KIMI_VENV", str(cache_root / "kimi-judge-venv")))
+    python = kimi_venv / "bin" / "python"
+    revision = "cc6452511d00c99f3b3bed213e96ab7802c415c8"
+    snapshot = (
+        cache_root
+        / "huggingface"
+        / "hub"
+        / "models--moonshotai--Kimi-VL-A3B-Instruct"
+        / "snapshots"
+        / revision
+    )
+    weights_present = (snapshot / "model.safetensors").exists() or (
+        snapshot / "model.safetensors.index.json"
+    ).exists()
+    if not python.is_file() or not (snapshot / "config.json").is_file() or not weights_present:
+        raise SystemExit(
+            f"The pinned Kimi-VL judge environment/snapshot is incomplete under {cache_root}. "
+            "Run `bash scripts/setup_neuronic_kimi_judge.sh` on the login node first."
         )
 
 
