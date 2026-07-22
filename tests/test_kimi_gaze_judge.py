@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 
 from PIL import Image
@@ -98,6 +99,28 @@ def test_kimi_judge_writes_complete_valid_artifacts(tmp_path: Path) -> None:
     assert result["n_rows"] == 1
     aggregate = json.loads((tmp_path / "judge" / "aggregate_results.json").read_text())
     assert aggregate["aggregate"]["gaze_top1"]["overall"]["accuracy"] == 1.0
+
+
+def test_resolve_local_snapshot_uses_configured_hub_cache(
+    tmp_path: Path, monkeypatch
+) -> None:
+    revision = "abc123"
+    snapshot = (
+        tmp_path
+        / "models--moonshotai--Kimi-VL-A3B-Instruct"
+        / "snapshots"
+        / revision
+    )
+    snapshot.mkdir(parents=True)
+    (snapshot / "config.json").write_text("{}", encoding="utf-8")
+    monkeypatch.setenv("HUGGINGFACE_HUB_CACHE", str(tmp_path))
+    monkeypatch.setenv("TRANSFORMERS_CACHE", str(tmp_path / "wrong-cache"))
+
+    resolved = judge.resolve_local_snapshot(
+        "moonshotai/Kimi-VL-A3B-Instruct", revision
+    )
+
+    assert resolved == os.fspath(snapshot)
 
 
 class _FakeGenerator:

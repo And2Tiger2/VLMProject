@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 from pathlib import Path
 from typing import Any
@@ -189,19 +190,25 @@ class KimiVLGenerator:
         self.torch = torch
         self.max_new_tokens = max_new_tokens
         dtype = torch.bfloat16 if torch.cuda.is_bf16_supported() else torch.float16
+        model_source = resolve_local_snapshot(model_id, revision)
+        source_kwargs = (
+            {}
+            if model_source != model_id
+            else {"revision": revision}
+        )
         self.processor = AutoProcessor.from_pretrained(
-            model_id,
-            revision=revision,
+            model_source,
             trust_remote_code=True,
             local_files_only=True,
+            **source_kwargs,
         )
         self.model = AutoModelForCausalLM.from_pretrained(
-            model_id,
-            revision=revision,
+            model_source,
             trust_remote_code=True,
             local_files_only=True,
             torch_dtype=dtype,
             device_map={"": "cuda:0"},
+            **source_kwargs,
         ).eval()
 
     def generate(self, image: Any, prompt: str) -> str:
@@ -360,6 +367,27 @@ def _coerce_panel(value: Any, *, n_panels: int) -> int | None:
             return None
         panel = int(match.group(0))
     return panel if 1 <= panel <= n_panels else None
+
+
+def resolve_local_snapshot(model_id: str, revision: str) -> str:
+    """Return the exact cached snapshot path, avoiding conflicting legacy caches."""
+    explicit = Path(model_id)
+    if explicit.is_dir():
+        return str(explicit)
+    hub_cache_value = os.environ.get("HUGGINGFACE_HUB_CACHE")
+    if hub_cache_value:
+        hub_cache = Path(hub_cache_value)
+    else:
+        hf_home = Path(os.environ.get("HF_HOME", Path.home() / ".cache" / "huggingface"))
+        hub_cache = hf_home / "hub"
+    repo_cache_name = "models--" + model_id.replace("/", "--")
+    snapshot = hub_cache / repo_cache_name / "snapshots" / revision
+    if not (snapshot / "config.json").is_file():
+        raise FileNotFoundError(
+            f"Pinned offline snapshot is missing: {snapshot}. "
+            "Run bash scripts/setup_neuronic_kimi_judge.sh on the login node."
+        )
+    return str(snapshot)
 
 
 def _read_jsonl(path: Path) -> list[dict[str, Any]]:

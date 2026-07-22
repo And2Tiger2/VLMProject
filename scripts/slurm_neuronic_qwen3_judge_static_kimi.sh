@@ -45,6 +45,9 @@ export TORCH_HOME="$CACHE_ROOT/torch"
 export TOKENIZERS_PARALLELISM=false
 export HF_HUB_OFFLINE=1
 export PYTHONPATH="$REPO${PYTHONPATH:+:$PYTHONPATH}"
+# Neuronic may export this deprecated variable globally. Transformers gives it
+# precedence over HF_HOME and would otherwise search the wrong offline cache.
+unset TRANSFORMERS_CACHE
 
 echo "host=$(hostname) gpu=${CUDA_VISIBLE_DEVICES:-unset} seed=$SEED top_k=$TOP_K judge=kimi limit=$JUDGE_LIMIT"
 "$KIMI_VENV/bin/python" scripts/check_neuronic_gpu.py \

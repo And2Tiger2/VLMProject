@@ -32,6 +32,7 @@ export UV_PYTHON_INSTALL_DIR="$CACHE_ROOT/python"
 export HF_HOME="$CACHE_ROOT/huggingface"
 export HUGGINGFACE_HUB_CACHE="$CACHE_ROOT/huggingface/hub"
 export TORCH_HOME="$CACHE_ROOT/torch"
+unset TRANSFORMERS_CACHE
 
 uv python install "$PYTHON_VERSION"
 if [[ ! -x "$KIMI_VENV/bin/python" ]]; then
