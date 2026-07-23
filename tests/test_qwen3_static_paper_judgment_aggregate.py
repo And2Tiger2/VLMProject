@@ -17,6 +17,7 @@ def _write_run(
     gaze_correct: list[bool],
     control_correct: list[bool],
     alter_gaze_match: bool = False,
+    alter_gaze_generation: bool = False,
 ) -> None:
     judge_dir = (
         root
@@ -25,6 +26,15 @@ def _write_run(
         / "kimi_judge"
     )
     judge_dir.mkdir(parents=True)
+    (judge_dir.parent / "experiment_config.json").write_text(
+        json.dumps(
+            {
+                "gaze_ranking": "missing-test-ranking.json",
+                "selected_control_heads": [],
+            }
+        ),
+        encoding="utf-8",
+    )
     (judge_dir / "judgment_config.json").write_text(
         json.dumps({"judgment_schema_version": 6, "label_panels": True}),
         encoding="utf-8",
@@ -43,9 +53,17 @@ def _write_run(
                     "strip_name": "comic1",
                     "condition": condition,
                     "target_panel": panel,
-                    "generated_text": f"shared gaze {panel}"
-                    if condition == "gaze_top100"
-                    else f"control {seed} {panel}",
+                    "generated_text": (
+                        f"changed gaze {panel}"
+                        if alter_gaze_generation
+                        and condition == "gaze_top100"
+                        and panel == 1
+                        else (
+                            f"shared gaze {panel}"
+                            if condition == "gaze_top100"
+                            else f"control {seed} {panel}"
+                        )
+                    ),
                     "baseline_text": "baseline",
                     "judgment": {
                         "matched_panel": matched,
@@ -88,7 +106,7 @@ def test_aggregate_counts_repeated_gaze_once_and_reports_control_seed_effects(
 
     assert result["valid"] is True
     assert result["independent_gaze_rows"] == 6
-    assert result["aggregate"]["gaze_accuracy_counted_once"] == 5 / 6
+    assert result["aggregate"]["gaze_accuracy_reference_seed"] == 5 / 6
     assert result["aggregate"]["control_accuracy_mean_across_seeds"] == 1 / 6
     assert np.isclose(
         result["aggregate"]["delta_mean_across_control_seeds"], 4 / 6
@@ -96,7 +114,7 @@ def test_aggregate_counts_repeated_gaze_once_and_reports_control_seed_effects(
     assert (tmp_path / "report" / "report.md").exists()
 
 
-def test_aggregate_rejects_repeated_gaze_judgment_disagreement(
+def test_aggregate_warns_on_repeated_gaze_judgment_disagreement(
     tmp_path: Path,
 ) -> None:
     gaze = [True] * 6
@@ -119,5 +137,35 @@ def test_aggregate_rejects_repeated_gaze_judgment_disagreement(
         out_dir=tmp_path / "report",
     )
 
+    assert result["valid"] is True
+    assert result["repeated_gaze_judge_diagnostics"]["43"][
+        "judge_label_disagreements"
+    ] == 1
+    assert any("Kimi labels disagree" in warning for warning in result["warnings"])
+
+
+def test_aggregate_rejects_repeated_gaze_generation_disagreement(
+    tmp_path: Path,
+) -> None:
+    gaze = [True] * 6
+    for seed in (42, 43):
+        _write_run(
+            tmp_path,
+            seed=seed,
+            gaze_correct=gaze,
+            control_correct=[False] * 6,
+            alter_gaze_generation=seed == 43,
+        )
+
+    result = aggregate_judgment_runs(
+        segment_root=tmp_path,
+        seeds=[42, 43],
+        top_k=100,
+        n_comics=1,
+        n_bootstrap=10,
+        bootstrap_seed=0,
+        out_dir=tmp_path / "report",
+    )
+
     assert result["valid"] is False
-    assert any("disagreements" in error for error in result["errors"])
+    assert any("generation disagreements" in error for error in result["errors"])
