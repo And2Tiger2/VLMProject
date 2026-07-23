@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from pathlib import Path
 import re
 
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, ImageFont
 
 
 IMAGE_SUFFIXES = (".png", ".jpg", ".jpeg", ".webp", ".bmp")
@@ -82,6 +82,48 @@ def build_strip_from_paths(
         panel_paths=list(panel_paths),
         target_height=int(strip.size[1]),
     )
+
+
+def add_panel_number_labels(
+    strip: ComicStrip, *, label_height: int = 56
+) -> Image.Image:
+    """Add a judge-only numbered banner without modifying generation images."""
+    if label_height <= 0:
+        raise ValueError("label_height must be positive")
+    canvas = Image.new(
+        "RGB",
+        (strip.strip.width, strip.strip.height + label_height),
+        (255, 255, 255),
+    )
+    canvas.paste(strip.strip, (0, label_height))
+    draw = ImageDraw.Draw(canvas)
+    try:
+        font = ImageFont.load_default(size=max(28, int(label_height * 0.65)))
+    except TypeError:  # Pillow before load_default(size=...) support.
+        font = ImageFont.load_default()
+    x_offset = 0
+    for panel, width in enumerate(strip.panel_widths, start=1):
+        center_x = x_offset + int(width) // 2
+        box_half_width = max(24, int(label_height * 0.55))
+        draw.rounded_rectangle(
+            [
+                center_x - box_half_width,
+                4,
+                center_x + box_half_width,
+                label_height - 4,
+            ],
+            radius=8,
+            fill=(0, 0, 0),
+        )
+        draw.text(
+            (center_x, label_height // 2),
+            str(panel),
+            fill=(255, 255, 255),
+            font=font,
+            anchor="mm",
+        )
+        x_offset += int(width)
+    return canvas
 
 
 def sample_raw_comics_windows(

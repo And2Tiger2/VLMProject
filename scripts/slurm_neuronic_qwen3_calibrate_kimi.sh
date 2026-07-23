@@ -16,7 +16,7 @@ SEGMENT_ROOT="${SEGMENT_ROOT:-segments/gaze_heads_qwen3_8b}"
 KIMI_MODEL="${KIMI_MODEL:-moonshotai/Kimi-VL-A3B-Instruct}"
 KIMI_REVISION="${KIMI_REVISION:-cc6452511d00c99f3b3bed213e96ab7802c415c8}"
 MANIFEST="${MANIFEST:-$SEGMENT_ROOT/data/openai_comic_strips_manifest.json}"
-OUT_DIR="${OUT_DIR:-$SEGMENT_ROOT/runs/kimi_judge_calibration_60}"
+OUT_DIR="${OUT_DIR:-$SEGMENT_ROOT/runs/kimi_judge_calibration_60_numbered}"
 
 if [[ ! -x "$KIMI_VENV/bin/python" ]]; then
   echo "Missing Kimi judge environment: $KIMI_VENV" >&2

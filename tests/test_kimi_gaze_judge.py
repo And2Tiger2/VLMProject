@@ -61,6 +61,7 @@ def test_judge_row_with_kimi_uses_image_and_forced_choice() -> None:
     assert "Answer to judge" in generator.prompts[0]
     assert "Baseline answer" not in generator.prompts[0]
     assert row["baseline_text"] not in generator.prompts[0]
+    assert "large visible number" in generator.prompts[0]
 
 
 def test_judge_row_with_kimi_skips_empty_output() -> None:

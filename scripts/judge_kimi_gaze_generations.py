@@ -11,7 +11,11 @@ from typing import Any
 
 from tqdm.auto import tqdm
 
-from vlm_eval.gaze_comics import DEFAULT_N_PANELS, build_strip
+from vlm_eval.gaze_comics import (
+    DEFAULT_N_PANELS,
+    add_panel_number_labels,
+    build_strip,
+)
 from vlm_eval.gaze_judge import aggregate_judgments, steered_matches_baseline
 from vlm_eval.gaze_resume import ensure_resume_config, load_completed_keys, row_key
 
@@ -19,7 +23,7 @@ from vlm_eval.gaze_resume import ensure_resume_config, load_completed_keys, row_
 DEFAULT_KIMI_MODEL = "moonshotai/Kimi-VL-A3B-Instruct"
 DEFAULT_KIMI_REVISION = "cc6452511d00c99f3b3bed213e96ab7802c415c8"
 KEY_FIELDS = ["strip_name", "condition", "target_panel"]
-JUDGMENT_SCHEMA_VERSION = 5
+JUDGMENT_SCHEMA_VERSION = 6
 
 
 def main() -> None:
@@ -33,6 +37,12 @@ def main() -> None:
     parser.add_argument("--max-new-tokens", type=int, default=2)
     parser.add_argument("--batch-size", type=int, default=4)
     parser.add_argument("--image-token-limit", type=int, default=1024)
+    parser.add_argument(
+        "--label-panels",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="Add large visible 1..6 labels above panels in judge-only images.",
+    )
     parser.add_argument("--n-panels", type=int, default=DEFAULT_N_PANELS)
     parser.add_argument("--limit", type=int, default=0)
     parser.add_argument("--max-parse-failure-rate", type=float, default=0.01)
@@ -48,6 +58,7 @@ def main() -> None:
         max_new_tokens=args.max_new_tokens,
         batch_size=args.batch_size,
         image_token_limit=args.image_token_limit,
+        label_panels=args.label_panels,
         n_panels=args.n_panels,
         limit=args.limit,
         max_parse_failure_rate=args.max_parse_failure_rate,
@@ -68,6 +79,7 @@ def judge_generations_kimi(
     max_new_tokens: int = 2,
     batch_size: int = 4,
     image_token_limit: int = 1024,
+    label_panels: bool = True,
     n_panels: int = DEFAULT_N_PANELS,
     limit: int = 0,
     max_parse_failure_rate: float = 0.01,
@@ -93,6 +105,7 @@ def judge_generations_kimi(
         "max_new_tokens": max_new_tokens,
         "batch_size": batch_size,
         "image_token_limit": image_token_limit,
+        "label_panels": label_panels,
         "n_panels": n_panels,
         "limit": limit,
         "max_parse_failure_rate": max_parse_failure_rate,
@@ -129,9 +142,12 @@ def judge_generations_kimi(
             for row in batch_rows:
                 comic_dir = Path(row["comic_dir"])
                 if comic_dir not in strip_cache:
-                    strip_cache[comic_dir] = build_strip(
-                        comic_dir, n_panels=n_panels
-                    ).strip
+                    strip = build_strip(comic_dir, n_panels=n_panels)
+                    strip_cache[comic_dir] = (
+                        add_panel_number_labels(strip)
+                        if label_panels
+                        else strip.strip
+                    )
                 batch_images.append(strip_cache[comic_dir])
             judgments = judge_rows_with_kimi(
                 generator,
@@ -410,8 +426,8 @@ def _prejudge_without_model(row: dict[str, Any]) -> dict[str, Any] | None:
 
 def forced_choice_prompt(generated_text: str, *, n_panels: int) -> str:
     return (
-        f"This is a {n_panels}-panel comic strip. The panels are numbered 1 to {n_panels} "
-        "from left to right.\n\n"
+        f"This is a {n_panels}-panel comic strip. Each panel has a large visible number "
+        f"from 1 to {n_panels} above it.\n\n"
         f'Answer to judge: "{generated_text}"\n\n'
         "Ignore any panel number mentioned inside the answer. Match by visual content only.\n"
         f"Choose exactly one panel number from 1 to {n_panels} whose visual content the answer "

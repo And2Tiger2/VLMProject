@@ -23,10 +23,11 @@ case "$mode" in
       scripts/slurm_neuronic_qwen3_calibrate_kimi.sh
     ;;
   verify-calibration)
-    cat segments/gaze_heads_qwen3_8b/runs/kimi_judge_calibration_60/calibration_results.json
+    cat segments/gaze_heads_qwen3_8b/runs/kimi_judge_calibration_60_numbered/calibration_results.json
     ;;
   diagnose-calibration)
-    uv run python scripts/diagnose_kimi_calibration.py
+    uv run python scripts/diagnose_kimi_calibration.py \
+      --judgments segments/gaze_heads_qwen3_8b/runs/kimi_judge_calibration_60_numbered/kimi_judge/judgments.jsonl
     ;;
   smoke)
     python3 scripts/submit_neuronic_qwen3.py static-paper-control \

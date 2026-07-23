@@ -27,7 +27,9 @@ def main() -> None:
     parser.add_argument(
         "--out-dir",
         type=Path,
-        default=Path("segments/gaze_heads_qwen3_8b/runs/kimi_judge_calibration_60"),
+        default=Path(
+            "segments/gaze_heads_qwen3_8b/runs/kimi_judge_calibration_60_numbered"
+        ),
     )
     parser.add_argument("--limit", type=int, default=60)
     parser.add_argument("--seed", type=int, default=42)
@@ -85,6 +87,7 @@ def calibrate_kimi(
         model_id=model_id,
         revision=revision,
         batch_size=batch_size,
+        label_panels=True,
         seed=seed,
         resume=resume,
     )
