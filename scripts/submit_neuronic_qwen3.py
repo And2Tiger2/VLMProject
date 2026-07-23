@@ -145,6 +145,11 @@ def main() -> None:
     )
     paper_control.add_argument("--judge", choices=["kimi", "none"], default="none")
     paper_control.add_argument("--judge-limit", type=_nonnegative_int, default=0)
+    paper_control.add_argument(
+        "--judge-only",
+        action="store_true",
+        help="Judge existing assembled paper-control runs without rerunning Qwen.",
+    )
     paper_control.add_argument("--eval-root", default=f"{DEFAULT_SEGMENT_ROOT}/data/eval_comics")
     paper_control.add_argument("--ranking", default="", help="Override the merged gaze-head ranking path.")
 
@@ -360,6 +365,28 @@ def submit_static_paper_control(
         "KIMI_REVISION": "cc6452511d00c99f3b3bed213e96ab7802c415c8",
         "KIMI_MIN_GPU_MEMORY_GB": max(40.0, args.min_gpu_memory_gb),
     }
+    if args.judge_only:
+        if args.judge != "kimi":
+            raise SystemExit("--judge-only requires --judge kimi.")
+        if not args.skip_preflight:
+            for seed_index in range(args.seeds):
+                seed = args.base_seed + seed_index
+                for top_k in args.top_ks:
+                    generations = Path(
+                        f"{DEFAULT_SEGMENT_ROOT}/runs/static_paper_replication_seed{seed}_"
+                        f"top{top_k}_merged_0_{n_comics}/generations.jsonl"
+                    )
+                    if not generations.exists():
+                        raise SystemExit(
+                            f"Missing assembled paper-control generations: {generations}"
+                        )
+        return submitter.submit(
+            "scripts/slurm_neuronic_qwen3_judge_static_kimi.sh",
+            array_count=args.seeds * len(args.top_ks),
+            max_parallel=args.judge_parallel,
+            dependency=dependency,
+            exports=exports,
+        )
     workers = submitter.submit(
         "scripts/slurm_neuronic_qwen3_static_paper_control.sh",
         array_count=args.seeds * args.shards * len(args.top_ks),

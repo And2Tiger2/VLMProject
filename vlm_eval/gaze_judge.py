@@ -22,7 +22,7 @@ def normalize_for_match(text: str) -> str:
     return text.strip()
 
 
-def steered_matches_baseline(steered: str, baseline: str | None, jaccard_threshold: float = 0.85) -> bool:
+def steered_matches_baseline(steered: str, baseline: str | None, jaccard_threshold: float = 0.90) -> bool:
     if baseline is None:
         return False
     a = normalize_for_match(steered)

@@ -34,16 +34,22 @@ def main() -> None:
         comic_dir = out_root / f"comic{comic_id}"
         comic_dir.mkdir(parents=True, exist_ok=True)
         panel_paths = [comic_dir / f"p{panel_idx}.png" for panel_idx in range(1, 7)]
+        manifest_row = {
+            "comic_id": comic_id,
+            "comic_dir": str(comic_dir),
+            "panel_paths": [str(path) for path in panel_paths],
+            "captions": [str(row.get(f"caption_{panel_idx}", "") or "") for panel_idx in range(1, 7)],
+        }
         if not args.overwrite and all(path.exists() and path.stat().st_size > 0 for path in panel_paths):
             skipped += 1
-            manifest.append({"comic_id": comic_id, "comic_dir": str(comic_dir), "panel_paths": [str(path) for path in panel_paths]})
+            manifest.append(manifest_row)
             continue
         for panel_idx in range(1, 7):
             image = row[f"panel_{panel_idx}"]
             panel_path = panel_paths[panel_idx - 1]
             image.save(panel_path)
         exported += 1
-        manifest.append({"comic_id": comic_id, "comic_dir": str(comic_dir), "panel_paths": [str(path) for path in panel_paths]})
+        manifest.append(manifest_row)
 
     manifest_path = out_root.parent / "openai_comic_strips_manifest.json"
     import json

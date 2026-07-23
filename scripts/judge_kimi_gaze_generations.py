@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import random
 import re
 import time
 from pathlib import Path
@@ -18,7 +19,7 @@ from vlm_eval.gaze_resume import ensure_resume_config, load_completed_keys, row_
 DEFAULT_KIMI_MODEL = "moonshotai/Kimi-VL-A3B-Instruct"
 DEFAULT_KIMI_REVISION = "cc6452511d00c99f3b3bed213e96ab7802c415c8"
 KEY_FIELDS = ["strip_name", "condition", "target_panel"]
-JUDGMENT_SCHEMA_VERSION = 4
+JUDGMENT_SCHEMA_VERSION = 5
 
 
 def main() -> None:
@@ -81,7 +82,7 @@ def judge_generations_kimi(
     out_dir.mkdir(parents=True, exist_ok=True)
     rows = _read_jsonl(generations_path)
     if limit > 0:
-        rows = rows[:limit]
+        rows = select_representative_rows(rows, limit=limit, seed=seed)
 
     config = {
         "task": "judge_gaze_generations_kimi",
@@ -96,6 +97,7 @@ def judge_generations_kimi(
         "limit": limit,
         "max_parse_failure_rate": max_parse_failure_rate,
         "seed": seed,
+        "limit_selection": "condition-panel-stratified-v1" if limit > 0 else "all",
     }
     judgments_path = out_dir / "judgments.jsonl"
     ensure_resume_config(
@@ -325,7 +327,6 @@ def judge_rows_with_kimi(
             model_prompts.append(
                 forced_choice_prompt(
                     str(row.get("generated_text", "") or ""),
-                    row.get("baseline_text"),
                     n_panels=n_panels,
                 )
             )
@@ -359,8 +360,7 @@ def judge_row_with_kimi(
         return early
 
     generated_text = str(row.get("generated_text", "") or "")
-    baseline_text = row.get("baseline_text")
-    prompt = forced_choice_prompt(generated_text, baseline_text, n_panels=n_panels)
+    prompt = forced_choice_prompt(generated_text, n_panels=n_panels)
     raw = generator.generate(strip_image, prompt)
     return _judgment_from_raw(row, raw, n_panels=n_panels)
 
@@ -408,12 +408,10 @@ def _prejudge_without_model(row: dict[str, Any]) -> dict[str, Any] | None:
     return None
 
 
-def forced_choice_prompt(generated_text: str, baseline_text: str | None, *, n_panels: int) -> str:
-    baseline = f'Baseline answer: "{baseline_text}"\n' if baseline_text else ""
+def forced_choice_prompt(generated_text: str, *, n_panels: int) -> str:
     return (
         f"This is a {n_panels}-panel comic strip. The panels are numbered 1 to {n_panels} "
         "from left to right.\n\n"
-        f"{baseline}"
         f'Answer to judge: "{generated_text}"\n\n'
         "Ignore any panel number mentioned inside the answer. Match by visual content only.\n"
         f"Choose exactly one panel number from 1 to {n_panels} whose visual content the answer "
@@ -423,6 +421,37 @@ def forced_choice_prompt(generated_text: str, baseline_text: str | None, *, n_pa
         "Return exactly one digit and nothing else:\n"
         "0 if the answer is junk; otherwise the matching panel number."
     )
+
+
+def select_representative_rows(
+    rows: list[dict[str, Any]], *, limit: int, seed: int
+) -> list[dict[str, Any]]:
+    """Select a deterministic smoke sample balanced by condition and target panel."""
+    if limit <= 0 or limit >= len(rows):
+        return list(rows)
+    strata: dict[tuple[str, int], list[dict[str, Any]]] = {}
+    for row in rows:
+        key = (str(row.get("condition")), int(row.get("target_panel", 0)))
+        strata.setdefault(key, []).append(row)
+    rng = random.Random(seed)
+    ordered_keys = sorted(strata)
+    for key in ordered_keys:
+        rng.shuffle(strata[key])
+    selected: list[dict[str, Any]] = []
+    index = 0
+    while len(selected) < limit:
+        added = False
+        for key in ordered_keys:
+            group = strata[key]
+            if index < len(group):
+                selected.append(group[index])
+                added = True
+                if len(selected) == limit:
+                    break
+        if not added:
+            break
+        index += 1
+    return selected
 
 
 def parse_panel_judgment(text: str, *, n_panels: int) -> dict[str, Any]:

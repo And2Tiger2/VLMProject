@@ -89,3 +89,23 @@ def test_static_paper_control_full_has_thirty_gpu_tasks() -> None:
     assert "--array=0-29" in output
     assert "--array=0-2%3" in output
     assert "SOURCE_GAZE_COMICS=500" in output
+
+
+def test_static_paper_control_judge_only_submits_no_qwen_or_assembly() -> None:
+    output = _run(
+        "static-paper-control",
+        "--seeds",
+        "3",
+        "--shards",
+        "10",
+        "--judge",
+        "kimi",
+        "--judge-only",
+        "--judge-limit",
+        "120",
+    )
+    assert "slurm_neuronic_qwen3_judge_static_kimi.sh" in output
+    assert "slurm_neuronic_qwen3_static_paper_control.sh" not in output
+    assert "slurm_neuronic_qwen3_assemble_paper_control.sh" not in output
+    assert "--array=0-2%2" in output
+    assert "JUDGE_LIMIT=120" in output

@@ -18,6 +18,16 @@ def test_steered_matches_baseline_normalizes_panel_prefix() -> None:
     assert not steered_matches_baseline("A dog sleeps", "A person runs")
 
 
+def test_baseline_match_uses_paper_point_nine_threshold() -> None:
+    baseline = "one two three four five six seven eight nine ten"
+    assert steered_matches_baseline(
+        baseline, "one two three four five six seven eight nine eleven", jaccard_threshold=0.80
+    )
+    assert not steered_matches_baseline(
+        baseline, "one two three four five six seven eight nine eleven"
+    )
+
+
 def test_anthropic_judge_marks_empty_without_api_key() -> None:
     judgment = judge_match_target_panel_anthropic(
         strip_image=object(),

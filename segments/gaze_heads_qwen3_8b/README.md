@@ -193,6 +193,51 @@ there are exactly 100 unique control heads, all in layers 20--35, with no
 overlap with the top-100 gaze set. Judging is intentionally not submitted by
 these wrapper commands; inspect the pilot and calibrate the judge first.
 
+### Calibrate and smoke-test Kimi before full judging
+
+Refresh the evaluation manifest once so it records the six known source
+captions for each strip (existing images are not overwritten):
+
+```bash
+bash scripts/run_neuronic_qwen3_kimi_gate.sh prepare-captions
+```
+
+Then submit a 60-caption calibration balanced across all six panels:
+
+```bash
+bash scripts/run_neuronic_qwen3_kimi_gate.sh calibrate
+```
+
+After the job finishes:
+
+```bash
+bash scripts/run_neuronic_qwen3_kimi_gate.sh verify-calibration
+```
+
+The gate requires at least 70% overall caption-to-panel accuracy, at least 40%
+for every panel position, and a valid parse rate. Only after that passes,
+submit a 120-row actual-generation smoke test:
+
+```bash
+bash scripts/run_neuronic_qwen3_kimi_gate.sh smoke
+```
+
+This smoke is deterministically balanced across both conditions and all six
+target panels instead of taking the first rows in file order. The judge sees
+the strip and answer only; the baseline is used solely for the paper's
+token-Jaccard prefilter at threshold 0.90 and is never included in the judge
+prompt. Inspect the smoke with:
+
+```bash
+bash scripts/run_neuronic_qwen3_kimi_gate.sh verify-smoke
+```
+
+Full three-seed judging is deliberately a separate final command:
+
+```bash
+bash scripts/run_neuronic_qwen3_kimi_gate.sh judge-full
+```
+
 After CPU merging finishes, verify the complete three-seed discovery and
 static-generation state before spending more GPU time:
 

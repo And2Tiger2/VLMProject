@@ -59,6 +59,8 @@ def test_judge_row_with_kimi_uses_image_and_forced_choice() -> None:
     assert result["parse_failed"] is False
     assert generator.images == [image]
     assert "Answer to judge" in generator.prompts[0]
+    assert "Baseline answer" not in generator.prompts[0]
+    assert row["baseline_text"] not in generator.prompts[0]
 
 
 def test_judge_row_with_kimi_skips_empty_output() -> None:
@@ -154,6 +156,29 @@ def test_resolve_local_snapshot_uses_configured_hub_cache(
     )
 
     assert resolved == os.fspath(snapshot)
+
+
+def test_representative_limit_balances_conditions_and_panels() -> None:
+    rows = [
+        {
+            "strip_name": f"comic{comic}",
+            "condition": condition,
+            "target_panel": panel,
+        }
+        for comic in range(20)
+        for condition in ("gaze_top100", "non_gaze_paper_100")
+        for panel in range(1, 7)
+    ]
+
+    selected = judge.select_representative_rows(rows, limit=24, seed=42)
+
+    counts: dict[tuple[str, int], int] = {}
+    for row in selected:
+        key = (row["condition"], row["target_panel"])
+        counts[key] = counts.get(key, 0) + 1
+    assert len(selected) == 24
+    assert set(counts.values()) == {2}
+    assert len({row["strip_name"] for row in selected}) > 2
 
 
 class _FakeGenerator:
