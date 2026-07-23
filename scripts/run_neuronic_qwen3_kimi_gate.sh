@@ -25,6 +25,9 @@ case "$mode" in
   verify-calibration)
     cat segments/gaze_heads_qwen3_8b/runs/kimi_judge_calibration_60/calibration_results.json
     ;;
+  diagnose-calibration)
+    uv run python scripts/diagnose_kimi_calibration.py
+    ;;
   smoke)
     python3 scripts/submit_neuronic_qwen3.py static-paper-control \
       --seeds 1 --shards 10 --shard-size 50 --top-ks 100 \
@@ -39,7 +42,7 @@ case "$mode" in
       --judge kimi --judge-only
     ;;
   *)
-    echo "Usage: $0 {prepare-captions|calibrate|verify-calibration|smoke|verify-smoke|judge-full}" >&2
+    echo "Usage: $0 {prepare-captions|calibrate|verify-calibration|diagnose-calibration|smoke|verify-smoke|judge-full}" >&2
     exit 2
     ;;
 esac
