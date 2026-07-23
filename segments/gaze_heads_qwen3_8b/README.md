@@ -238,6 +238,19 @@ Full three-seed judging is deliberately a separate final command:
 bash scripts/run_neuronic_qwen3_kimi_gate.sh judge-full
 ```
 
+After all three judge tasks complete, strictly validate and aggregate them:
+
+```bash
+bash scripts/run_neuronic_qwen3_kimi_gate.sh aggregate-full
+```
+
+The aggregator requires 6,000 unique judgments per seed, numbered-panel judge
+schema 6, zero parse failures, and exact agreement among the deterministic
+gaze judgments repeated across files. It counts gaze rows once, reports each
+random-control seed separately, and computes paired 95% intervals by
+bootstrapping the 500 comic strips rather than treating panel rows or repeated
+gaze copies as independent.
+
 After CPU merging finishes, verify the complete three-seed discovery and
 static-generation state before spending more GPU time:
 

@@ -42,8 +42,11 @@ case "$mode" in
       --seeds 3 --shards 10 --shard-size 50 --top-ks 100 \
       --judge kimi --judge-only
     ;;
+  aggregate-full)
+    uv run python scripts/aggregate_qwen3_static_paper_judgments.py
+    ;;
   *)
-    echo "Usage: $0 {prepare-captions|calibrate|verify-calibration|diagnose-calibration|smoke|verify-smoke|judge-full}" >&2
+    echo "Usage: $0 {prepare-captions|calibrate|verify-calibration|diagnose-calibration|smoke|verify-smoke|judge-full|aggregate-full}" >&2
     exit 2
     ;;
 esac
