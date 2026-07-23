@@ -153,6 +153,43 @@ def main() -> None:
     paper_control.add_argument("--eval-root", default=f"{DEFAULT_SEGMENT_ROOT}/data/eval_comics")
     paper_control.add_argument("--ranking", default="", help="Override the merged gaze-head ranking path.")
 
+    control_distribution = subparsers.add_parser(
+        "control-distribution",
+        help=(
+            "Estimate uniform and layer-matched random-control distributions for "
+            "the static top-100 steering result."
+        ),
+    )
+    control_distribution.add_argument("--draws", type=_positive_int, default=10)
+    control_distribution.add_argument(
+        "--base-control-seed", type=_nonnegative_int, default=45
+    )
+    control_distribution.add_argument("--low-seed", type=_nonnegative_int, default=42)
+    control_distribution.add_argument("--reference-seed", type=_nonnegative_int, default=42)
+    control_distribution.add_argument("--reference-comics", type=_positive_int, default=500)
+    control_distribution.add_argument("--ranking-seed", type=_nonnegative_int, default=42)
+    control_distribution.add_argument("--shards", type=_positive_int, default=2)
+    control_distribution.add_argument("--shard-size", type=_positive_int, default=50)
+    control_distribution.add_argument("--top-k", type=_positive_int, default=100)
+    control_distribution.add_argument(
+        "--max-parallel",
+        type=_positive_int,
+        default=8,
+        help="Maximum concurrent one-GPU Qwen jobs (default: 8).",
+    )
+    control_distribution.add_argument(
+        "--judge-parallel",
+        type=_positive_int,
+        default=2,
+        help="Maximum concurrent one-GPU Kimi judge jobs (default: 2).",
+    )
+    control_distribution.add_argument(
+        "--eval-root", default=f"{DEFAULT_SEGMENT_ROOT}/data/eval_comics"
+    )
+    control_distribution.add_argument(
+        "--ranking", default="", help="Override the merged gaze-head ranking path."
+    )
+
     benchmark = subparsers.add_parser("benchmark", help="Run and aggregate VLMBias + NaturalBench alpha sweeps.")
     _seed_args(benchmark, default_base_seed=0)
     benchmark.add_argument("--ranking-seed", type=_nonnegative_int, default=42)
@@ -191,6 +228,8 @@ def main() -> None:
         final_job = submit_static(args, submitter, dependency)
     elif args.experiment == "static-paper-control":
         final_job = submit_static_paper_control(args, submitter, dependency)
+    elif args.experiment == "control-distribution":
+        final_job = submit_control_distribution(args, submitter, dependency)
     else:
         final_job = submit_benchmark(args, submitter, dependency)
     print(f"final_job={final_job}", flush=True)
@@ -408,6 +447,85 @@ def submit_static_paper_control(
         array_count=args.seeds * len(args.top_ks),
         max_parallel=args.judge_parallel,
         dependency=assembled,
+        exports=exports,
+    )
+
+
+def submit_control_distribution(
+    args: argparse.Namespace, submitter: Submitter, dependency: str | None
+) -> str:
+    n_comics = args.shards * args.shard_size
+    if n_comics > args.reference_comics:
+        raise SystemExit(
+            f"control-distribution requests {n_comics} comics but the reference gaze "
+            f"run has only {args.reference_comics}"
+        )
+    _require_path(Path(args.eval_root), "OpenAI evaluation comics root", args)
+    if not args.skip_preflight:
+        _require_eval_comics(Path(args.eval_root), n_comics)
+    ranking = args.ranking or (
+        f"{DEFAULT_SEGMENT_ROOT}/runs/gaze_discovery_seed{args.ranking_seed}_merged/"
+        "gaze_head_ranking.json"
+    )
+    _require_path(Path(ranking), "merged gaze-head ranking", args)
+    if not args.skip_preflight:
+        _require_ranking(Path(ranking), args.top_k)
+        reference_judgments = Path(
+            f"{DEFAULT_SEGMENT_ROOT}/runs/static_paper_replication_seed"
+            f"{args.reference_seed}_top{args.top_k}_merged_0_{args.reference_comics}/"
+            "kimi_judge/judgments.jsonl"
+        )
+        _require_path(reference_judgments, "existing reference gaze judgments", args)
+    if not args.dry_run and not args.skip_preflight:
+        _require_kimi_judge_cache(repo=Path.cwd())
+
+    seeds = list(
+        range(args.base_control_seed, args.base_control_seed + args.draws)
+    )
+    paper_specs = [f"paper@{seed}" for seed in seeds]
+    matched_specs = [f"layer_matched_random@{seed}" for seed in seeds]
+    specs = [*paper_specs, *matched_specs, f"layer_matched_low@{args.low_seed}"]
+    exports = _common_exports(args) | {
+        "EVAL_COMICS_ROOT": args.eval_root,
+        "GAZE_RANKING": ranking,
+        "RANKING_SEED": args.ranking_seed,
+        "N_SHARDS": args.shards,
+        "SHARD_SIZE": args.shard_size,
+        "TOP_K": args.top_k,
+        "CONTROL_SPECS_COLON": _colon(specs),
+        "PAPER_SEEDS_COLON": _colon(seeds),
+        "MATCHED_SEEDS_COLON": _colon(seeds),
+        "LOW_SEED": args.low_seed,
+        "REFERENCE_SEED": args.reference_seed,
+        "REFERENCE_COMICS": args.reference_comics,
+        "KIMI_MODEL": "moonshotai/Kimi-VL-A3B-Instruct",
+        "KIMI_REVISION": "cc6452511d00c99f3b3bed213e96ab7802c415c8",
+        "KIMI_MIN_GPU_MEMORY_GB": max(40.0, args.min_gpu_memory_gb),
+    }
+    workers = submitter.submit(
+        "scripts/slurm_neuronic_qwen3_control_distribution.sh",
+        array_count=len(specs) * args.shards,
+        max_parallel=args.max_parallel,
+        dependency=dependency,
+        exports=exports,
+    )
+    merged = submitter.submit(
+        "scripts/slurm_neuronic_qwen3_merge_control_distribution.sh",
+        array_count=len(specs),
+        max_parallel=len(specs),
+        dependency=workers,
+        exports=exports,
+    )
+    judged = submitter.submit(
+        "scripts/slurm_neuronic_qwen3_judge_control_distribution_kimi.sh",
+        array_count=len(specs),
+        max_parallel=args.judge_parallel,
+        dependency=merged,
+        exports=exports,
+    )
+    return submitter.submit(
+        "scripts/slurm_neuronic_qwen3_aggregate_control_distribution.sh",
+        dependency=judged,
         exports=exports,
     )
 

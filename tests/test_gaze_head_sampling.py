@@ -83,6 +83,45 @@ def test_paper_control_is_deterministic_for_seed() -> None:
     assert first == second
 
 
+def test_layer_matched_random_control_matches_gaze_layer_histogram() -> None:
+    gaze_heads = [(18, 0), (20, 0), (20, 1), (24, 29), (35, 31)]
+    heads, cutoff = select_control_heads(
+        control_mode="layer_matched_random",
+        n_layers=36,
+        n_heads=32,
+        gaze_heads=gaze_heads,
+        n_select=len(gaze_heads),
+        seed=45,
+        gaze_scores=None,
+        nongaze_percentile=5.0,
+    )
+
+    assert cutoff is None
+    assert len(heads) == len(set(heads)) == len(gaze_heads)
+    assert not set(heads).intersection(gaze_heads)
+    assert sorted(layer for layer, _ in heads) == sorted(
+        layer for layer, _ in gaze_heads
+    )
+
+
+def test_layer_matched_low_control_selects_lowest_eligible_per_layer() -> None:
+    scores = np.arange(4 * 5, dtype=np.float64).reshape(4, 5)
+    gaze_heads = [(1, 0), (1, 1), (3, 0)]
+
+    heads, _ = select_control_heads(
+        control_mode="layer_matched_low",
+        n_layers=4,
+        n_heads=5,
+        gaze_heads=gaze_heads,
+        n_select=3,
+        seed=0,
+        gaze_scores=scores,
+        nongaze_percentile=5.0,
+    )
+
+    assert heads == [(1, 2), (1, 3), (3, 1)]
+
+
 def test_static_paper_protocol_steers_prefill_and_decode_by_default() -> None:
     assert DEFAULT_DECODE_ONLY is False
     assert VQA_DEFAULT_DECODE_ONLY is False

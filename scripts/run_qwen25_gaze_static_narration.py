@@ -111,6 +111,46 @@ def select_control_heads(
                 f"in layers {PAPER_CONTROL_MIN_LAYER}--{PAPER_CONTROL_MAX_LAYER}"
             )
         return heads, None
+    if control_mode in {"layer_matched_random", "layer_matched_low"}:
+        layer_counts: dict[int, int] = {}
+        for layer, _ in gaze_heads:
+            layer_counts[layer] = layer_counts.get(layer, 0) + 1
+        if sum(layer_counts.values()) != n_select:
+            raise ValueError(
+                "layer-matched controls require n_select to equal the number "
+                f"of gaze heads ({len(gaze_heads)}), got {n_select}"
+            )
+        if control_mode == "layer_matched_low" and gaze_scores is None:
+            raise FileNotFoundError(
+                "layer_matched_low requires gaze_scores.npy next to the ranking"
+            )
+        selected: list[tuple[int, int]] = []
+        excluded = set(gaze_heads)
+        for layer, count in sorted(layer_counts.items()):
+            candidates = [
+                (layer, head)
+                for head in range(n_heads)
+                if (layer, head) not in excluded
+            ]
+            if len(candidates) < count:
+                raise RuntimeError(
+                    f"layer {layer} has only {len(candidates)} eligible controls; "
+                    f"need {count}"
+                )
+            if control_mode == "layer_matched_low":
+                candidates.sort(
+                    key=lambda item: float(gaze_scores[item[0], item[1]])
+                )
+            else:
+                import torch
+
+                generator = torch.Generator().manual_seed(seed * 10_000 + layer)
+                permutation = torch.randperm(
+                    len(candidates), generator=generator
+                ).tolist()
+                candidates = [candidates[index] for index in permutation]
+            selected.extend(candidates[:count])
+        return selected, None
     if gaze_scores is None:
         raise FileNotFoundError(
             f"control mode {control_mode!r} requires gaze_scores.npy next to the ranking"
@@ -152,12 +192,19 @@ def main() -> None:
     parser.add_argument("--nongaze-percentile", type=float, default=5.0)
     parser.add_argument(
         "--control-mode",
-        choices=["paper", "bottom5", "matched"],
+        choices=[
+            "paper",
+            "bottom5",
+            "matched",
+            "layer_matched_random",
+            "layer_matched_low",
+        ],
         default="paper",
         help=(
             "paper samples exactly K non-gaze heads uniformly from layers 20--35; bottom5 "
             "preserves the public repository's bottom-score-percentile ablation; matched "
-            "backfills that low-score pool to exactly K."
+            "backfills that low-score pool to exactly K; layer-matched modes reproduce the "
+            "gaze set's per-layer counts using random or lowest-score eligible heads."
         ),
     )
     parser.add_argument(
@@ -256,6 +303,15 @@ def main() -> None:
         "nongaze_percentile": args.nongaze_percentile,
         "control_mode": args.control_mode,
         "paper_control_layers": [PAPER_CONTROL_MIN_LAYER, PAPER_CONTROL_MAX_LAYER],
+        "control_layer_policy": (
+            "uniform_layers_20_35"
+            if args.control_mode == "paper"
+            else (
+                "match_gaze_layer_histogram"
+                if args.control_mode.startswith("layer_matched")
+                else "global_score_pool"
+            )
+        ),
         "condition_set": args.condition_set,
         "condition_labels": sorted(conditions),
         "selected_gaze_heads": [list(head) for head in gaze_heads],

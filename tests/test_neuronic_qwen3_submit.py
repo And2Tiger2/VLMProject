@@ -109,3 +109,18 @@ def test_static_paper_control_judge_only_submits_no_qwen_or_assembly() -> None:
     assert "slurm_neuronic_qwen3_assemble_paper_control.sh" not in output
     assert "--array=0-2%2" in output
     assert "JUDGE_LIMIT=120" in output
+
+
+def test_control_distribution_submits_complete_dependency_chain() -> None:
+    output = _run("control-distribution")
+    assert "slurm_neuronic_qwen3_control_distribution.sh" in output
+    assert "slurm_neuronic_qwen3_merge_control_distribution.sh" in output
+    assert "slurm_neuronic_qwen3_judge_control_distribution_kimi.sh" in output
+    assert "slurm_neuronic_qwen3_aggregate_control_distribution.sh" in output
+    assert "--array=0-41%8" in output
+    assert "--array=0-20%21" in output
+    assert "--array=0-20%2" in output
+    assert "paper@45:paper@46" in output
+    assert "layer_matched_random@45" in output
+    assert "layer_matched_low@42" in output
+    assert "--dependency=afterok:DRYRUN3" in output

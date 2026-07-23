@@ -300,6 +300,38 @@ The dependent validator rejects empty generations, missing attention
 telemetry, ineffective target attention, incomplete row counts, and duplicate
 experiment keys before results are interpreted.
 
+### Control-distribution follow-up
+
+The three-control result is too variable to support a specificity claim. The
+follow-up estimates that variance on 100 comics while reusing the already
+judged seed-42 gaze generations:
+
+- 10 paper controls, each uniformly sampling 100 non-gaze heads from layers
+  20--35;
+- 10 random controls with exactly the same per-layer histogram as the top-100
+  gaze set;
+- one deterministic layer-matched control using the lowest-scoring eligible
+  heads.
+
+Generation, strict merging, numbered-panel Kimi judging, and CPU aggregation
+form one dependency chain:
+
+```bash
+bash scripts/run_neuronic_qwen3_control_distribution.sh submit
+```
+
+The defaults request one GPU per generation/judge task, cap generation at
+eight concurrent tasks, and cap Kimi judging at two. The aggregate counts the
+existing gaze condition once and treats each selected control set as a draw;
+it reports the empirical gaze percentile, control distributions, paired
+comic-bootstrap intervals, and score/accuracy correlations.
+
+After `final_job` completes:
+
+```bash
+bash scripts/run_neuronic_qwen3_control_distribution.sh verify
+```
+
 ## Experiment 3: VLMBias + NaturalBench alpha sweep
 
 One seed:
