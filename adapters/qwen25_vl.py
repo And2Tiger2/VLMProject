@@ -98,8 +98,10 @@ class Qwen25VLAdapter:
 
         self._before_generate(inputs, include_image=include_image)
         generated = self._model.generate(**inputs, **self._generation_kwargs(max_new_tokens=max_new_tokens))
+        sequences = generated.sequences if hasattr(generated, "sequences") else generated
+        self._after_generate_output(generated, inputs)
         generated_trimmed = [
-            output_ids[len(input_ids) :] for input_ids, output_ids in zip(inputs.input_ids, generated)
+            output_ids[len(input_ids) :] for input_ids, output_ids in zip(inputs.input_ids, sequences)
         ]
         decoded = self._processor.batch_decode(
             generated_trimmed,
@@ -113,6 +115,10 @@ class Qwen25VLAdapter:
         return None
 
     def _after_generate(self) -> None:
+        return None
+
+    def _after_generate_output(self, generated: Any, inputs: Any) -> None:
+        """Inspect structured generation output before it is decoded."""
         return None
 
     def _generation_kwargs(self, max_new_tokens: int | None = None) -> dict[str, Any]:

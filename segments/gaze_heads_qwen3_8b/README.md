@@ -369,6 +369,45 @@ A non-colliding benchmark smoke run is:
 python3 scripts/submit_neuronic_qwen3.py benchmark --limit 20 --naturalbench-limit-groups 5
 ```
 
+## Experiment 4: staged attention-controller and head-selection study
+
+The original alpha sweep mixes intervention strength, head count, and
+selection on the same benchmark rows. The staged follow-up tests four
+controllers (baseline, fixed alpha, target attention mass, and a label-free
+confidence gate), then tests head count/layer placement, and finally evaluates
+the locked settings on held-out examples.
+
+Inspect the complete Slurm chain:
+
+```bash
+bash scripts/run_neuronic_qwen3_attention_methods.sh dry-run
+```
+
+Submit the small mechanics smoke, development controller sweep, development
+head sweep, and held-out confirmation as one failure-gated dependency chain:
+
+```bash
+bash scripts/run_neuronic_qwen3_attention_methods.sh full
+```
+
+When its final job completes:
+
+```bash
+bash scripts/run_neuronic_qwen3_attention_methods.sh verify
+```
+
+If the held-out result is worth tightening, run the separately authorized
+three-seed, all-400/all-100 robustness stage:
+
+```bash
+bash scripts/run_neuronic_qwen3_attention_methods.sh robustness
+```
+
+The exact sweep matrix, controller equations, deterministic 100/300 and 25/75
+splits, guardrails, head controls, selection rule, result hierarchy, resource
+rationale, and artifact paths are documented in
+[ATTENTION_METHODS.md](ATTENTION_METHODS.md).
+
 ## Scheduler controls
 
 Optional Neuronic scheduling fields are passed directly to every job in the

@@ -63,8 +63,10 @@ class Qwen3VLAdapter(Qwen25VLAdapter):
         inputs = prepare_qwen3_inputs(self._processor, messages, self._model.device)
         self._before_generate(inputs, include_image=include_image)
         generated = self._model.generate(**inputs, **self._generation_kwargs(max_new_tokens=max_new_tokens))
+        sequences = generated.sequences if hasattr(generated, "sequences") else generated
+        self._after_generate_output(generated, inputs)
         generated_trimmed = [
-            output_ids[len(input_ids) :] for input_ids, output_ids in zip(inputs.input_ids, generated)
+            output_ids[len(input_ids) :] for input_ids, output_ids in zip(inputs.input_ids, sequences)
         ]
         decoded = self._processor.batch_decode(
             generated_trimmed,
