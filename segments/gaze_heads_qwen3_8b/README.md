@@ -403,6 +403,18 @@ three-seed, all-400/all-100 robustness stage:
 bash scripts/run_neuronic_qwen3_attention_methods.sh robustness
 ```
 
+To queue the mechanics gate, both development sweeps, held-out confirmation,
+and three-seed robustness as one unattended `afterok` graph:
+
+```bash
+bash scripts/run_neuronic_qwen3_attention_methods.sh overnight
+```
+
+The launcher records every job ID and the final dependency ID in
+`segments/gaze_heads_qwen3_8b/experiments/attention_methods_v1/last_submission.json`.
+If any stage fails validation, all later work stays blocked rather than
+silently running with missing or unqualified inputs.
+
 The exact sweep matrix, controller equations, deterministic 100/300 and 25/75
 splits, guardrails, head controls, selection rule, result hierarchy, resource
 rationale, and artifact paths are documented in

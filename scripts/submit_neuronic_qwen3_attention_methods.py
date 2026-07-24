@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+from datetime import datetime, timezone
 import json
 import shlex
 import subprocess
@@ -28,10 +29,18 @@ def main() -> None:
     )
     parser.add_argument(
         "stage",
-        choices=["full", "smoke", "controller", "heads", "confirm", "robustness"],
+        choices=[
+            "full",
+            "overnight",
+            "smoke",
+            "controller",
+            "heads",
+            "confirm",
+            "robustness",
+        ],
         help=(
             "full runs development controller -> head sweep -> held-out confirmation. "
-            "robustness is the optional post-selection multi-seed all-data run."
+            "overnight appends the post-selection multi-seed all-data robustness run."
         ),
     )
     parser.add_argument("--repo", type=Path, default=REPO_DEFAULT)
@@ -60,15 +69,29 @@ def main() -> None:
         "MIN_GPU_MEMORY_GB": "20.0",
     }
 
-    if args.stage == "full":
+    if args.stage in {"full", "overnight"}:
         dependency = None
         jobs = {}
-        for stage in ("smoke", "controller", "heads", "confirm"):
+        chain = ["smoke", "controller", "heads", "confirm"]
+        if args.stage == "overnight":
+            chain.append("robustness")
+        for stage in chain:
+            count = (
+                4 * len(args.seeds)
+                if stage == "robustness"
+                else STAGE_COUNTS[stage]
+            )
             stage_jobs = _submit_stage(
                 submitter,
                 stage=stage,
-                count=STAGE_COUNTS[stage],
-                max_parallel=2 if stage == "smoke" else args.max_parallel,
+                count=count,
+                max_parallel=(
+                    2
+                    if stage == "smoke"
+                    else args.robustness_max_parallel
+                    if stage == "robustness"
+                    else args.max_parallel
+                ),
                 dependency=dependency,
                 exports=exports,
             )
@@ -99,7 +122,17 @@ def main() -> None:
         "jobs": jobs,
         "final_job": list(jobs.values())[-1]["aggregate"],
         "dry_run": args.dry_run,
+        "commands": submitter.commands,
     }
+    if not args.dry_run:
+        receipt_path = repo / EXPERIMENT_ROOT / "last_submission.json"
+        receipt_path.parent.mkdir(parents=True, exist_ok=True)
+        result["submitted_at_utc"] = datetime.now(timezone.utc).isoformat()
+        result["git_commit"] = subprocess.check_output(
+            ["git", "rev-parse", "HEAD"], cwd=repo, text=True
+        ).strip()
+        result["receipt"] = str(receipt_path)
+        receipt_path.write_text(json.dumps(result, indent=2), encoding="utf-8")
     print(json.dumps(result, indent=2))
 
 
@@ -136,6 +169,7 @@ class Submitter:
     def __init__(self, *, dry_run: bool) -> None:
         self.dry_run = dry_run
         self.counter = 0
+        self.commands: list[str] = []
 
     def sbatch(
         self,
@@ -154,7 +188,9 @@ class Submitter:
             f"{key}={value}" for key, value in sorted(exports.items())
         )
         command.extend(["--export", export_value, script])
-        print(shlex.join(command), flush=True)
+        rendered = shlex.join(command)
+        self.commands.append(rendered)
+        print(rendered, flush=True)
         if self.dry_run:
             self.counter += 1
             return f"DRYRUN{self.counter}"

@@ -13,10 +13,13 @@ from adapters.qwen25_vl_gaze_attention import (
 from scripts.aggregate_qwen3_attention_methods import aggregate_stage
 from scripts.run_qwen3_attention_method_condition import _generate
 from vlm_eval.qwen3_attention_methods import (
+    confirmation_conditions,
     controller_conditions,
     head_conditions,
     prepare_stratified_splits,
     read_jsonl,
+    robustness_conditions,
+    smoke_conditions,
 )
 from vlm_eval.types import EvalExample
 
@@ -112,6 +115,49 @@ def test_condition_families_and_head_sweep_are_explicit() -> None:
         "layer_matched_low",
         "paper_random",
     }
+
+
+def test_smoke_confirmation_and_robustness_expand_locked_specs_exactly() -> None:
+    controllers = controller_conditions()
+    smoke = smoke_conditions()
+    assert [(row["name"], row["head_count"]) for row in smoke] == [
+        ("baseline", 0),
+        ("fixed_alpha2", 10),
+        ("target_mass0p7", 10),
+        ("confidence_gate0p6", 10),
+    ]
+    controller_selection = {
+        "selected_overall": {"spec": controllers[3]},
+        "selected_by_family": {
+            "fixed": {"spec": controllers[3]},
+            "target_mass": {"spec": controllers[6]},
+            "confidence_gate": {"spec": controllers[9]},
+        },
+    }
+    chosen_head = head_conditions(controllers[3])[1]
+    head_selection = {"selected_head": {"spec": chosen_head}}
+    confirmation = confirmation_conditions(
+        controller_selection, head_selection
+    )
+    assert len(confirmation) == 4
+    assert confirmation[0]["name"] == "baseline"
+    assert confirmation[0]["head_count"] == 0
+    assert {
+        row["controller"] for row in confirmation[1:]
+    } == {"fixed", "target_mass", "confidence_gate"}
+    assert all(row["head_count"] == 50 for row in confirmation[1:])
+    assert all(
+        row["head_selection"] == "gaze_global" for row in confirmation[1:]
+    )
+
+    robustness = robustness_conditions(
+        controller_selection, head_selection, [0, 1, 2]
+    )
+    assert len(robustness) == 12
+    assert {row["seed"] for row in robustness} == {0, 1, 2}
+    assert all(row["do_sample"] for row in robustness)
+    assert all(row["temperature"] == 0.7 for row in robustness)
+    assert all(row["split"] == "all" for row in robustness)
 
 
 def test_head_controls_are_exact_reproducible_and_layer_matched(

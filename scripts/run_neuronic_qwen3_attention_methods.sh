@@ -4,12 +4,12 @@ set -euo pipefail
 cd "${REPO:-/n/fs/pvl-memory/at7979/VLMProject}"
 
 case "${1:-}" in
-  full|smoke|controller|heads|confirm|robustness)
+  full|overnight|smoke|controller|heads|confirm|robustness)
     python3 scripts/submit_neuronic_qwen3_attention_methods.py "${1}"
     ;;
   dry-run)
     python3 scripts/submit_neuronic_qwen3_attention_methods.py \
-      --dry-run --skip-preflight full
+      --dry-run --skip-preflight overnight
     ;;
   verify)
     for stage in smoke controller heads confirm robustness; do
@@ -21,7 +21,7 @@ case "${1:-}" in
     done
     ;;
   *)
-    echo "Usage: bash scripts/run_neuronic_qwen3_attention_methods.sh {full|smoke|controller|heads|confirm|robustness|dry-run|verify}" >&2
+    echo "Usage: bash scripts/run_neuronic_qwen3_attention_methods.sh {full|overnight|smoke|controller|heads|confirm|robustness|dry-run|verify}" >&2
     exit 2
     ;;
 esac

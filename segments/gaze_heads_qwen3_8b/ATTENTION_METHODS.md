@@ -224,6 +224,27 @@ held-out confirmation:
 bash scripts/run_neuronic_qwen3_attention_methods.sh full
 ```
 
+For an unattended run, queue those four stages plus the three-seed robustness
+stage in one command:
+
+```bash
+bash scripts/run_neuronic_qwen3_attention_methods.sh overnight
+```
+
+`overnight` is a strict 15-job `afterok` graph: each of the five stages has a
+CPU preparation job, a one-GPU condition array, and a CPU validation/aggregate
+job. Robustness cannot start unless the mechanics gate passes, a non-baseline
+controller passes the development guardrails, a gaze-ranked head setting
+passes the development guardrails, and held-out confirmation is complete and
+valid. Any failed task blocks every dependent stage.
+
+The submission receipt, exact commands, all job IDs, final job ID, timestamp,
+and Git commit are saved to:
+
+```text
+segments/gaze_heads_qwen3_8b/experiments/attention_methods_v1/last_submission.json
+```
+
 Each GPU task requests one GPU, eight CPU cores, and 96 GB host memory. The
 model and examples are serial within one worker, so requesting multiple GPUs
 would not speed a condition up. The array permits at most eight concurrent
@@ -238,7 +259,8 @@ After the final job completes:
 bash scripts/run_neuronic_qwen3_attention_methods.sh verify
 ```
 
-If held-out confirmation is satisfactory, launch the optional broader run:
+If `full` was used instead of `overnight` and held-out confirmation is
+satisfactory, launch the optional broader run:
 
 ```bash
 bash scripts/run_neuronic_qwen3_attention_methods.sh robustness
