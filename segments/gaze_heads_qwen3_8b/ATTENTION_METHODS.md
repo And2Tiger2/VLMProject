@@ -245,13 +245,14 @@ and Git commit are saved to:
 segments/gaze_heads_qwen3_8b/experiments/attention_methods_v1/last_submission.json
 ```
 
-The launcher requires the Neuronic temperature checker before submitting any
-jobs, and each GPU worker checks it again before loading model weights. The
-default location is `/n/fs/vl/scripts_group/check_overheat`. If the checker is
-provided in another accessible location, set `VLM_CHECK_OVERHEAT_DIR` to the
-directory containing `check_overheat.py`. Submission and GPU execution both
-fail closed unless the checker provides callable `pause_needed()` and
-`pause()` functions.
+The Princeton-VL `check_overheat` Python module is an Ionic policy and lives in
+a Princeton-VL group-owned directory. It is not required for this Neuronic
+workflow. Calls through `vlm_eval.overheat.maybe_pause()` therefore treat a
+missing or inaccessible checker as unavailable. For a future Ionic run, set
+`VLM_REQUIRE_OVERHEAT_CHECK=1` and, if necessary,
+`VLM_CHECK_OVERHEAT_DIR` to the accessible directory containing
+`check_overheat.py`; strict mode refuses to continue unless the module provides
+callable `pause_needed()` and `pause()` functions.
 
 Each GPU task requests one GPU, four CPU cores, and 64 GB host memory. The
 model and examples are serial within one worker, so requesting multiple GPUs

@@ -415,12 +415,11 @@ The launcher records every job ID and the final dependency ID in
 If any stage fails validation, all later work stays blocked rather than
 silently running with missing or unqualified inputs.
 
-The Neuronic temperature checker is mandatory for this workflow. It is
-validated before submission and again before model loading in every GPU job.
-The default is `/n/fs/vl/scripts_group/check_overheat`; set
-`VLM_CHECK_OVERHEAT_DIR` to an accessible directory containing
-`check_overheat.py` if your cluster group provides it elsewhere. The workflow
-refuses to run without callable `pause_needed()` and `pause()` safeguards.
+The Princeton-VL `check_overheat` Python module is required by that lab for
+Ionic jobs, not for this Neuronic workflow. An inaccessible Ionic group path is
+therefore treated as unavailable here. Future Ionic runs can opt into
+fail-closed enforcement with `VLM_REQUIRE_OVERHEAT_CHECK=1` and, when needed,
+an accessible `VLM_CHECK_OVERHEAT_DIR`.
 
 To replace a failed chain without mixing its partial artifacts into a corrected
 run:

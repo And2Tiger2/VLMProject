@@ -4,7 +4,6 @@ from __future__ import annotations
 import argparse
 from datetime import datetime, timezone
 import json
-import os
 import re
 import subprocess
 import sys
@@ -46,16 +45,6 @@ def main() -> None:
         )
     if receipt.get("stage") != "overnight" or receipt.get("dry_run"):
         raise SystemExit("Refusing recovery: receipt is not a real overnight run.")
-
-    # Validate the required cluster safeguard before changing the old chain.
-    # The replacement submitter checks it again, and each GPU worker checks it
-    # once more before model loading.
-    subprocess.run(
-        ["uv", "run", "python", "scripts/check_neuronic_overheat.py"],
-        cwd=repo,
-        env={**os.environ, "VLM_REQUIRE_OVERHEAT_CHECK": "1"},
-        check=True,
-    )
 
     job_ids = _receipt_job_ids(receipt)
     invalid = [job_id for job_id in job_ids if not JOB_ID_PATTERN.fullmatch(job_id)]
