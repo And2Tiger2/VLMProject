@@ -4,11 +4,11 @@ from __future__ import annotations
 import argparse
 from datetime import datetime, timezone
 import json
+import os
 import shlex
 import subprocess
 from pathlib import Path
 from typing import Any
-
 
 REPO_DEFAULT = Path("/n/fs/pvl-memory/at7979/VLMProject")
 EXPERIMENT_ROOT = Path(
@@ -208,6 +208,7 @@ def _preflight(repo: Path, stage: str) -> None:
         repo / "scripts/slurm_neuronic_qwen3_prepare_attention_methods.sh",
         repo / "scripts/slurm_neuronic_qwen3_attention_method_condition.sh",
         repo / "scripts/slurm_neuronic_qwen3_aggregate_attention_methods.sh",
+        repo / "scripts/check_neuronic_overheat.py",
     ]
     if stage in {"heads", "confirm", "robustness"}:
         required.append(repo / REPORT_ROOT / "controller/selection.json")
@@ -221,6 +222,13 @@ def _preflight(repo: Path, stage: str) -> None:
         raise SystemExit(
             f"Gaze ranking must contain at least 100 heads: {repo / GAZE_RANKING}"
         )
+    checker_environment = {**os.environ, "VLM_REQUIRE_OVERHEAT_CHECK": "1"}
+    subprocess.run(
+        ["uv", "run", "python", "scripts/check_neuronic_overheat.py"],
+        cwd=repo,
+        env=checker_environment,
+        check=True,
+    )
     _validate_vlmbias(
         repo / "segments/vlm_bias_attention/data/vlmbias_400.jsonl"
     )

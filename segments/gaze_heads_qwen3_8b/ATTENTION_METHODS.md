@@ -245,13 +245,33 @@ and Git commit are saved to:
 segments/gaze_heads_qwen3_8b/experiments/attention_methods_v1/last_submission.json
 ```
 
-Each GPU task requests one GPU, eight CPU cores, and 96 GB host memory. The
+The launcher requires the Neuronic temperature checker before submitting any
+jobs, and each GPU worker checks it again before loading model weights. The
+default location is `/n/fs/vl/scripts_group/check_overheat`. If the checker is
+provided in another accessible location, set `VLM_CHECK_OVERHEAT_DIR` to the
+directory containing `check_overheat.py`. Submission and GPU execution both
+fail closed unless the checker provides callable `pause_needed()` and
+`pause()` functions.
+
+Each GPU task requests one GPU, four CPU cores, and 64 GB host memory. The
 model and examples are serial within one worker, so requesting multiple GPUs
 would not speed a condition up. The array permits at most eight concurrent
 single-GPU workers; Slurm may run fewer as resources permit. This follows the
 cluster guidance to demonstrate/utilize the one-GPU case before considering
 multi-GPU parallelism. Use `jobstats <jobid>` after the pilot tasks to check
 GPU/CPU utilization before increasing resources or concurrency.
+
+If an earlier chain failed, recover it only after pulling the fix:
+
+```bash
+bash scripts/run_neuronic_qwen3_attention_methods.sh recover FINAL_JOB_ID
+```
+
+Recovery validates that ID against the saved receipt, cancels exactly the jobs
+recorded there, moves the old experiment/run/report directories into
+timestamped `*_failed_FINAL_JOB_ID_*` archives, and submits a clean replacement.
+It uses gentler concurrency limits of four development workers and two
+robustness workers.
 
 After the final job completes:
 

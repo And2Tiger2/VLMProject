@@ -415,6 +415,20 @@ The launcher records every job ID and the final dependency ID in
 If any stage fails validation, all later work stays blocked rather than
 silently running with missing or unqualified inputs.
 
+The Neuronic temperature checker is mandatory for this workflow. It is
+validated before submission and again before model loading in every GPU job.
+The default is `/n/fs/vl/scripts_group/check_overheat`; set
+`VLM_CHECK_OVERHEAT_DIR` to an accessible directory containing
+`check_overheat.py` if your cluster group provides it elsewhere. The workflow
+refuses to run without callable `pause_needed()` and `pause()` safeguards.
+
+To replace a failed chain without mixing its partial artifacts into a corrected
+run:
+
+```bash
+bash scripts/run_neuronic_qwen3_attention_methods.sh recover FINAL_JOB_ID
+```
+
 The exact sweep matrix, controller equations, deterministic 100/300 and 25/75
 splits, guardrails, head controls, selection rule, result hierarchy, resource
 rationale, and artifact paths are documented in

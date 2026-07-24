@@ -20,8 +20,15 @@ case "${1:-}" in
       fi
     done
     ;;
+  recover)
+    if [[ -z "${2:-}" ]]; then
+      echo "Usage: bash scripts/run_neuronic_qwen3_attention_methods.sh recover FINAL_JOB_ID" >&2
+      exit 2
+    fi
+    python3 scripts/recover_neuronic_qwen3_attention_methods.py "$2"
+    ;;
   *)
-    echo "Usage: bash scripts/run_neuronic_qwen3_attention_methods.sh {full|overnight|smoke|controller|heads|confirm|robustness|dry-run|verify}" >&2
+    echo "Usage: bash scripts/run_neuronic_qwen3_attention_methods.sh {full|overnight|smoke|controller|heads|confirm|robustness|dry-run|verify|recover FINAL_JOB_ID}" >&2
     exit 2
     ;;
 esac

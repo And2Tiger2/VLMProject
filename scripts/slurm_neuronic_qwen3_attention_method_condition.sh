@@ -5,8 +5,8 @@
 #SBATCH --time=08:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --cpus-per-task=8
-#SBATCH --mem=96G
+#SBATCH --cpus-per-task=4
+#SBATCH --mem=64G
 #SBATCH --gres=gpu:1
 
 set -euo pipefail
@@ -28,8 +28,10 @@ export HUGGINGFACE_HUB_CACHE="$CACHE_ROOT/huggingface/hub"
 export TORCH_HOME="$CACHE_ROOT/torch"
 export TOKENIZERS_PARALLELISM=false
 export HF_HUB_OFFLINE="${HF_HUB_OFFLINE:-1}"
+export VLM_REQUIRE_OVERHEAT_CHECK=1
 
 echo "host=$(hostname) gpu=${CUDA_VISIBLE_DEVICES:-unset} stage=$STAGE task=${SLURM_ARRAY_TASK_ID:-0}"
+uv run python scripts/check_neuronic_overheat.py
 uv run python scripts/check_neuronic_gpu.py \
   --min-memory-gb "${MIN_GPU_MEMORY_GB:-20}"
 srun uv run python scripts/run_qwen3_attention_method_condition.py \
