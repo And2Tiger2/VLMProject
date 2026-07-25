@@ -42,6 +42,14 @@ VLMBias or NaturalBench labels. Controller and head choices use only the
 development split. The held-out confirmation split is the primary inferential
 result.
 
+> **Post-run correction.** The original v1 confirmation artifacts are not a
+> valid held-out comparison. Treatment specs inherited their development split
+> and dataset paths while the baseline used the held-out split. The code now
+> makes stage routing authoritative and aggregation rejects any stage/path
+> mismatch, but existing v1 confirmation outputs remain historical artifacts.
+> Use the repaired v2 run documented in
+> [GAZE_SPECIFICITY_V2.md](GAZE_SPECIFICITY_V2.md) for held-out inference.
+
 ## Attention controllers
 
 All interventions operate inside language-model self-attention. They add a

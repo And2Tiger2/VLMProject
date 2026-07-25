@@ -15,6 +15,14 @@ from vlm_eval.qwen3_attention_methods import (
     read_jsonl,
 )
 
+EXPECTED_STAGE_SPLIT = {
+    "smoke": "smoke",
+    "controller": "dev",
+    "heads": "dev",
+    "confirm": "confirm",
+    "robustness": "all",
+}
+
 
 def main() -> None:
     parser = argparse.ArgumentParser(
@@ -54,6 +62,7 @@ def aggregate_stage(
     errors: list[str] = []
     warnings: list[str] = []
     rows: list[dict[str, Any]] = []
+    errors.extend(_validate_manifest_routing(manifest, stage))
     for condition in manifest["conditions"]:
         summary_path = run_root / stage / condition["name"] / "summary.json"
         if not summary_path.exists():
@@ -110,9 +119,34 @@ def aggregate_stage(
     return report
 
 
-def _validate_summary(
-    summary: dict[str, Any], condition: dict[str, Any]
-) -> list[str]:
+def _validate_manifest_routing(manifest: dict[str, Any], stage: str) -> list[str]:
+    errors: list[str] = []
+    expected_split = EXPECTED_STAGE_SPLIT[stage]
+    split_manifest_path = Path(manifest["split_manifest"])
+    split_manifest = _read_json(split_manifest_path)
+    expected_vlmbias = split_manifest["paths"][f"{expected_split}_vlmbias"]
+    expected_naturalbench = split_manifest["paths"][f"{expected_split}_naturalbench"]
+    for condition in manifest.get("conditions", []):
+        name = condition.get("name", "<unnamed>")
+        if condition.get("split") != expected_split:
+            errors.append(
+                f"{name}: stage {stage} requires split {expected_split!r}, "
+                f"found {condition.get('split')!r}"
+            )
+        if condition.get("vlmbias_dataset") != expected_vlmbias:
+            errors.append(
+                f"{name}: stage {stage} does not use the authoritative "
+                f"{expected_split} VLMBias dataset"
+            )
+        if condition.get("naturalbench_dataset") != expected_naturalbench:
+            errors.append(
+                f"{name}: stage {stage} does not use the authoritative "
+                f"{expected_split} NaturalBench dataset"
+            )
+    return errors
+
+
+def _validate_summary(summary: dict[str, Any], condition: dict[str, Any]) -> list[str]:
     errors: list[str] = []
     name = condition["name"]
     if not summary.get("valid"):
@@ -153,7 +187,10 @@ def _validate_summary(
         errors.append(f"{name}: NaturalBench contains duplicate calls")
     selected = summary.get("selected_heads", [])
     expected_heads = int(condition["head_count"])
-    if len(selected) != expected_heads or len({tuple(head) for head in selected}) != expected_heads:
+    if (
+        len(selected) != expected_heads
+        or len({tuple(head) for head in selected}) != expected_heads
+    ):
         errors.append(
             f"{name}: expected {expected_heads} unique selected heads, found "
             f"{len({tuple(head) for head in selected})}"
@@ -219,9 +256,7 @@ def _select_development_setting(
     warnings: list[str] = []
     errors: list[str] = []
     if stage == "controller":
-        nonbaseline = [
-            item for item in evaluated if item["spec"]["name"] != "baseline"
-        ]
+        nonbaseline = [item for item in evaluated if item["spec"]["name"] != "baseline"]
         qualified = [item for item in nonbaseline if item["qualified"]]
         selected_overall = min(qualified, key=_selection_key) if qualified else None
         selected_by_family = {}
@@ -292,9 +327,7 @@ def _select_development_setting(
     return selection
 
 
-def _qualification(
-    row: dict[str, Any], baseline: dict[str, Any]
-) -> dict[str, Any]:
+def _qualification(row: dict[str, Any], baseline: dict[str, Any]) -> dict[str, Any]:
     values = {
         "vlmbias_accuracy_drop": (
             baseline["vlmbias"]["accuracy"] - row["vlmbias"]["accuracy"]
@@ -383,14 +416,20 @@ def _confirmation_comparison(rows: list[dict[str, Any]]) -> dict[str, Any]:
     for row in rows:
         if row is baseline:
             continue
+        if row["vlmbias"]["n"] != baseline["vlmbias"]["n"]:
+            raise ValueError(
+                "held-out confirmation conditions have unequal VLMBias row counts"
+            )
+        if row["naturalbench"]["n_groups"] != baseline["naturalbench"]["n_groups"]:
+            raise ValueError(
+                "held-out confirmation conditions have unequal NaturalBench group counts"
+            )
         comparisons[row["condition"]["name"]] = {
             "metrics": _compact_metrics(row),
             "delta_vs_baseline": {
                 "vlmbias_accuracy": row["vlmbias"]["accuracy"]
                 - baseline["vlmbias"]["accuracy"],
-                "vlmbias_bias_aligned_fraction": row["vlmbias"][
-                    "bias_aligned_fraction"
-                ]
+                "vlmbias_bias_aligned_fraction": row["vlmbias"]["bias_aligned_fraction"]
                 - baseline["vlmbias"]["bias_aligned_fraction"],
                 "naturalbench_Acc": row["naturalbench"]["Acc"]
                 - baseline["naturalbench"]["Acc"],

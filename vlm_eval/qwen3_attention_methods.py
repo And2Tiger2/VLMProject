@@ -12,16 +12,20 @@ EXPERIMENT_VERSION = "qwen3_attention_methods_v1"
 DEFAULT_EXPERIMENT_ROOT = Path(
     "segments/gaze_heads_qwen3_8b/experiments/attention_methods_v1"
 )
-DEFAULT_RUN_ROOT = Path(
-    "segments/gaze_heads_qwen3_8b/runs/attention_methods_v1"
-)
-DEFAULT_REPORT_ROOT = Path(
-    "segments/gaze_heads_qwen3_8b/reports/attention_methods_v1"
-)
+DEFAULT_RUN_ROOT = Path("segments/gaze_heads_qwen3_8b/runs/attention_methods_v1")
+DEFAULT_REPORT_ROOT = Path("segments/gaze_heads_qwen3_8b/reports/attention_methods_v1")
 QUALIFICATION = {
     "max_vlmbias_accuracy_drop": 0.02,
     "max_naturalbench_g_acc_drop": 0.05,
     "max_invalid_rate_increase": 0.02,
+}
+RUNTIME_CONDITION_FIELDS = {
+    "seed",
+    "do_sample",
+    "temperature",
+    "split",
+    "vlmbias_dataset",
+    "naturalbench_dataset",
 }
 
 
@@ -75,9 +79,7 @@ def methodology() -> dict[str, Any]:
             },
         },
         "head_sweep": {
-            "eligible": (
-                "global gaze top 10/50/100 and early/middle/late gaze top 50"
-            ),
+            "eligible": ("global gaze top 10/50/100 and early/middle/late gaze top 50"),
             "diagnostic_controls": (
                 "two layer-matched random top-50 draws, a layer-matched lowest-score "
                 "top-50 set, and a paper-style layer-20-to-35 random top-50 set"
@@ -179,7 +181,9 @@ def confirmation_conditions(
     baseline = _condition("baseline", controller="fixed", alpha=0.0)
     output = [baseline]
     for family in ("fixed", "target_mass", "confidence_gate"):
-        source = controller_selection["selected_by_family"][family]["spec"]
+        source = _without_runtime_fields(
+            controller_selection["selected_by_family"][family]["spec"]
+        )
         output.append(
             {
                 **source,
@@ -228,9 +232,7 @@ def prepare_stratified_splits(
     if not 0 < vlmbias_smoke <= vlmbias_dev:
         raise ValueError("VLMBias smoke size must be within the development split")
     if not 0 < naturalbench_smoke <= naturalbench_dev:
-        raise ValueError(
-            "NaturalBench smoke size must be within the development split"
-        )
+        raise ValueError("NaturalBench smoke size must be within the development split")
     vlmbias_rows = read_jsonl(vlmbias_path)
     naturalbench_rows = read_jsonl(naturalbench_path)
     vlmbias_dev_ids = _stratified_ids(
@@ -250,9 +252,7 @@ def prepare_stratified_splits(
     )
     split_rows = {
         "smoke_vlmbias": [
-            row
-            for row in vlmbias_rows
-            if str(row.get("id")) in vlmbias_dev_ids
+            row for row in vlmbias_rows if str(row.get("id")) in vlmbias_dev_ids
         ][:vlmbias_smoke],
         "dev_vlmbias": [
             row for row in vlmbias_rows if str(row.get("id")) in vlmbias_dev_ids
@@ -321,10 +321,14 @@ def write_condition_manifest(
 ) -> dict[str, Any]:
     rows = []
     for condition in conditions:
-        condition_split = str(condition.get("split", split))
+        # Dataset routing belongs to the stage, not to a condition inherited from
+        # an earlier selection report.  In v1 the selected development condition
+        # carried ``split=dev`` into held-out confirmation, causing the baseline
+        # to use confirm data while treatments silently reused development data.
+        condition_split = str(split)
         rows.append(
             {
-                **condition,
+                **_without_runtime_fields(condition),
                 "seed": int(condition.get("seed", seed)),
                 "do_sample": bool(condition.get("do_sample", do_sample)),
                 "temperature": condition.get("temperature", temperature),
@@ -346,6 +350,14 @@ def write_condition_manifest(
     out_path.parent.mkdir(parents=True, exist_ok=True)
     out_path.write_text(json.dumps(manifest, indent=2), encoding="utf-8")
     return manifest
+
+
+def _without_runtime_fields(condition: dict[str, Any]) -> dict[str, Any]:
+    return {
+        key: value
+        for key, value in condition.items()
+        if key not in RUNTIME_CONDITION_FIELDS
+    }
 
 
 def _condition(

@@ -433,6 +433,43 @@ splits, guardrails, head controls, selection rule, result hierarchy, resource
 rationale, and artifact paths are documented in
 [ATTENTION_METHODS.md](ATTENTION_METHODS.md).
 
+### Held-out repair and rigorous gaze-head specificity follow-up
+
+The completed v1 run exposed a routing defect in deterministic confirmation:
+the baseline used the 300/75 held-out split, but treatment conditions inherited
+the 100/25 development paths from their selection records. The development
+sweeps and explicit all-data robustness stage remain internally valid; the v1
+held-out treatment comparison must not be used.
+
+The v2 follow-up fixes that invariant and adds the experiments needed to test
+whether the effect is actually specific to gaze heads:
+
+- corrected four-condition held-out rerun;
+- 20 exact layer-matched random top-50 draws, 10 paper-style random draws, and
+  a layer-matched lowest-score control;
+- paired example/group bootstrap intervals and an add-one empirical head-draw
+  test;
+- a top-50 interaction sweep over fixed alpha, lower target masses, and
+  confidence thresholds near the observed confidence distribution;
+- development-only selection, deterministic held-out final evaluation, and
+  three-seed all-data robustness.
+
+Inspect and submit the strict chain:
+
+```bash
+bash scripts/run_neuronic_qwen3_gaze_specificity.sh dry-run
+bash scripts/run_neuronic_qwen3_gaze_specificity.sh overnight
+```
+
+After its printed final job completes:
+
+```bash
+bash scripts/run_neuronic_qwen3_gaze_specificity.sh verify
+```
+
+The complete methodology is in
+[GAZE_SPECIFICITY_V2.md](GAZE_SPECIFICITY_V2.md).
+
 ## Scheduler controls
 
 Optional Neuronic scheduling fields are passed directly to every job in the

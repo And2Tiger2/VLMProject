@@ -20,15 +20,14 @@ from vlm_eval.qwen3_attention_methods import (
     read_jsonl,
     robustness_conditions,
     smoke_conditions,
+    write_condition_manifest,
 )
 from vlm_eval.types import EvalExample
 
 
 def _write_jsonl(path: Path, rows: list[dict]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(
-        "".join(json.dumps(row) + "\n" for row in rows), encoding="utf-8"
-    )
+    path.write_text("".join(json.dumps(row) + "\n" for row in rows), encoding="utf-8")
 
 
 def test_stratified_splits_are_exact_disjoint_and_deterministic(tmp_path: Path) -> None:
@@ -90,9 +89,7 @@ def test_stratified_splits_are_exact_disjoint_and_deterministic(tmp_path: Path) 
     }
     dev = read_jsonl(Path(first["paths"]["dev_vlmbias"]))
     confirm = read_jsonl(Path(first["paths"]["confirm_vlmbias"]))
-    assert {row["id"] for row in dev}.isdisjoint(
-        {row["id"] for row in confirm}
-    )
+    assert {row["id"] for row in dev}.isdisjoint({row["id"] for row in confirm})
     assert [row["id"] for row in dev] == [
         row["id"] for row in read_jsonl(Path(second["paths"]["dev_vlmbias"]))
     ]
@@ -129,35 +126,82 @@ def test_smoke_confirmation_and_robustness_expand_locked_specs_exactly() -> None
     controller_selection = {
         "selected_overall": {"spec": controllers[3]},
         "selected_by_family": {
-            "fixed": {"spec": controllers[3]},
-            "target_mass": {"spec": controllers[6]},
-            "confidence_gate": {"spec": controllers[9]},
+            "fixed": {
+                "spec": {
+                    **controllers[3],
+                    "split": "dev",
+                    "vlmbias_dataset": "dev-v.jsonl",
+                    "naturalbench_dataset": "dev-n.jsonl",
+                }
+            },
+            "target_mass": {
+                "spec": {
+                    **controllers[6],
+                    "split": "dev",
+                    "vlmbias_dataset": "dev-v.jsonl",
+                    "naturalbench_dataset": "dev-n.jsonl",
+                }
+            },
+            "confidence_gate": {
+                "spec": {
+                    **controllers[9],
+                    "split": "dev",
+                    "vlmbias_dataset": "dev-v.jsonl",
+                    "naturalbench_dataset": "dev-n.jsonl",
+                }
+            },
         },
     }
     chosen_head = head_conditions(controllers[3])[1]
     head_selection = {"selected_head": {"spec": chosen_head}}
-    confirmation = confirmation_conditions(
-        controller_selection, head_selection
-    )
+    confirmation = confirmation_conditions(controller_selection, head_selection)
     assert len(confirmation) == 4
     assert confirmation[0]["name"] == "baseline"
     assert confirmation[0]["head_count"] == 0
-    assert {
-        row["controller"] for row in confirmation[1:]
-    } == {"fixed", "target_mass", "confidence_gate"}
+    assert {row["controller"] for row in confirmation[1:]} == {
+        "fixed",
+        "target_mass",
+        "confidence_gate",
+    }
     assert all(row["head_count"] == 50 for row in confirmation[1:])
-    assert all(
-        row["head_selection"] == "gaze_global" for row in confirmation[1:]
-    )
+    assert all(row["head_selection"] == "gaze_global" for row in confirmation[1:])
+    assert all("split" not in row for row in confirmation)
+    assert all("vlmbias_dataset" not in row for row in confirmation)
 
-    robustness = robustness_conditions(
-        controller_selection, head_selection, [0, 1, 2]
-    )
+    robustness = robustness_conditions(controller_selection, head_selection, [0, 1, 2])
     assert len(robustness) == 12
     assert {row["seed"] for row in robustness} == {0, 1, 2}
     assert all(row["do_sample"] for row in robustness)
     assert all(row["temperature"] == 0.7 for row in robustness)
     assert all(row["split"] == "all" for row in robustness)
+
+
+def test_manifest_stage_split_overrides_inherited_condition_routing(
+    tmp_path: Path,
+) -> None:
+    paths = {}
+    for split in ("dev", "confirm"):
+        for dataset in ("vlmbias", "naturalbench"):
+            path = tmp_path / f"{split}_{dataset}.jsonl"
+            _write_jsonl(path, [{"id": f"{split}-{dataset}"}])
+            paths[f"{split}_{dataset}"] = str(path)
+    condition = {
+        **controller_conditions()[1],
+        "split": "dev",
+        "vlmbias_dataset": paths["dev_vlmbias"],
+        "naturalbench_dataset": paths["dev_naturalbench"],
+    }
+    manifest = write_condition_manifest(
+        stage="confirm",
+        conditions=[condition],
+        split_manifest={"paths": paths},
+        out_path=tmp_path / "confirm_manifest.json",
+        split="confirm",
+    )
+    routed = manifest["conditions"][0]
+    assert routed["split"] == "confirm"
+    assert routed["vlmbias_dataset"] == paths["confirm_vlmbias"]
+    assert routed["naturalbench_dataset"] == paths["confirm_naturalbench"]
 
 
 def test_head_controls_are_exact_reproducible_and_layer_matched(
@@ -262,8 +306,26 @@ def test_controller_aggregation_locks_only_qualified_nonbaseline(
     ]
     manifest = tmp_path / "experiment" / "controller_manifest.json"
     manifest.parent.mkdir(parents=True)
+    split_manifest = manifest.parent / "split_manifest.json"
+    split_manifest.write_text(
+        json.dumps(
+            {
+                "paths": {
+                    "dev_vlmbias": str(vlmbias),
+                    "dev_naturalbench": str(naturalbench),
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
     manifest.write_text(
-        json.dumps({"stage": "controller", "conditions": conditions}),
+        json.dumps(
+            {
+                "stage": "controller",
+                "conditions": conditions,
+                "split_manifest": str(split_manifest),
+            }
+        ),
         encoding="utf-8",
     )
     run_root = tmp_path / "runs"
@@ -337,9 +399,7 @@ def test_generated_token_confidence_uses_chosen_token_probabilities() -> None:
     assert confidence["n_tokens"] == 2
     assert confidence["first_token_probability"] == pytest.approx(0.8)
     assert confidence["minimum_token_probability"] == pytest.approx(0.5)
-    assert confidence["geometric_mean_probability"] == pytest.approx(
-        (0.8 * 0.5) ** 0.5
-    )
+    assert confidence["geometric_mean_probability"] == pytest.approx((0.8 * 0.5) ** 0.5)
 
 
 def _summary(
@@ -407,8 +467,6 @@ class _FakeAdapter:
     def generate(self, example: EvalExample) -> str:
         self.alphas.append(self.attention_alpha)
         self.last_generation_metadata = {
-            "token_confidence": {
-                "geometric_mean_probability": self.confidence
-            }
+            "token_confidence": {"geometric_mean_probability": self.confidence}
         }
         return "boosted" if self.attention_alpha else "baseline"
