@@ -470,6 +470,22 @@ bash scripts/run_neuronic_qwen3_gaze_specificity.sh verify
 The complete methodology is in
 [GAZE_SPECIFICITY_V2.md](GAZE_SPECIFICITY_V2.md).
 
+## Publish verified Qwen3 results
+
+After the completed runs are present on Neuronic, one script reaggregates every
+informative experiment, validates exact cardinalities and provenance, excludes
+smoke/failed artifacts and the invalid v1 confirmation, stages only compact
+graph-ready files, commits them, and pushes the current branch:
+
+```bash
+bash scripts/publish_neuronic_qwen3_results.sh
+```
+
+Use the explicit `verify` mode to perform the same checks without touching the
+Git index, or `stage` to stop after preparing and auditing the result commit.
+Raw generations, raw judgments, Slurm logs, and files at least 90 MB are never
+published by this helper.
+
 ## Scheduler controls
 
 Optional Neuronic scheduling fields are passed directly to every job in the
