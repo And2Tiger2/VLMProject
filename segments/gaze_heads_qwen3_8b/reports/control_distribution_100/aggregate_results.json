@@ -1,0 +1,1570 @@
+{
+  "valid": true,
+  "stage": "qwen3_control_distribution",
+  "question": "Are top gaze heads more effective than the distribution of equally sized random controls, after separating layer placement from gaze score?",
+  "judge": "moonshotai/Kimi-VL-A3B-Instruct",
+  "numbered_judge_images": true,
+  "top_k": 100,
+  "n_comics": 100,
+  "panels_per_comic": 6,
+  "independent_gaze_rows": 600,
+  "control_rows_per_draw": 600,
+  "paper_seeds": [
+    45,
+    46,
+    47,
+    48,
+    49,
+    50,
+    51,
+    52,
+    53,
+    54
+  ],
+  "matched_seeds": [
+    45,
+    46,
+    47,
+    48,
+    49,
+    50,
+    51,
+    52,
+    53,
+    54
+  ],
+  "low_seed": 42,
+  "reference_gaze": "segments/gaze_heads_qwen3_8b/runs/static_paper_replication_seed42_top100_merged_0_500/kimi_judge/judgments.jsonl",
+  "source_paths": {
+    "paper@45": "segments/gaze_heads_qwen3_8b/runs/static_control_distribution_paper_seed45_top100_merged_0_100/kimi_judge/judgments.jsonl",
+    "paper@46": "segments/gaze_heads_qwen3_8b/runs/static_control_distribution_paper_seed46_top100_merged_0_100/kimi_judge/judgments.jsonl",
+    "paper@47": "segments/gaze_heads_qwen3_8b/runs/static_control_distribution_paper_seed47_top100_merged_0_100/kimi_judge/judgments.jsonl",
+    "paper@48": "segments/gaze_heads_qwen3_8b/runs/static_control_distribution_paper_seed48_top100_merged_0_100/kimi_judge/judgments.jsonl",
+    "paper@49": "segments/gaze_heads_qwen3_8b/runs/static_control_distribution_paper_seed49_top100_merged_0_100/kimi_judge/judgments.jsonl",
+    "paper@50": "segments/gaze_heads_qwen3_8b/runs/static_control_distribution_paper_seed50_top100_merged_0_100/kimi_judge/judgments.jsonl",
+    "paper@51": "segments/gaze_heads_qwen3_8b/runs/static_control_distribution_paper_seed51_top100_merged_0_100/kimi_judge/judgments.jsonl",
+    "paper@52": "segments/gaze_heads_qwen3_8b/runs/static_control_distribution_paper_seed52_top100_merged_0_100/kimi_judge/judgments.jsonl",
+    "paper@53": "segments/gaze_heads_qwen3_8b/runs/static_control_distribution_paper_seed53_top100_merged_0_100/kimi_judge/judgments.jsonl",
+    "paper@54": "segments/gaze_heads_qwen3_8b/runs/static_control_distribution_paper_seed54_top100_merged_0_100/kimi_judge/judgments.jsonl",
+    "layer_matched_random@45": "segments/gaze_heads_qwen3_8b/runs/static_control_distribution_layer_matched_random_seed45_top100_merged_0_100/kimi_judge/judgments.jsonl",
+    "layer_matched_random@46": "segments/gaze_heads_qwen3_8b/runs/static_control_distribution_layer_matched_random_seed46_top100_merged_0_100/kimi_judge/judgments.jsonl",
+    "layer_matched_random@47": "segments/gaze_heads_qwen3_8b/runs/static_control_distribution_layer_matched_random_seed47_top100_merged_0_100/kimi_judge/judgments.jsonl",
+    "layer_matched_random@48": "segments/gaze_heads_qwen3_8b/runs/static_control_distribution_layer_matched_random_seed48_top100_merged_0_100/kimi_judge/judgments.jsonl",
+    "layer_matched_random@49": "segments/gaze_heads_qwen3_8b/runs/static_control_distribution_layer_matched_random_seed49_top100_merged_0_100/kimi_judge/judgments.jsonl",
+    "layer_matched_random@50": "segments/gaze_heads_qwen3_8b/runs/static_control_distribution_layer_matched_random_seed50_top100_merged_0_100/kimi_judge/judgments.jsonl",
+    "layer_matched_random@51": "segments/gaze_heads_qwen3_8b/runs/static_control_distribution_layer_matched_random_seed51_top100_merged_0_100/kimi_judge/judgments.jsonl",
+    "layer_matched_random@52": "segments/gaze_heads_qwen3_8b/runs/static_control_distribution_layer_matched_random_seed52_top100_merged_0_100/kimi_judge/judgments.jsonl",
+    "layer_matched_random@53": "segments/gaze_heads_qwen3_8b/runs/static_control_distribution_layer_matched_random_seed53_top100_merged_0_100/kimi_judge/judgments.jsonl",
+    "layer_matched_random@54": "segments/gaze_heads_qwen3_8b/runs/static_control_distribution_layer_matched_random_seed54_top100_merged_0_100/kimi_judge/judgments.jsonl",
+    "layer_matched_low@42": "segments/gaze_heads_qwen3_8b/runs/static_control_distribution_layer_matched_low_seed42_top100_merged_0_100/kimi_judge/judgments.jsonl"
+  },
+  "bootstrap_unit": "comic strip",
+  "n_bootstrap": 10000,
+  "gaze": {
+    "accuracy": 0.7,
+    "summary": {
+      "accuracy": 0.7,
+      "n": 600,
+      "per_panel_accuracy": {
+        "1": 0.8,
+        "2": 0.78,
+        "3": 0.75,
+        "4": 0.73,
+        "5": 0.59,
+        "6": 0.55
+      },
+      "junk_count": 90,
+      "baseline_match_count": 0,
+      "empty_count": 6
+    },
+    "counting_policy": "existing seed-42 gaze judgments are counted once"
+  },
+  "groups": {
+    "paper_uniform_layers_20_35": {
+      "n_draws": 10,
+      "control_accuracy_mean": 0.39616666666666667,
+      "control_accuracy_std": 0.2411751707016354,
+      "control_accuracy_range": [
+        0.039999999999999994,
+        0.6633333333333334
+      ],
+      "gaze_empirical_percentile": 1.0,
+      "n_controls_at_or_above_gaze": 0,
+      "delta_mean": 0.30383333333333334,
+      "delta_std": 0.24117517070163538,
+      "delta_range": [
+        0.03666666666666666,
+        0.66
+      ],
+      "delta_draw_t_interval": [
+        0.13130700941550102,
+        0.4763596572511657
+      ],
+      "mean_control_score_accuracy_correlation": 0.3679540754699845
+    },
+    "layer_matched_random": {
+      "n_draws": 10,
+      "control_accuracy_mean": 0.2956666666666667,
+      "control_accuracy_std": 0.17814579963031946,
+      "control_accuracy_range": [
+        0.09333333333333332,
+        0.5683333333333334
+      ],
+      "gaze_empirical_percentile": 1.0,
+      "n_controls_at_or_above_gaze": 0,
+      "delta_mean": 0.4043333333333333,
+      "delta_std": 0.17814579963031946,
+      "delta_range": [
+        0.13166666666666665,
+        0.6066666666666667
+      ],
+      "delta_draw_t_interval": [
+        0.27689550529238344,
+        0.5317711613742833
+      ],
+      "mean_control_score_accuracy_correlation": -0.14663910266747604
+    },
+    "layer_matched_low_score": {
+      "n_draws": 1,
+      "control_accuracy": 0.3116666666666666,
+      "control_ci": [
+        0.27499999999999997,
+        0.3483333333333334
+      ],
+      "gaze_minus_control": 0.3883333333333334,
+      "delta_ci": [
+        0.3400000000000001,
+        0.4350416666666662
+      ],
+      "control_head_diagnostics": {
+        "available": true,
+        "n_heads": 100,
+        "scores_path": "segments/gaze_heads_qwen3_8b/runs/gaze_discovery_seed42_merged/gaze_scores.npy",
+        "mean_gaze_score": 0.0056827146238677155,
+        "median_gaze_score": 0.003927126388455386,
+        "p90_gaze_score": 0.014709785043330944,
+        "max_gaze_score": 0.017796550738935667,
+        "layer_counts": {
+          "0": 5,
+          "1": 1,
+          "2": 2,
+          "7": 1,
+          "11": 1,
+          "13": 1,
+          "14": 1,
+          "15": 5,
+          "16": 2,
+          "18": 4,
+          "19": 2,
+          "20": 1,
+          "23": 6,
+          "24": 8,
+          "25": 4,
+          "26": 4,
+          "27": 5,
+          "28": 2,
+          "29": 7,
+          "30": 4,
+          "31": 9,
+          "32": 8,
+          "33": 11,
+          "34": 6
+        }
+      }
+    }
+  },
+  "per_control": {
+    "paper@45": {
+      "mode": "paper",
+      "seed": 45,
+      "n_comics": 100,
+      "gaze_accuracy": 0.7,
+      "gaze_ci": [
+        0.6566666666666667,
+        0.7416666666666667
+      ],
+      "control_accuracy": 0.08499999999999998,
+      "control_ci": [
+        0.06666666666666667,
+        0.10333333333333332
+      ],
+      "delta": 0.6150000000000001,
+      "delta_ci": [
+        0.5700000000000001,
+        0.6583333333333334
+      ],
+      "control": {
+        "accuracy": 0.085,
+        "n": 600,
+        "per_panel_accuracy": {
+          "1": 0.42,
+          "2": 0.05,
+          "3": 0.03,
+          "4": 0.0,
+          "5": 0.0,
+          "6": 0.01
+        },
+        "junk_count": 96,
+        "baseline_match_count": 4,
+        "empty_count": 31
+      },
+      "control_head_diagnostics": {
+        "available": true,
+        "n_heads": 100,
+        "scores_path": "segments/gaze_heads_qwen3_8b/runs/gaze_discovery_seed42_merged/gaze_scores.npy",
+        "mean_gaze_score": 0.016621093198086762,
+        "median_gaze_score": 0.011925172839934628,
+        "p90_gaze_score": 0.03973354696490256,
+        "max_gaze_score": 0.05632818095300657,
+        "layer_counts": {
+          "20": 5,
+          "21": 8,
+          "22": 10,
+          "23": 6,
+          "24": 6,
+          "25": 4,
+          "26": 5,
+          "27": 8,
+          "28": 7,
+          "29": 3,
+          "30": 7,
+          "31": 4,
+          "32": 6,
+          "33": 3,
+          "34": 10,
+          "35": 8
+        }
+      }
+    },
+    "paper@46": {
+      "mode": "paper",
+      "seed": 46,
+      "n_comics": 100,
+      "gaze_accuracy": 0.7,
+      "gaze_ci": [
+        0.6566666666666668,
+        0.7416666666666666
+      ],
+      "control_accuracy": 0.6166666666666667,
+      "control_ci": [
+        0.5716666666666667,
+        0.6600000000000001
+      ],
+      "delta": 0.08333333333333334,
+      "delta_ci": [
+        0.03499999999999999,
+        0.13166666666666668
+      ],
+      "control": {
+        "accuracy": 0.6166666666666667,
+        "n": 600,
+        "per_panel_accuracy": {
+          "1": 0.75,
+          "2": 0.61,
+          "3": 0.66,
+          "4": 0.62,
+          "5": 0.56,
+          "6": 0.5
+        },
+        "junk_count": 71,
+        "baseline_match_count": 1,
+        "empty_count": 27
+      },
+      "control_head_diagnostics": {
+        "available": true,
+        "n_heads": 100,
+        "scores_path": "segments/gaze_heads_qwen3_8b/runs/gaze_discovery_seed42_merged/gaze_scores.npy",
+        "mean_gaze_score": 0.016512554657236195,
+        "median_gaze_score": 0.012681089352156658,
+        "p90_gaze_score": 0.036807880578364614,
+        "max_gaze_score": 0.057836326858688454,
+        "layer_counts": {
+          "20": 12,
+          "21": 3,
+          "22": 10,
+          "23": 7,
+          "24": 8,
+          "25": 4,
+          "26": 7,
+          "27": 4,
+          "28": 8,
+          "29": 6,
+          "30": 8,
+          "31": 4,
+          "32": 2,
+          "33": 1,
+          "34": 6,
+          "35": 10
+        }
+      }
+    },
+    "paper@47": {
+      "mode": "paper",
+      "seed": 47,
+      "n_comics": 100,
+      "gaze_accuracy": 0.7,
+      "gaze_ci": [
+        0.6566666666666668,
+        0.7416666666666667
+      ],
+      "control_accuracy": 0.6633333333333334,
+      "control_ci": [
+        0.62,
+        0.7066666666666666
+      ],
+      "delta": 0.03666666666666666,
+      "delta_ci": [
+        -0.011666666666666669,
+        0.08333333333333334
+      ],
+      "control": {
+        "accuracy": 0.6633333333333333,
+        "n": 600,
+        "per_panel_accuracy": {
+          "1": 0.85,
+          "2": 0.64,
+          "3": 0.65,
+          "4": 0.68,
+          "5": 0.62,
+          "6": 0.54
+        },
+        "junk_count": 39,
+        "baseline_match_count": 1,
+        "empty_count": 1
+      },
+      "control_head_diagnostics": {
+        "available": true,
+        "n_heads": 100,
+        "scores_path": "segments/gaze_heads_qwen3_8b/runs/gaze_discovery_seed42_merged/gaze_scores.npy",
+        "mean_gaze_score": 0.01633014580580312,
+        "median_gaze_score": 0.014297718476736918,
+        "p90_gaze_score": 0.03355915803675314,
+        "max_gaze_score": 0.05632818095300657,
+        "layer_counts": {
+          "20": 2,
+          "21": 7,
+          "22": 6,
+          "23": 9,
+          "24": 10,
+          "25": 9,
+          "26": 8,
+          "27": 7,
+          "28": 6,
+          "29": 6,
+          "30": 6,
+          "31": 4,
+          "32": 1,
+          "33": 4,
+          "34": 9,
+          "35": 6
+        }
+      }
+    },
+    "paper@48": {
+      "mode": "paper",
+      "seed": 48,
+      "n_comics": 100,
+      "gaze_accuracy": 0.7,
+      "gaze_ci": [
+        0.6566666666666667,
+        0.7433333333333332
+      ],
+      "control_accuracy": 0.48666666666666664,
+      "control_ci": [
+        0.43499999999999994,
+        0.5366666666666667
+      ],
+      "delta": 0.21333333333333335,
+      "delta_ci": [
+        0.15833333333333333,
+        0.26833333333333337
+      ],
+      "control": {
+        "accuracy": 0.4866666666666667,
+        "n": 600,
+        "per_panel_accuracy": {
+          "1": 0.72,
+          "2": 0.56,
+          "3": 0.49,
+          "4": 0.38,
+          "5": 0.37,
+          "6": 0.4
+        },
+        "junk_count": 114,
+        "baseline_match_count": 1,
+        "empty_count": 24
+      },
+      "control_head_diagnostics": {
+        "available": true,
+        "n_heads": 100,
+        "scores_path": "segments/gaze_heads_qwen3_8b/runs/gaze_discovery_seed42_merged/gaze_scores.npy",
+        "mean_gaze_score": 0.02002817276580686,
+        "median_gaze_score": 0.015942242021257096,
+        "p90_gaze_score": 0.044529129284707605,
+        "max_gaze_score": 0.057836326858688454,
+        "layer_counts": {
+          "20": 4,
+          "21": 5,
+          "22": 7,
+          "23": 5,
+          "24": 10,
+          "25": 9,
+          "26": 7,
+          "27": 4,
+          "28": 7,
+          "29": 7,
+          "30": 4,
+          "31": 4,
+          "32": 5,
+          "33": 4,
+          "34": 7,
+          "35": 11
+        }
+      }
+    },
+    "paper@49": {
+      "mode": "paper",
+      "seed": 49,
+      "n_comics": 100,
+      "gaze_accuracy": 0.7,
+      "gaze_ci": [
+        0.6583333333333333,
+        0.7416666666666666
+      ],
+      "control_accuracy": 0.3583333333333333,
+      "control_ci": [
+        0.31666666666666665,
+        0.4016666666666666
+      ],
+      "delta": 0.3416666666666666,
+      "delta_ci": [
+        0.29333333333333333,
+        0.39000000000000007
+      ],
+      "control": {
+        "accuracy": 0.35833333333333334,
+        "n": 600,
+        "per_panel_accuracy": {
+          "1": 0.79,
+          "2": 0.33,
+          "3": 0.39,
+          "4": 0.23,
+          "5": 0.2,
+          "6": 0.21
+        },
+        "junk_count": 59,
+        "baseline_match_count": 0,
+        "empty_count": 49
+      },
+      "control_head_diagnostics": {
+        "available": true,
+        "n_heads": 100,
+        "scores_path": "segments/gaze_heads_qwen3_8b/runs/gaze_discovery_seed42_merged/gaze_scores.npy",
+        "mean_gaze_score": 0.018102308222977207,
+        "median_gaze_score": 0.01420497274915639,
+        "p90_gaze_score": 0.03812078692026169,
+        "max_gaze_score": 0.05274336181033868,
+        "layer_counts": {
+          "20": 10,
+          "21": 9,
+          "22": 10,
+          "23": 8,
+          "24": 3,
+          "25": 4,
+          "26": 5,
+          "27": 8,
+          "28": 7,
+          "29": 4,
+          "30": 4,
+          "31": 4,
+          "32": 6,
+          "33": 8,
+          "34": 4,
+          "35": 6
+        }
+      }
+    },
+    "paper@50": {
+      "mode": "paper",
+      "seed": 50,
+      "n_comics": 100,
+      "gaze_accuracy": 0.7,
+      "gaze_ci": [
+        0.6566666666666667,
+        0.7416666666666666
+      ],
+      "control_accuracy": 0.5416666666666667,
+      "control_ci": [
+        0.4983333333333333,
+        0.585
+      ],
+      "delta": 0.15833333333333333,
+      "delta_ci": [
+        0.11000000000000001,
+        0.20500000000000004
+      ],
+      "control": {
+        "accuracy": 0.5416666666666666,
+        "n": 600,
+        "per_panel_accuracy": {
+          "1": 0.66,
+          "2": 0.54,
+          "3": 0.49,
+          "4": 0.61,
+          "5": 0.54,
+          "6": 0.41
+        },
+        "junk_count": 69,
+        "baseline_match_count": 0,
+        "empty_count": 14
+      },
+      "control_head_diagnostics": {
+        "available": true,
+        "n_heads": 100,
+        "scores_path": "segments/gaze_heads_qwen3_8b/runs/gaze_discovery_seed42_merged/gaze_scores.npy",
+        "mean_gaze_score": 0.02104799723913399,
+        "median_gaze_score": 0.01782299192936989,
+        "p90_gaze_score": 0.042858558794791085,
+        "max_gaze_score": 0.057836326858688454,
+        "layer_counts": {
+          "20": 6,
+          "21": 2,
+          "22": 6,
+          "23": 5,
+          "24": 5,
+          "25": 8,
+          "26": 10,
+          "27": 6,
+          "28": 6,
+          "29": 11,
+          "30": 9,
+          "31": 2,
+          "32": 4,
+          "33": 6,
+          "34": 5,
+          "35": 9
+        }
+      }
+    },
+    "paper@51": {
+      "mode": "paper",
+      "seed": 51,
+      "n_comics": 100,
+      "gaze_accuracy": 0.7,
+      "gaze_ci": [
+        0.6566666666666667,
+        0.7400000000000001
+      ],
+      "control_accuracy": 0.4416666666666667,
+      "control_ci": [
+        0.3983333333333334,
+        0.485
+      ],
+      "delta": 0.25833333333333336,
+      "delta_ci": [
+        0.21,
+        0.305
+      ],
+      "control": {
+        "accuracy": 0.44166666666666665,
+        "n": 600,
+        "per_panel_accuracy": {
+          "1": 0.72,
+          "2": 0.57,
+          "3": 0.43,
+          "4": 0.31,
+          "5": 0.36,
+          "6": 0.26
+        },
+        "junk_count": 94,
+        "baseline_match_count": 1,
+        "empty_count": 37
+      },
+      "control_head_diagnostics": {
+        "available": true,
+        "n_heads": 100,
+        "scores_path": "segments/gaze_heads_qwen3_8b/runs/gaze_discovery_seed42_merged/gaze_scores.npy",
+        "mean_gaze_score": 0.01742678740680019,
+        "median_gaze_score": 0.014300358795063261,
+        "p90_gaze_score": 0.03859106517973944,
+        "max_gaze_score": 0.05274336181033868,
+        "layer_counts": {
+          "20": 8,
+          "21": 3,
+          "22": 10,
+          "23": 6,
+          "24": 8,
+          "25": 6,
+          "26": 7,
+          "27": 3,
+          "28": 5,
+          "29": 6,
+          "30": 2,
+          "31": 5,
+          "32": 6,
+          "33": 9,
+          "34": 7,
+          "35": 9
+        }
+      }
+    },
+    "paper@52": {
+      "mode": "paper",
+      "seed": 52,
+      "n_comics": 100,
+      "gaze_accuracy": 0.7,
+      "gaze_ci": [
+        0.6566666666666667,
+        0.7433333333333333
+      ],
+      "control_accuracy": 0.6333333333333333,
+      "control_ci": [
+        0.59,
+        0.675
+      ],
+      "delta": 0.06666666666666667,
+      "delta_ci": [
+        0.016666666666666666,
+        0.11666666666666665
+      ],
+      "control": {
+        "accuracy": 0.6333333333333333,
+        "n": 600,
+        "per_panel_accuracy": {
+          "1": 0.84,
+          "2": 0.63,
+          "3": 0.64,
+          "4": 0.64,
+          "5": 0.67,
+          "6": 0.38
+        },
+        "junk_count": 58,
+        "baseline_match_count": 2,
+        "empty_count": 17
+      },
+      "control_head_diagnostics": {
+        "available": true,
+        "n_heads": 100,
+        "scores_path": "segments/gaze_heads_qwen3_8b/runs/gaze_discovery_seed42_merged/gaze_scores.npy",
+        "mean_gaze_score": 0.020271119621639543,
+        "median_gaze_score": 0.01732458989485167,
+        "p90_gaze_score": 0.0394538477014156,
+        "max_gaze_score": 0.057836326858688454,
+        "layer_counts": {
+          "20": 10,
+          "21": 3,
+          "22": 11,
+          "23": 5,
+          "24": 6,
+          "25": 5,
+          "26": 7,
+          "27": 9,
+          "28": 7,
+          "29": 8,
+          "30": 5,
+          "31": 4,
+          "32": 5,
+          "33": 3,
+          "34": 6,
+          "35": 6
+        }
+      }
+    },
+    "paper@53": {
+      "mode": "paper",
+      "seed": 53,
+      "n_comics": 100,
+      "gaze_accuracy": 0.7,
+      "gaze_ci": [
+        0.6566666666666667,
+        0.7416666666666667
+      ],
+      "control_accuracy": 0.09499999999999999,
+      "control_ci": [
+        0.07666666666666666,
+        0.11333333333333334
+      ],
+      "delta": 0.605,
+      "delta_ci": [
+        0.5566666666666668,
+        0.6516666666666667
+      ],
+      "control": {
+        "accuracy": 0.095,
+        "n": 600,
+        "per_panel_accuracy": {
+          "1": 0.29,
+          "2": 0.08,
+          "3": 0.09,
+          "4": 0.05,
+          "5": 0.04,
+          "6": 0.02
+        },
+        "junk_count": 81,
+        "baseline_match_count": 1,
+        "empty_count": 10
+      },
+      "control_head_diagnostics": {
+        "available": true,
+        "n_heads": 100,
+        "scores_path": "segments/gaze_heads_qwen3_8b/runs/gaze_discovery_seed42_merged/gaze_scores.npy",
+        "mean_gaze_score": 0.017610488044996226,
+        "median_gaze_score": 0.015016459858859889,
+        "p90_gaze_score": 0.03709012965814036,
+        "max_gaze_score": 0.05570788463385543,
+        "layer_counts": {
+          "20": 5,
+          "21": 8,
+          "22": 11,
+          "23": 2,
+          "24": 7,
+          "25": 9,
+          "26": 5,
+          "27": 8,
+          "28": 5,
+          "29": 6,
+          "30": 5,
+          "31": 5,
+          "32": 5,
+          "33": 4,
+          "34": 6,
+          "35": 9
+        }
+      }
+    },
+    "paper@54": {
+      "mode": "paper",
+      "seed": 54,
+      "n_comics": 100,
+      "gaze_accuracy": 0.7,
+      "gaze_ci": [
+        0.6566666666666667,
+        0.7416666666666667
+      ],
+      "control_accuracy": 0.039999999999999994,
+      "control_ci": [
+        0.025,
+        0.056666666666666664
+      ],
+      "delta": 0.66,
+      "delta_ci": [
+        0.6116666666666667,
+        0.7066666666666666
+      ],
+      "control": {
+        "accuracy": 0.04,
+        "n": 600,
+        "per_panel_accuracy": {
+          "1": 0.19,
+          "2": 0.01,
+          "3": 0.04,
+          "4": 0.0,
+          "5": 0.0,
+          "6": 0.0
+        },
+        "junk_count": 61,
+        "baseline_match_count": 3,
+        "empty_count": 22
+      },
+      "control_head_diagnostics": {
+        "available": true,
+        "n_heads": 100,
+        "scores_path": "segments/gaze_heads_qwen3_8b/runs/gaze_discovery_seed42_merged/gaze_scores.npy",
+        "mean_gaze_score": 0.01660282276130888,
+        "median_gaze_score": 0.014439508662294286,
+        "p90_gaze_score": 0.03741346366769285,
+        "max_gaze_score": 0.0464105568852489,
+        "layer_counts": {
+          "20": 9,
+          "21": 7,
+          "22": 9,
+          "23": 5,
+          "24": 6,
+          "25": 9,
+          "26": 5,
+          "27": 4,
+          "28": 6,
+          "29": 10,
+          "30": 4,
+          "31": 5,
+          "32": 8,
+          "33": 5,
+          "34": 4,
+          "35": 4
+        }
+      }
+    },
+    "layer_matched_random@45": {
+      "mode": "layer_matched_random",
+      "seed": 45,
+      "n_comics": 100,
+      "gaze_accuracy": 0.7,
+      "gaze_ci": [
+        0.6566666666666666,
+        0.7433333333333332
+      ],
+      "control_accuracy": 0.5683333333333334,
+      "control_ci": [
+        0.5233333333333333,
+        0.6133333333333333
+      ],
+      "delta": 0.13166666666666665,
+      "delta_ci": [
+        0.08166666666666664,
+        0.18166666666666664
+      ],
+      "control": {
+        "accuracy": 0.5683333333333334,
+        "n": 600,
+        "per_panel_accuracy": {
+          "1": 0.72,
+          "2": 0.57,
+          "3": 0.59,
+          "4": 0.53,
+          "5": 0.55,
+          "6": 0.45
+        },
+        "junk_count": 46,
+        "baseline_match_count": 0,
+        "empty_count": 5
+      },
+      "control_head_diagnostics": {
+        "available": true,
+        "n_heads": 100,
+        "scores_path": "segments/gaze_heads_qwen3_8b/runs/gaze_discovery_seed42_merged/gaze_scores.npy",
+        "mean_gaze_score": 0.017623901652585636,
+        "median_gaze_score": 0.014683911112948408,
+        "p90_gaze_score": 0.03921490309733008,
+        "max_gaze_score": 0.05632818095300657,
+        "layer_counts": {
+          "0": 5,
+          "1": 1,
+          "2": 2,
+          "7": 1,
+          "11": 1,
+          "13": 1,
+          "14": 1,
+          "15": 5,
+          "16": 2,
+          "18": 4,
+          "19": 2,
+          "20": 1,
+          "23": 6,
+          "24": 8,
+          "25": 4,
+          "26": 4,
+          "27": 5,
+          "28": 2,
+          "29": 7,
+          "30": 4,
+          "31": 9,
+          "32": 8,
+          "33": 11,
+          "34": 6
+        }
+      }
+    },
+    "layer_matched_random@46": {
+      "mode": "layer_matched_random",
+      "seed": 46,
+      "n_comics": 100,
+      "gaze_accuracy": 0.7,
+      "gaze_ci": [
+        0.6566666666666667,
+        0.7416666666666667
+      ],
+      "control_accuracy": 0.15166666666666667,
+      "control_ci": [
+        0.12499999999999999,
+        0.18000000000000005
+      ],
+      "delta": 0.5483333333333333,
+      "delta_ci": [
+        0.5016666666666668,
+        0.5916666666666667
+      ],
+      "control": {
+        "accuracy": 0.15166666666666667,
+        "n": 600,
+        "per_panel_accuracy": {
+          "1": 0.36,
+          "2": 0.07,
+          "3": 0.12,
+          "4": 0.12,
+          "5": 0.17,
+          "6": 0.07
+        },
+        "junk_count": 124,
+        "baseline_match_count": 0,
+        "empty_count": 66
+      },
+      "control_head_diagnostics": {
+        "available": true,
+        "n_heads": 100,
+        "scores_path": "segments/gaze_heads_qwen3_8b/runs/gaze_discovery_seed42_merged/gaze_scores.npy",
+        "mean_gaze_score": 0.017936161944741992,
+        "median_gaze_score": 0.014565323560032994,
+        "p90_gaze_score": 0.04094652343092363,
+        "max_gaze_score": 0.05551160451583564,
+        "layer_counts": {
+          "0": 5,
+          "1": 1,
+          "2": 2,
+          "7": 1,
+          "11": 1,
+          "13": 1,
+          "14": 1,
+          "15": 5,
+          "16": 2,
+          "18": 4,
+          "19": 2,
+          "20": 1,
+          "23": 6,
+          "24": 8,
+          "25": 4,
+          "26": 4,
+          "27": 5,
+          "28": 2,
+          "29": 7,
+          "30": 4,
+          "31": 9,
+          "32": 8,
+          "33": 11,
+          "34": 6
+        }
+      }
+    },
+    "layer_matched_random@47": {
+      "mode": "layer_matched_random",
+      "seed": 47,
+      "n_comics": 100,
+      "gaze_accuracy": 0.7,
+      "gaze_ci": [
+        0.6566666666666667,
+        0.7416666666666667
+      ],
+      "control_accuracy": 0.2316666666666667,
+      "control_ci": [
+        0.20166666666666663,
+        0.2633333333333333
+      ],
+      "delta": 0.46833333333333327,
+      "delta_ci": [
+        0.41833333333333333,
+        0.5183333333333333
+      ],
+      "control": {
+        "accuracy": 0.23166666666666666,
+        "n": 600,
+        "per_panel_accuracy": {
+          "1": 0.5,
+          "2": 0.14,
+          "3": 0.2,
+          "4": 0.1,
+          "5": 0.25,
+          "6": 0.2
+        },
+        "junk_count": 93,
+        "baseline_match_count": 2,
+        "empty_count": 4
+      },
+      "control_head_diagnostics": {
+        "available": true,
+        "n_heads": 100,
+        "scores_path": "segments/gaze_heads_qwen3_8b/runs/gaze_discovery_seed42_merged/gaze_scores.npy",
+        "mean_gaze_score": 0.016851570842961752,
+        "median_gaze_score": 0.014862758819777808,
+        "p90_gaze_score": 0.03410405649692939,
+        "max_gaze_score": 0.055108228077064274,
+        "layer_counts": {
+          "0": 5,
+          "1": 1,
+          "2": 2,
+          "7": 1,
+          "11": 1,
+          "13": 1,
+          "14": 1,
+          "15": 5,
+          "16": 2,
+          "18": 4,
+          "19": 2,
+          "20": 1,
+          "23": 6,
+          "24": 8,
+          "25": 4,
+          "26": 4,
+          "27": 5,
+          "28": 2,
+          "29": 7,
+          "30": 4,
+          "31": 9,
+          "32": 8,
+          "33": 11,
+          "34": 6
+        }
+      }
+    },
+    "layer_matched_random@48": {
+      "mode": "layer_matched_random",
+      "seed": 48,
+      "n_comics": 100,
+      "gaze_accuracy": 0.7,
+      "gaze_ci": [
+        0.6566666666666667,
+        0.7417083333333329
+      ],
+      "control_accuracy": 0.5333333333333333,
+      "control_ci": [
+        0.485,
+        0.5800000000000001
+      ],
+      "delta": 0.16666666666666663,
+      "delta_ci": [
+        0.11499999999999998,
+        0.21833333333333335
+      ],
+      "control": {
+        "accuracy": 0.5333333333333333,
+        "n": 600,
+        "per_panel_accuracy": {
+          "1": 0.65,
+          "2": 0.5,
+          "3": 0.5,
+          "4": 0.55,
+          "5": 0.51,
+          "6": 0.49
+        },
+        "junk_count": 69,
+        "baseline_match_count": 3,
+        "empty_count": 7
+      },
+      "control_head_diagnostics": {
+        "available": true,
+        "n_heads": 100,
+        "scores_path": "segments/gaze_heads_qwen3_8b/runs/gaze_discovery_seed42_merged/gaze_scores.npy",
+        "mean_gaze_score": 0.01737916880025572,
+        "median_gaze_score": 0.0145629226085107,
+        "p90_gaze_score": 0.03768706863312546,
+        "max_gaze_score": 0.05234697793089921,
+        "layer_counts": {
+          "0": 5,
+          "1": 1,
+          "2": 2,
+          "7": 1,
+          "11": 1,
+          "13": 1,
+          "14": 1,
+          "15": 5,
+          "16": 2,
+          "18": 4,
+          "19": 2,
+          "20": 1,
+          "23": 6,
+          "24": 8,
+          "25": 4,
+          "26": 4,
+          "27": 5,
+          "28": 2,
+          "29": 7,
+          "30": 4,
+          "31": 9,
+          "32": 8,
+          "33": 11,
+          "34": 6
+        }
+      }
+    },
+    "layer_matched_random@49": {
+      "mode": "layer_matched_random",
+      "seed": 49,
+      "n_comics": 100,
+      "gaze_accuracy": 0.7,
+      "gaze_ci": [
+        0.6566666666666666,
+        0.7433333333333333
+      ],
+      "control_accuracy": 0.15666666666666665,
+      "control_ci": [
+        0.13166666666666665,
+        0.18166666666666667
+      ],
+      "delta": 0.5433333333333333,
+      "delta_ci": [
+        0.4966666666666668,
+        0.5899999999999999
+      ],
+      "control": {
+        "accuracy": 0.15666666666666668,
+        "n": 600,
+        "per_panel_accuracy": {
+          "1": 0.48,
+          "2": 0.07,
+          "3": 0.03,
+          "4": 0.08,
+          "5": 0.11,
+          "6": 0.17
+        },
+        "junk_count": 159,
+        "baseline_match_count": 1,
+        "empty_count": 22
+      },
+      "control_head_diagnostics": {
+        "available": true,
+        "n_heads": 100,
+        "scores_path": "segments/gaze_heads_qwen3_8b/runs/gaze_discovery_seed42_merged/gaze_scores.npy",
+        "mean_gaze_score": 0.019130293505087506,
+        "median_gaze_score": 0.016538004498819647,
+        "p90_gaze_score": 0.04058488762851025,
+        "max_gaze_score": 0.05374914700157629,
+        "layer_counts": {
+          "0": 5,
+          "1": 1,
+          "2": 2,
+          "7": 1,
+          "11": 1,
+          "13": 1,
+          "14": 1,
+          "15": 5,
+          "16": 2,
+          "18": 4,
+          "19": 2,
+          "20": 1,
+          "23": 6,
+          "24": 8,
+          "25": 4,
+          "26": 4,
+          "27": 5,
+          "28": 2,
+          "29": 7,
+          "30": 4,
+          "31": 9,
+          "32": 8,
+          "33": 11,
+          "34": 6
+        }
+      }
+    },
+    "layer_matched_random@50": {
+      "mode": "layer_matched_random",
+      "seed": 50,
+      "n_comics": 100,
+      "gaze_accuracy": 0.7,
+      "gaze_ci": [
+        0.6583333333333333,
+        0.7400416666666664
+      ],
+      "control_accuracy": 0.47666666666666674,
+      "control_ci": [
+        0.43333333333333335,
+        0.5183333333333334
+      ],
+      "delta": 0.22333333333333327,
+      "delta_ci": [
+        0.17333333333333337,
+        0.27166666666666667
+      ],
+      "control": {
+        "accuracy": 0.4766666666666667,
+        "n": 600,
+        "per_panel_accuracy": {
+          "1": 0.78,
+          "2": 0.47,
+          "3": 0.41,
+          "4": 0.34,
+          "5": 0.55,
+          "6": 0.31
+        },
+        "junk_count": 68,
+        "baseline_match_count": 0,
+        "empty_count": 18
+      },
+      "control_head_diagnostics": {
+        "available": true,
+        "n_heads": 100,
+        "scores_path": "segments/gaze_heads_qwen3_8b/runs/gaze_discovery_seed42_merged/gaze_scores.npy",
+        "mean_gaze_score": 0.01722370803604823,
+        "median_gaze_score": 0.01471635020434587,
+        "p90_gaze_score": 0.0361055045726319,
+        "max_gaze_score": 0.05632818095300657,
+        "layer_counts": {
+          "0": 5,
+          "1": 1,
+          "2": 2,
+          "7": 1,
+          "11": 1,
+          "13": 1,
+          "14": 1,
+          "15": 5,
+          "16": 2,
+          "18": 4,
+          "19": 2,
+          "20": 1,
+          "23": 6,
+          "24": 8,
+          "25": 4,
+          "26": 4,
+          "27": 5,
+          "28": 2,
+          "29": 7,
+          "30": 4,
+          "31": 9,
+          "32": 8,
+          "33": 11,
+          "34": 6
+        }
+      }
+    },
+    "layer_matched_random@51": {
+      "mode": "layer_matched_random",
+      "seed": 51,
+      "n_comics": 100,
+      "gaze_accuracy": 0.7,
+      "gaze_ci": [
+        0.6566666666666667,
+        0.7416666666666667
+      ],
+      "control_accuracy": 0.3766666666666667,
+      "control_ci": [
+        0.34,
+        0.41666666666666663
+      ],
+      "delta": 0.3233333333333333,
+      "delta_ci": [
+        0.2733333333333334,
+        0.37166666666666665
+      ],
+      "control": {
+        "accuracy": 0.37666666666666665,
+        "n": 600,
+        "per_panel_accuracy": {
+          "1": 0.62,
+          "2": 0.39,
+          "3": 0.41,
+          "4": 0.26,
+          "5": 0.39,
+          "6": 0.19
+        },
+        "junk_count": 86,
+        "baseline_match_count": 0,
+        "empty_count": 2
+      },
+      "control_head_diagnostics": {
+        "available": true,
+        "n_heads": 100,
+        "scores_path": "segments/gaze_heads_qwen3_8b/runs/gaze_discovery_seed42_merged/gaze_scores.npy",
+        "mean_gaze_score": 0.019782342226401725,
+        "median_gaze_score": 0.0164120037428717,
+        "p90_gaze_score": 0.043471698697252835,
+        "max_gaze_score": 0.057836326858688454,
+        "layer_counts": {
+          "0": 5,
+          "1": 1,
+          "2": 2,
+          "7": 1,
+          "11": 1,
+          "13": 1,
+          "14": 1,
+          "15": 5,
+          "16": 2,
+          "18": 4,
+          "19": 2,
+          "20": 1,
+          "23": 6,
+          "24": 8,
+          "25": 4,
+          "26": 4,
+          "27": 5,
+          "28": 2,
+          "29": 7,
+          "30": 4,
+          "31": 9,
+          "32": 8,
+          "33": 11,
+          "34": 6
+        }
+      }
+    },
+    "layer_matched_random@52": {
+      "mode": "layer_matched_random",
+      "seed": 52,
+      "n_comics": 100,
+      "gaze_accuracy": 0.7,
+      "gaze_ci": [
+        0.6566666666666667,
+        0.7416666666666667
+      ],
+      "control_accuracy": 0.09333333333333332,
+      "control_ci": [
+        0.075,
+        0.1133333333333333
+      ],
+      "delta": 0.6066666666666667,
+      "delta_ci": [
+        0.56,
+        0.6533333333333333
+      ],
+      "control": {
+        "accuracy": 0.09333333333333334,
+        "n": 600,
+        "per_panel_accuracy": {
+          "1": 0.47,
+          "2": 0.05,
+          "3": 0.01,
+          "4": 0.0,
+          "5": 0.03,
+          "6": 0.0
+        },
+        "junk_count": 185,
+        "baseline_match_count": 0,
+        "empty_count": 126
+      },
+      "control_head_diagnostics": {
+        "available": true,
+        "n_heads": 100,
+        "scores_path": "segments/gaze_heads_qwen3_8b/runs/gaze_discovery_seed42_merged/gaze_scores.npy",
+        "mean_gaze_score": 0.017157699035586758,
+        "median_gaze_score": 0.015016459858859889,
+        "p90_gaze_score": 0.03257226236987052,
+        "max_gaze_score": 0.05234697793089921,
+        "layer_counts": {
+          "0": 5,
+          "1": 1,
+          "2": 2,
+          "7": 1,
+          "11": 1,
+          "13": 1,
+          "14": 1,
+          "15": 5,
+          "16": 2,
+          "18": 4,
+          "19": 2,
+          "20": 1,
+          "23": 6,
+          "24": 8,
+          "25": 4,
+          "26": 4,
+          "27": 5,
+          "28": 2,
+          "29": 7,
+          "30": 4,
+          "31": 9,
+          "32": 8,
+          "33": 11,
+          "34": 6
+        }
+      }
+    },
+    "layer_matched_random@53": {
+      "mode": "layer_matched_random",
+      "seed": 53,
+      "n_comics": 100,
+      "gaze_accuracy": 0.7,
+      "gaze_ci": [
+        0.6583333333333333,
+        0.7416666666666666
+      ],
+      "control_accuracy": 0.2366666666666667,
+      "control_ci": [
+        0.20666666666666664,
+        0.2683333333333333
+      ],
+      "delta": 0.4633333333333334,
+      "delta_ci": [
+        0.41666666666666663,
+        0.51
+      ],
+      "control": {
+        "accuracy": 0.23666666666666666,
+        "n": 600,
+        "per_panel_accuracy": {
+          "1": 0.59,
+          "2": 0.21,
+          "3": 0.21,
+          "4": 0.12,
+          "5": 0.14,
+          "6": 0.15
+        },
+        "junk_count": 116,
+        "baseline_match_count": 1,
+        "empty_count": 22
+      },
+      "control_head_diagnostics": {
+        "available": true,
+        "n_heads": 100,
+        "scores_path": "segments/gaze_heads_qwen3_8b/runs/gaze_discovery_seed42_merged/gaze_scores.npy",
+        "mean_gaze_score": 0.01798807531161504,
+        "median_gaze_score": 0.015442898207306523,
+        "p90_gaze_score": 0.037219566194495575,
+        "max_gaze_score": 0.04937657311993341,
+        "layer_counts": {
+          "0": 5,
+          "1": 1,
+          "2": 2,
+          "7": 1,
+          "11": 1,
+          "13": 1,
+          "14": 1,
+          "15": 5,
+          "16": 2,
+          "18": 4,
+          "19": 2,
+          "20": 1,
+          "23": 6,
+          "24": 8,
+          "25": 4,
+          "26": 4,
+          "27": 5,
+          "28": 2,
+          "29": 7,
+          "30": 4,
+          "31": 9,
+          "32": 8,
+          "33": 11,
+          "34": 6
+        }
+      }
+    },
+    "layer_matched_random@54": {
+      "mode": "layer_matched_random",
+      "seed": 54,
+      "n_comics": 100,
+      "gaze_accuracy": 0.7,
+      "gaze_ci": [
+        0.6566666666666667,
+        0.7416666666666668
+      ],
+      "control_accuracy": 0.13166666666666665,
+      "control_ci": [
+        0.11166666666666664,
+        0.15166666666666664
+      ],
+      "delta": 0.5683333333333332,
+      "delta_ci": [
+        0.525,
+        0.6100000000000001
+      ],
+      "control": {
+        "accuracy": 0.13166666666666665,
+        "n": 600,
+        "per_panel_accuracy": {
+          "1": 0.5,
+          "2": 0.1,
+          "3": 0.12,
+          "4": 0.02,
+          "5": 0.03,
+          "6": 0.02
+        },
+        "junk_count": 120,
+        "baseline_match_count": 0,
+        "empty_count": 102
+      },
+      "control_head_diagnostics": {
+        "available": true,
+        "n_heads": 100,
+        "scores_path": "segments/gaze_heads_qwen3_8b/runs/gaze_discovery_seed42_merged/gaze_scores.npy",
+        "mean_gaze_score": 0.01842001677732362,
+        "median_gaze_score": 0.015718061880797905,
+        "p90_gaze_score": 0.04039803438328988,
+        "max_gaze_score": 0.05494835526822862,
+        "layer_counts": {
+          "0": 5,
+          "1": 1,
+          "2": 2,
+          "7": 1,
+          "11": 1,
+          "13": 1,
+          "14": 1,
+          "15": 5,
+          "16": 2,
+          "18": 4,
+          "19": 2,
+          "20": 1,
+          "23": 6,
+          "24": 8,
+          "25": 4,
+          "26": 4,
+          "27": 5,
+          "28": 2,
+          "29": 7,
+          "30": 4,
+          "31": 9,
+          "32": 8,
+          "33": 11,
+          "34": 6
+        }
+      }
+    },
+    "layer_matched_low@42": {
+      "mode": "layer_matched_low",
+      "seed": 42,
+      "n_comics": 100,
+      "gaze_accuracy": 0.7,
+      "gaze_ci": [
+        0.6566666666666667,
+        0.7417083333333327
+      ],
+      "control_accuracy": 0.3116666666666666,
+      "control_ci": [
+        0.27499999999999997,
+        0.3483333333333334
+      ],
+      "delta": 0.3883333333333334,
+      "delta_ci": [
+        0.3400000000000001,
+        0.4350416666666662
+      ],
+      "control": {
+        "accuracy": 0.31166666666666665,
+        "n": 600,
+        "per_panel_accuracy": {
+          "1": 0.65,
+          "2": 0.35,
+          "3": 0.33,
+          "4": 0.18,
+          "5": 0.16,
+          "6": 0.2
+        },
+        "junk_count": 46,
+        "baseline_match_count": 0,
+        "empty_count": 12
+      },
+      "control_head_diagnostics": {
+        "available": true,
+        "n_heads": 100,
+        "scores_path": "segments/gaze_heads_qwen3_8b/runs/gaze_discovery_seed42_merged/gaze_scores.npy",
+        "mean_gaze_score": 0.0056827146238677155,
+        "median_gaze_score": 0.003927126388455386,
+        "p90_gaze_score": 0.014709785043330944,
+        "max_gaze_score": 0.017796550738935667,
+        "layer_counts": {
+          "0": 5,
+          "1": 1,
+          "2": 2,
+          "7": 1,
+          "11": 1,
+          "13": 1,
+          "14": 1,
+          "15": 5,
+          "16": 2,
+          "18": 4,
+          "19": 2,
+          "20": 1,
+          "23": 6,
+          "24": 8,
+          "25": 4,
+          "26": 4,
+          "27": 5,
+          "28": 2,
+          "29": 7,
+          "30": 4,
+          "31": 9,
+          "32": 8,
+          "33": 11,
+          "34": 6
+        }
+      }
+    }
+  },
+  "errors": [],
+  "warnings": []
+}

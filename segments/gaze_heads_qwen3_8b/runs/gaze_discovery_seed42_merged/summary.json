@@ -1,0 +1,126 @@
+{
+  "valid_samples": 500,
+  "n_layers": 36,
+  "n_heads": 32,
+  "n_panels": 6,
+  "top_head": {
+    "layer": 24,
+    "head": 29,
+    "score": 0.2287250637824958
+  },
+  "top_head_selectivity": 0.15421273547991973,
+  "top_head_routing_accuracy": 1.0,
+  "max_head_routing_accuracy": 1.0,
+  "merged_from": [
+    {
+      "path": "segments/gaze_heads_qwen3_8b/runs/gaze_discovery_seed42_0_50",
+      "valid_samples": 50,
+      "start_comic_idx": 0,
+      "max_comics": 50,
+      "top_head": {
+        "layer": 24,
+        "head": 29,
+        "score": 0.2205421729478985
+      }
+    },
+    {
+      "path": "segments/gaze_heads_qwen3_8b/runs/gaze_discovery_seed42_50_50",
+      "valid_samples": 50,
+      "start_comic_idx": 50,
+      "max_comics": 50,
+      "top_head": {
+        "layer": 24,
+        "head": 29,
+        "score": 0.2321380009626349
+      }
+    },
+    {
+      "path": "segments/gaze_heads_qwen3_8b/runs/gaze_discovery_seed42_100_50",
+      "valid_samples": 50,
+      "start_comic_idx": 100,
+      "max_comics": 50,
+      "top_head": {
+        "layer": 24,
+        "head": 29,
+        "score": 0.24956100153581548
+      }
+    },
+    {
+      "path": "segments/gaze_heads_qwen3_8b/runs/gaze_discovery_seed42_150_50",
+      "valid_samples": 50,
+      "start_comic_idx": 150,
+      "max_comics": 50,
+      "top_head": {
+        "layer": 24,
+        "head": 29,
+        "score": 0.21907816766140362
+      }
+    },
+    {
+      "path": "segments/gaze_heads_qwen3_8b/runs/gaze_discovery_seed42_200_50",
+      "valid_samples": 50,
+      "start_comic_idx": 200,
+      "max_comics": 50,
+      "top_head": {
+        "layer": 24,
+        "head": 29,
+        "score": 0.2197630079338948
+      }
+    },
+    {
+      "path": "segments/gaze_heads_qwen3_8b/runs/gaze_discovery_seed42_250_50",
+      "valid_samples": 50,
+      "start_comic_idx": 250,
+      "max_comics": 50,
+      "top_head": {
+        "layer": 24,
+        "head": 29,
+        "score": 0.22138988761231304
+      }
+    },
+    {
+      "path": "segments/gaze_heads_qwen3_8b/runs/gaze_discovery_seed42_300_50",
+      "valid_samples": 50,
+      "start_comic_idx": 300,
+      "max_comics": 50,
+      "top_head": {
+        "layer": 24,
+        "head": 29,
+        "score": 0.24217194330568118
+      }
+    },
+    {
+      "path": "segments/gaze_heads_qwen3_8b/runs/gaze_discovery_seed42_350_50",
+      "valid_samples": 50,
+      "start_comic_idx": 350,
+      "max_comics": 50,
+      "top_head": {
+        "layer": 24,
+        "head": 29,
+        "score": 0.2425030560558662
+      }
+    },
+    {
+      "path": "segments/gaze_heads_qwen3_8b/runs/gaze_discovery_seed42_400_50",
+      "valid_samples": 50,
+      "start_comic_idx": 400,
+      "max_comics": 50,
+      "top_head": {
+        "layer": 24,
+        "head": 29,
+        "score": 0.21752118251286448
+      }
+    },
+    {
+      "path": "segments/gaze_heads_qwen3_8b/runs/gaze_discovery_seed42_450_50",
+      "valid_samples": 50,
+      "start_comic_idx": 450,
+      "max_comics": 50,
+      "top_head": {
+        "layer": 24,
+        "head": 29,
+        "score": 0.22258221729658545
+      }
+    }
+  ]
+}

@@ -1,0 +1,23 @@
+{
+  "valid": true,
+  "stage": "static",
+  "n_rows": 600,
+  "expected_rows": 600,
+  "n_unique_rows": 600,
+  "duplicate_count": 0,
+  "empty_rates": {
+    "non_gaze_layer_matched_random_100": 0.03666666666666667
+  },
+  "target_attention_mass": {
+    "n": 579,
+    "minimum": 0.9999960544133427,
+    "mean": 0.9999999734234055,
+    "missing_on_empty_outputs": 21,
+    "missing_on_nonempty_outputs": 0
+  },
+  "unique_outputs_by_condition": {
+    "non_gaze_layer_matched_random_100": 531
+  },
+  "errors": [],
+  "warnings": []
+}

@@ -1,0 +1,55 @@
+{
+  "experiment_version": "qwen3_attention_methods_v1",
+  "model": "Qwen/Qwen3-VL-8B-Instruct",
+  "ranking": "The seed-42 merged COMICS gaze ranking is fixed before benchmark evaluation; no VLMBias or NaturalBench labels enter head discovery.",
+  "controllers": {
+    "baseline": "No image-attention logit bias (alpha = 0).",
+    "fixed": "Add one constant alpha to image-token logits in every selected head and every prefill/decode query.",
+    "target_mass": "For each selected head and query, compute the smallest nonnegative logit shift that reaches the requested image-attention mass, capped at alpha = 5. The intervention never suppresses image mass.",
+    "confidence_gate": "Run an unboosted greedy pass, compute the geometric mean chosen-token probability, and rerun with fixed alpha = 2 only below the threshold."
+  },
+  "development_sweep": {
+    "mechanics_smoke": "8 VLMBias rows and 2 NaturalBench groups across baseline, fixed alpha 2, target mass 0.7, and confidence gate 0.6",
+    "vlmbias_examples": 100,
+    "naturalbench_groups": 25,
+    "split_seed": 2026,
+    "controller_conditions": [
+      "baseline",
+      "fixed_alpha0p5",
+      "fixed_alpha1",
+      "fixed_alpha2",
+      "fixed_alpha5",
+      "target_mass0p5",
+      "target_mass0p7",
+      "target_mass0p9",
+      "confidence_gate0p3",
+      "confidence_gate0p6"
+    ],
+    "selection_objective": "Minimize VLMBias bias_aligned_fraction after guardrails, then maximize VLMBias accuracy, NaturalBench G_Acc, and NaturalBench Acc.",
+    "guardrails": {
+      "maximum_vlmbias_accuracy_drop": 0.02,
+      "maximum_naturalbench_G_Acc_drop": 0.05,
+      "maximum_invalid_rate_increase": 0.02
+    }
+  },
+  "head_sweep": {
+    "eligible": "global gaze top 10/50/100 and early/middle/late gaze top 50",
+    "diagnostic_controls": "two layer-matched random top-50 draws, a layer-matched lowest-score top-50 set, and a paper-style layer-20-to-35 random top-50 set",
+    "policy": "Controls are never eligible to become the locked intervention."
+  },
+  "confirmation": {
+    "vlmbias_examples": 300,
+    "naturalbench_groups": 75,
+    "conditions": "baseline plus the best development setting from fixed, target-mass, and confidence-gated families, all using the locked gaze-head set",
+    "primary": true
+  },
+  "robustness": {
+    "default_seeds": [
+      0,
+      1,
+      2
+    ],
+    "sampling": "temperature 0.7 on all 400 VLMBias examples and 100 NaturalBench groups",
+    "interpretation": "Secondary robustness analysis; it includes development rows, so the held-out deterministic confirmation remains the primary result."
+  }
+}

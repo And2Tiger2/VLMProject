@@ -1,0 +1,14 @@
+{
+  "valid": true,
+  "stage": "datasets",
+  "n_discovery_directories": 1232,
+  "n_eligible_raw_pages": 1,
+  "n_evaluation_directories": 500,
+  "n_complete_evaluation_strips": 500,
+  "n_vlmbias_rows": 400,
+  "n_naturalbench_groups": 100,
+  "n_naturalbench_model_calls": 400,
+  "n_overlap": 0,
+  "overlap_examples": [],
+  "errors": []
+}

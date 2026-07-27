@@ -1,0 +1,23 @@
+{
+  "valid": true,
+  "stage": "static",
+  "n_rows": 600,
+  "expected_rows": 600,
+  "n_unique_rows": 600,
+  "duplicate_count": 0,
+  "empty_rates": {
+    "non_gaze_paper_100": 0.0016666666666666668
+  },
+  "target_attention_mass": {
+    "n": 599,
+    "minimum": 0.9999996054413343,
+    "mean": 0.9999999986826089,
+    "missing_on_empty_outputs": 1,
+    "missing_on_nonempty_outputs": 0
+  },
+  "unique_outputs_by_condition": {
+    "non_gaze_paper_100": 577
+  },
+  "errors": [],
+  "warnings": []
+}

@@ -1,0 +1,52 @@
+{
+  "stage": "overnight",
+  "jobs": {
+    "smoke": {
+      "prepare": "3566993",
+      "run": "3566994",
+      "aggregate": "3566995"
+    },
+    "controller": {
+      "prepare": "3566996",
+      "run": "3566997",
+      "aggregate": "3566998"
+    },
+    "heads": {
+      "prepare": "3566999",
+      "run": "3567000",
+      "aggregate": "3567001"
+    },
+    "confirm": {
+      "prepare": "3567002",
+      "run": "3567003",
+      "aggregate": "3567004"
+    },
+    "robustness": {
+      "prepare": "3567005",
+      "run": "3567006",
+      "aggregate": "3567007"
+    }
+  },
+  "final_job": "3567007",
+  "dry_run": false,
+  "commands": [
+    "sbatch --parsable --export ALL,EXPERIMENT_ROOT=segments/gaze_heads_qwen3_8b/experiments/attention_methods_v1,GAZE_RANKING=segments/gaze_heads_qwen3_8b/runs/gaze_discovery_seed42_merged/gaze_head_ranking.json,MIN_GPU_MEMORY_GB=20.0,REPO=/n/fs/pvl-memory/at7979/VLMProject,REPORT_ROOT=segments/gaze_heads_qwen3_8b/reports/attention_methods_v1,RUN_ROOT=segments/gaze_heads_qwen3_8b/runs/attention_methods_v1,SEEDS_COLON=0:1:2,STAGE=smoke scripts/slurm_neuronic_qwen3_prepare_attention_methods.sh",
+    "sbatch --parsable --array 0-3%2 --dependency afterok:3566993 --export ALL,EXPERIMENT_ROOT=segments/gaze_heads_qwen3_8b/experiments/attention_methods_v1,GAZE_RANKING=segments/gaze_heads_qwen3_8b/runs/gaze_discovery_seed42_merged/gaze_head_ranking.json,MIN_GPU_MEMORY_GB=20.0,REPO=/n/fs/pvl-memory/at7979/VLMProject,REPORT_ROOT=segments/gaze_heads_qwen3_8b/reports/attention_methods_v1,RUN_ROOT=segments/gaze_heads_qwen3_8b/runs/attention_methods_v1,SEEDS_COLON=0:1:2,STAGE=smoke scripts/slurm_neuronic_qwen3_attention_method_condition.sh",
+    "sbatch --parsable --dependency afterok:3566994 --export ALL,EXPERIMENT_ROOT=segments/gaze_heads_qwen3_8b/experiments/attention_methods_v1,GAZE_RANKING=segments/gaze_heads_qwen3_8b/runs/gaze_discovery_seed42_merged/gaze_head_ranking.json,MIN_GPU_MEMORY_GB=20.0,REPO=/n/fs/pvl-memory/at7979/VLMProject,REPORT_ROOT=segments/gaze_heads_qwen3_8b/reports/attention_methods_v1,RUN_ROOT=segments/gaze_heads_qwen3_8b/runs/attention_methods_v1,SEEDS_COLON=0:1:2,STAGE=smoke scripts/slurm_neuronic_qwen3_aggregate_attention_methods.sh",
+    "sbatch --parsable --dependency afterok:3566995 --export ALL,EXPERIMENT_ROOT=segments/gaze_heads_qwen3_8b/experiments/attention_methods_v1,GAZE_RANKING=segments/gaze_heads_qwen3_8b/runs/gaze_discovery_seed42_merged/gaze_head_ranking.json,MIN_GPU_MEMORY_GB=20.0,REPO=/n/fs/pvl-memory/at7979/VLMProject,REPORT_ROOT=segments/gaze_heads_qwen3_8b/reports/attention_methods_v1,RUN_ROOT=segments/gaze_heads_qwen3_8b/runs/attention_methods_v1,SEEDS_COLON=0:1:2,STAGE=controller scripts/slurm_neuronic_qwen3_prepare_attention_methods.sh",
+    "sbatch --parsable --array 0-9%4 --dependency afterok:3566996 --export ALL,EXPERIMENT_ROOT=segments/gaze_heads_qwen3_8b/experiments/attention_methods_v1,GAZE_RANKING=segments/gaze_heads_qwen3_8b/runs/gaze_discovery_seed42_merged/gaze_head_ranking.json,MIN_GPU_MEMORY_GB=20.0,REPO=/n/fs/pvl-memory/at7979/VLMProject,REPORT_ROOT=segments/gaze_heads_qwen3_8b/reports/attention_methods_v1,RUN_ROOT=segments/gaze_heads_qwen3_8b/runs/attention_methods_v1,SEEDS_COLON=0:1:2,STAGE=controller scripts/slurm_neuronic_qwen3_attention_method_condition.sh",
+    "sbatch --parsable --dependency afterok:3566997 --export ALL,EXPERIMENT_ROOT=segments/gaze_heads_qwen3_8b/experiments/attention_methods_v1,GAZE_RANKING=segments/gaze_heads_qwen3_8b/runs/gaze_discovery_seed42_merged/gaze_head_ranking.json,MIN_GPU_MEMORY_GB=20.0,REPO=/n/fs/pvl-memory/at7979/VLMProject,REPORT_ROOT=segments/gaze_heads_qwen3_8b/reports/attention_methods_v1,RUN_ROOT=segments/gaze_heads_qwen3_8b/runs/attention_methods_v1,SEEDS_COLON=0:1:2,STAGE=controller scripts/slurm_neuronic_qwen3_aggregate_attention_methods.sh",
+    "sbatch --parsable --dependency afterok:3566998 --export ALL,EXPERIMENT_ROOT=segments/gaze_heads_qwen3_8b/experiments/attention_methods_v1,GAZE_RANKING=segments/gaze_heads_qwen3_8b/runs/gaze_discovery_seed42_merged/gaze_head_ranking.json,MIN_GPU_MEMORY_GB=20.0,REPO=/n/fs/pvl-memory/at7979/VLMProject,REPORT_ROOT=segments/gaze_heads_qwen3_8b/reports/attention_methods_v1,RUN_ROOT=segments/gaze_heads_qwen3_8b/runs/attention_methods_v1,SEEDS_COLON=0:1:2,STAGE=heads scripts/slurm_neuronic_qwen3_prepare_attention_methods.sh",
+    "sbatch --parsable --array 0-9%4 --dependency afterok:3566999 --export ALL,EXPERIMENT_ROOT=segments/gaze_heads_qwen3_8b/experiments/attention_methods_v1,GAZE_RANKING=segments/gaze_heads_qwen3_8b/runs/gaze_discovery_seed42_merged/gaze_head_ranking.json,MIN_GPU_MEMORY_GB=20.0,REPO=/n/fs/pvl-memory/at7979/VLMProject,REPORT_ROOT=segments/gaze_heads_qwen3_8b/reports/attention_methods_v1,RUN_ROOT=segments/gaze_heads_qwen3_8b/runs/attention_methods_v1,SEEDS_COLON=0:1:2,STAGE=heads scripts/slurm_neuronic_qwen3_attention_method_condition.sh",
+    "sbatch --parsable --dependency afterok:3567000 --export ALL,EXPERIMENT_ROOT=segments/gaze_heads_qwen3_8b/experiments/attention_methods_v1,GAZE_RANKING=segments/gaze_heads_qwen3_8b/runs/gaze_discovery_seed42_merged/gaze_head_ranking.json,MIN_GPU_MEMORY_GB=20.0,REPO=/n/fs/pvl-memory/at7979/VLMProject,REPORT_ROOT=segments/gaze_heads_qwen3_8b/reports/attention_methods_v1,RUN_ROOT=segments/gaze_heads_qwen3_8b/runs/attention_methods_v1,SEEDS_COLON=0:1:2,STAGE=heads scripts/slurm_neuronic_qwen3_aggregate_attention_methods.sh",
+    "sbatch --parsable --dependency afterok:3567001 --export ALL,EXPERIMENT_ROOT=segments/gaze_heads_qwen3_8b/experiments/attention_methods_v1,GAZE_RANKING=segments/gaze_heads_qwen3_8b/runs/gaze_discovery_seed42_merged/gaze_head_ranking.json,MIN_GPU_MEMORY_GB=20.0,REPO=/n/fs/pvl-memory/at7979/VLMProject,REPORT_ROOT=segments/gaze_heads_qwen3_8b/reports/attention_methods_v1,RUN_ROOT=segments/gaze_heads_qwen3_8b/runs/attention_methods_v1,SEEDS_COLON=0:1:2,STAGE=confirm scripts/slurm_neuronic_qwen3_prepare_attention_methods.sh",
+    "sbatch --parsable --array 0-3%4 --dependency afterok:3567002 --export ALL,EXPERIMENT_ROOT=segments/gaze_heads_qwen3_8b/experiments/attention_methods_v1,GAZE_RANKING=segments/gaze_heads_qwen3_8b/runs/gaze_discovery_seed42_merged/gaze_head_ranking.json,MIN_GPU_MEMORY_GB=20.0,REPO=/n/fs/pvl-memory/at7979/VLMProject,REPORT_ROOT=segments/gaze_heads_qwen3_8b/reports/attention_methods_v1,RUN_ROOT=segments/gaze_heads_qwen3_8b/runs/attention_methods_v1,SEEDS_COLON=0:1:2,STAGE=confirm scripts/slurm_neuronic_qwen3_attention_method_condition.sh",
+    "sbatch --parsable --dependency afterok:3567003 --export ALL,EXPERIMENT_ROOT=segments/gaze_heads_qwen3_8b/experiments/attention_methods_v1,GAZE_RANKING=segments/gaze_heads_qwen3_8b/runs/gaze_discovery_seed42_merged/gaze_head_ranking.json,MIN_GPU_MEMORY_GB=20.0,REPO=/n/fs/pvl-memory/at7979/VLMProject,REPORT_ROOT=segments/gaze_heads_qwen3_8b/reports/attention_methods_v1,RUN_ROOT=segments/gaze_heads_qwen3_8b/runs/attention_methods_v1,SEEDS_COLON=0:1:2,STAGE=confirm scripts/slurm_neuronic_qwen3_aggregate_attention_methods.sh",
+    "sbatch --parsable --dependency afterok:3567004 --export ALL,EXPERIMENT_ROOT=segments/gaze_heads_qwen3_8b/experiments/attention_methods_v1,GAZE_RANKING=segments/gaze_heads_qwen3_8b/runs/gaze_discovery_seed42_merged/gaze_head_ranking.json,MIN_GPU_MEMORY_GB=20.0,REPO=/n/fs/pvl-memory/at7979/VLMProject,REPORT_ROOT=segments/gaze_heads_qwen3_8b/reports/attention_methods_v1,RUN_ROOT=segments/gaze_heads_qwen3_8b/runs/attention_methods_v1,SEEDS_COLON=0:1:2,STAGE=robustness scripts/slurm_neuronic_qwen3_prepare_attention_methods.sh",
+    "sbatch --parsable --array 0-11%2 --dependency afterok:3567005 --export ALL,EXPERIMENT_ROOT=segments/gaze_heads_qwen3_8b/experiments/attention_methods_v1,GAZE_RANKING=segments/gaze_heads_qwen3_8b/runs/gaze_discovery_seed42_merged/gaze_head_ranking.json,MIN_GPU_MEMORY_GB=20.0,REPO=/n/fs/pvl-memory/at7979/VLMProject,REPORT_ROOT=segments/gaze_heads_qwen3_8b/reports/attention_methods_v1,RUN_ROOT=segments/gaze_heads_qwen3_8b/runs/attention_methods_v1,SEEDS_COLON=0:1:2,STAGE=robustness scripts/slurm_neuronic_qwen3_attention_method_condition.sh",
+    "sbatch --parsable --dependency afterok:3567006 --export ALL,EXPERIMENT_ROOT=segments/gaze_heads_qwen3_8b/experiments/attention_methods_v1,GAZE_RANKING=segments/gaze_heads_qwen3_8b/runs/gaze_discovery_seed42_merged/gaze_head_ranking.json,MIN_GPU_MEMORY_GB=20.0,REPO=/n/fs/pvl-memory/at7979/VLMProject,REPORT_ROOT=segments/gaze_heads_qwen3_8b/reports/attention_methods_v1,RUN_ROOT=segments/gaze_heads_qwen3_8b/runs/attention_methods_v1,SEEDS_COLON=0:1:2,STAGE=robustness scripts/slurm_neuronic_qwen3_aggregate_attention_methods.sh"
+  ],
+  "submitted_at_utc": "2026-07-24T18:45:26.492835+00:00",
+  "git_commit": "dc692233354a2e061aec0bd9bf6c91b4985e2d5f",
+  "receipt": "/n/fs/pvl-memory/at7979/VLMProject/segments/gaze_heads_qwen3_8b/experiments/attention_methods_v1/last_submission.json"
+}

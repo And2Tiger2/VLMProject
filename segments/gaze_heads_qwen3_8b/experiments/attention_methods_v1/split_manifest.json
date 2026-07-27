@@ -1,0 +1,34 @@
+{
+  "experiment_version": "qwen3_attention_methods_v1",
+  "seed": 2026,
+  "source": {
+    "vlmbias": "segments/vlm_bias_attention/data/vlmbias_400.jsonl",
+    "vlmbias_sha256": "2c10062d5a7bdc26ce5c2ad0114af88fa4d01764d3506a12e5085c9d8501c5cf",
+    "naturalbench": "segments/vlm_bias_attention/data/naturalbench_100_groups.jsonl",
+    "naturalbench_sha256": "5929391472a1bcf55b5ce1c8ce138c932cc8d4f59e43b8593383a56249955a2b"
+  },
+  "counts": {
+    "smoke_vlmbias": 8,
+    "dev_vlmbias": 100,
+    "confirm_vlmbias": 300,
+    "all_vlmbias": 400,
+    "smoke_naturalbench": 2,
+    "dev_naturalbench": 25,
+    "confirm_naturalbench": 75,
+    "all_naturalbench": 100
+  },
+  "stratification": {
+    "vlmbias": "topic",
+    "naturalbench": "question_type x source"
+  },
+  "paths": {
+    "smoke_vlmbias": "segments/gaze_heads_qwen3_8b/experiments/attention_methods_v1/smoke_vlmbias.jsonl",
+    "dev_vlmbias": "segments/gaze_heads_qwen3_8b/experiments/attention_methods_v1/dev_vlmbias.jsonl",
+    "confirm_vlmbias": "segments/gaze_heads_qwen3_8b/experiments/attention_methods_v1/confirm_vlmbias.jsonl",
+    "all_vlmbias": "segments/gaze_heads_qwen3_8b/experiments/attention_methods_v1/all_vlmbias.jsonl",
+    "smoke_naturalbench": "segments/gaze_heads_qwen3_8b/experiments/attention_methods_v1/smoke_naturalbench.jsonl",
+    "dev_naturalbench": "segments/gaze_heads_qwen3_8b/experiments/attention_methods_v1/dev_naturalbench.jsonl",
+    "confirm_naturalbench": "segments/gaze_heads_qwen3_8b/experiments/attention_methods_v1/confirm_naturalbench.jsonl",
+    "all_naturalbench": "segments/gaze_heads_qwen3_8b/experiments/attention_methods_v1/all_naturalbench.jsonl"
+  }
+}

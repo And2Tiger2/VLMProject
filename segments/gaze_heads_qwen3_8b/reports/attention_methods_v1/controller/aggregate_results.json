@@ -1,0 +1,6164 @@
+{
+  "valid": true,
+  "stage": "controller",
+  "manifest": "segments/gaze_heads_qwen3_8b/experiments/attention_methods_v1/controller_manifest.json",
+  "qualification": {
+    "max_vlmbias_accuracy_drop": 0.02,
+    "max_naturalbench_g_acc_drop": 0.05,
+    "max_invalid_rate_increase": 0.02
+  },
+  "n_conditions_expected": 10,
+  "n_conditions_found": 10,
+  "conditions": [
+    {
+      "valid": true,
+      "stage": "controller",
+      "condition": {
+        "name": "baseline",
+        "controller": "fixed",
+        "alpha": 0.0,
+        "target_mass": 0.0,
+        "max_alpha": 5.0,
+        "confidence_threshold": null,
+        "head_selection": "gaze_global",
+        "head_count": 0,
+        "head_seed": 0,
+        "seed": 0,
+        "do_sample": false,
+        "temperature": null,
+        "split": "dev",
+        "vlmbias_dataset": "segments/gaze_heads_qwen3_8b/experiments/attention_methods_v1/dev_vlmbias.jsonl",
+        "naturalbench_dataset": "segments/gaze_heads_qwen3_8b/experiments/attention_methods_v1/dev_naturalbench.jsonl"
+      },
+      "provenance": {
+        "git_commit": "dc692233354a2e061aec0bd9bf6c91b4985e2d5f",
+        "job_id": "3567284",
+        "array_job_id": "3566997",
+        "array_task_id": "0",
+        "node": "neu314"
+      },
+      "selected_heads": [],
+      "vlmbias": {
+        "n": 100,
+        "accuracy": 0.05,
+        "error_rate": 0.95,
+        "bias_aligned_error_rate": 0.11578947368421053,
+        "bias_aligned_fraction": 0.11,
+        "by_topic": {
+          "Animals": {
+            "n": 15,
+            "accuracy": 0.0,
+            "bias_aligned_error_rate": 0.0
+          },
+          "Chess Pieces": {
+            "n": 14,
+            "accuracy": 0.0,
+            "bias_aligned_error_rate": 0.0
+          },
+          "Flags": {
+            "n": 14,
+            "accuracy": 0.0,
+            "bias_aligned_error_rate": 0.07142857142857142
+          },
+          "Game Boards": {
+            "n": 14,
+            "accuracy": 0.14285714285714285,
+            "bias_aligned_error_rate": 0.3333333333333333
+          },
+          "Logos": {
+            "n": 14,
+            "accuracy": 0.0,
+            "bias_aligned_error_rate": 0.0
+          },
+          "Optical Illusion": {
+            "n": 14,
+            "accuracy": 0.21428571428571427,
+            "bias_aligned_error_rate": 0.5454545454545454
+          },
+          "Patterned Grid": {
+            "n": 15,
+            "accuracy": 0.0,
+            "bias_aligned_error_rate": 0.0
+          }
+        },
+        "n_unique": 100,
+        "duplicate_count": 0,
+        "invalid_rate": 0.28
+      },
+      "naturalbench": {
+        "n_groups": 25,
+        "n_model_calls": 100,
+        "Acc": 0.46,
+        "Q_Acc": 0.16,
+        "I_Acc": 0.14,
+        "G_Acc": 0.0,
+        "by_question_type": {
+          "multiple_choice": {
+            "n_model_calls": 48,
+            "Acc": 0.3333333333333333
+          },
+          "yes_no": {
+            "n_model_calls": 52,
+            "Acc": 0.5769230769230769
+          }
+        },
+        "by_source": {
+          "DOCCI": {
+            "n_model_calls": 52,
+            "Acc": 0.5769230769230769
+          },
+          "Flickr": {
+            "n_model_calls": 48,
+            "Acc": 0.3333333333333333
+          }
+        },
+        "n_unique_calls": 100,
+        "duplicate_count": 0,
+        "invalid_rate": 0.25
+      },
+      "telemetry": {
+        "vlmbias": {
+          "mean_image_attention_mass": 0.07525566037273625,
+          "mean_boosted_layer_image_attention_mass": null,
+          "mean_boosted_head_image_attention_mass": null,
+          "mean_preboost_head_image_attention_mass": null,
+          "mean_effective_alpha": null,
+          "mean_alpha_cap_fraction": null,
+          "confidence_gate_intervention_rate": null,
+          "mean_baseline_confidence": null
+        },
+        "naturalbench": {
+          "mean_image_attention_mass": 0.04936572779310626,
+          "mean_boosted_layer_image_attention_mass": null,
+          "mean_boosted_head_image_attention_mass": null,
+          "mean_preboost_head_image_attention_mass": null,
+          "mean_effective_alpha": null,
+          "mean_alpha_cap_fraction": null,
+          "confidence_gate_intervention_rate": null,
+          "mean_baseline_confidence": null
+        }
+      },
+      "artifacts": {
+        "config": "segments/gaze_heads_qwen3_8b/runs/attention_methods_v1/controller/baseline/experiment_config.json",
+        "vlmbias": "segments/gaze_heads_qwen3_8b/runs/attention_methods_v1/controller/baseline/vlmbias.jsonl",
+        "naturalbench": "segments/gaze_heads_qwen3_8b/runs/attention_methods_v1/controller/baseline/naturalbench.jsonl"
+      },
+      "errors": []
+    },
+    {
+      "valid": true,
+      "stage": "controller",
+      "condition": {
+        "name": "fixed_alpha0p5",
+        "controller": "fixed",
+        "alpha": 0.5,
+        "target_mass": 0.0,
+        "max_alpha": 5.0,
+        "confidence_threshold": null,
+        "head_selection": "gaze_global",
+        "head_count": 100,
+        "head_seed": 0,
+        "seed": 0,
+        "do_sample": false,
+        "temperature": null,
+        "split": "dev",
+        "vlmbias_dataset": "segments/gaze_heads_qwen3_8b/experiments/attention_methods_v1/dev_vlmbias.jsonl",
+        "naturalbench_dataset": "segments/gaze_heads_qwen3_8b/experiments/attention_methods_v1/dev_naturalbench.jsonl"
+      },
+      "provenance": {
+        "git_commit": "dc692233354a2e061aec0bd9bf6c91b4985e2d5f",
+        "job_id": "3567285",
+        "array_job_id": "3566997",
+        "array_task_id": "1",
+        "node": "neu314"
+      },
+      "selected_heads": [
+        [
+          24,
+          29
+        ],
+        [
+          26,
+          26
+        ],
+        [
+          25,
+          30
+        ],
+        [
+          26,
+          31
+        ],
+        [
+          24,
+          31
+        ],
+        [
+          25,
+          10
+        ],
+        [
+          0,
+          27
+        ],
+        [
+          7,
+          6
+        ],
+        [
+          32,
+          0
+        ],
+        [
+          34,
+          0
+        ],
+        [
+          2,
+          17
+        ],
+        [
+          24,
+          13
+        ],
+        [
+          24,
+          8
+        ],
+        [
+          32,
+          3
+        ],
+        [
+          33,
+          14
+        ],
+        [
+          0,
+          5
+        ],
+        [
+          32,
+          11
+        ],
+        [
+          29,
+          25
+        ],
+        [
+          33,
+          12
+        ],
+        [
+          29,
+          24
+        ],
+        [
+          18,
+          23
+        ],
+        [
+          0,
+          8
+        ],
+        [
+          32,
+          5
+        ],
+        [
+          34,
+          2
+        ],
+        [
+          32,
+          8
+        ],
+        [
+          34,
+          1
+        ],
+        [
+          33,
+          23
+        ],
+        [
+          19,
+          27
+        ],
+        [
+          27,
+          18
+        ],
+        [
+          33,
+          17
+        ],
+        [
+          33,
+          15
+        ],
+        [
+          30,
+          9
+        ],
+        [
+          24,
+          19
+        ],
+        [
+          33,
+          13
+        ],
+        [
+          30,
+          8
+        ],
+        [
+          33,
+          19
+        ],
+        [
+          16,
+          14
+        ],
+        [
+          0,
+          29
+        ],
+        [
+          25,
+          9
+        ],
+        [
+          24,
+          5
+        ],
+        [
+          34,
+          3
+        ],
+        [
+          31,
+          4
+        ],
+        [
+          31,
+          20
+        ],
+        [
+          33,
+          18
+        ],
+        [
+          31,
+          6
+        ],
+        [
+          32,
+          7
+        ],
+        [
+          34,
+          7
+        ],
+        [
+          31,
+          13
+        ],
+        [
+          2,
+          1
+        ],
+        [
+          28,
+          2
+        ],
+        [
+          31,
+          15
+        ],
+        [
+          27,
+          29
+        ],
+        [
+          25,
+          26
+        ],
+        [
+          16,
+          20
+        ],
+        [
+          18,
+          30
+        ],
+        [
+          32,
+          6
+        ],
+        [
+          27,
+          13
+        ],
+        [
+          29,
+          26
+        ],
+        [
+          26,
+          20
+        ],
+        [
+          29,
+          27
+        ],
+        [
+          24,
+          16
+        ],
+        [
+          19,
+          25
+        ],
+        [
+          33,
+          11
+        ],
+        [
+          23,
+          28
+        ],
+        [
+          33,
+          16
+        ],
+        [
+          30,
+          25
+        ],
+        [
+          29,
+          5
+        ],
+        [
+          11,
+          11
+        ],
+        [
+          34,
+          5
+        ],
+        [
+          26,
+          15
+        ],
+        [
+          23,
+          10
+        ],
+        [
+          15,
+          0
+        ],
+        [
+          23,
+          30
+        ],
+        [
+          31,
+          29
+        ],
+        [
+          27,
+          16
+        ],
+        [
+          31,
+          14
+        ],
+        [
+          31,
+          5
+        ],
+        [
+          18,
+          22
+        ],
+        [
+          18,
+          14
+        ],
+        [
+          15,
+          29
+        ],
+        [
+          13,
+          17
+        ],
+        [
+          15,
+          8
+        ],
+        [
+          23,
+          31
+        ],
+        [
+          14,
+          6
+        ],
+        [
+          15,
+          2
+        ],
+        [
+          23,
+          13
+        ],
+        [
+          1,
+          1
+        ],
+        [
+          15,
+          9
+        ],
+        [
+          23,
+          5
+        ],
+        [
+          32,
+          10
+        ],
+        [
+          29,
+          3
+        ],
+        [
+          28,
+          14
+        ],
+        [
+          30,
+          27
+        ],
+        [
+          33,
+          9
+        ],
+        [
+          0,
+          14
+        ],
+        [
+          29,
+          12
+        ],
+        [
+          24,
+          28
+        ],
+        [
+          20,
+          15
+        ],
+        [
+          31,
+          30
+        ],
+        [
+          27,
+          31
+        ]
+      ],
+      "vlmbias": {
+        "n": 100,
+        "accuracy": 0.05,
+        "error_rate": 0.95,
+        "bias_aligned_error_rate": 0.11578947368421053,
+        "bias_aligned_fraction": 0.11,
+        "by_topic": {
+          "Animals": {
+            "n": 15,
+            "accuracy": 0.0,
+            "bias_aligned_error_rate": 0.0
+          },
+          "Chess Pieces": {
+            "n": 14,
+            "accuracy": 0.0,
+            "bias_aligned_error_rate": 0.0
+          },
+          "Flags": {
+            "n": 14,
+            "accuracy": 0.0,
+            "bias_aligned_error_rate": 0.07142857142857142
+          },
+          "Game Boards": {
+            "n": 14,
+            "accuracy": 0.21428571428571427,
+            "bias_aligned_error_rate": 0.36363636363636365
+          },
+          "Logos": {
+            "n": 14,
+            "accuracy": 0.0,
+            "bias_aligned_error_rate": 0.0
+          },
+          "Optical Illusion": {
+            "n": 14,
+            "accuracy": 0.14285714285714285,
+            "bias_aligned_error_rate": 0.5
+          },
+          "Patterned Grid": {
+            "n": 15,
+            "accuracy": 0.0,
+            "bias_aligned_error_rate": 0.0
+          }
+        },
+        "n_unique": 100,
+        "duplicate_count": 0,
+        "invalid_rate": 0.27
+      },
+      "naturalbench": {
+        "n_groups": 25,
+        "n_model_calls": 100,
+        "Acc": 0.48,
+        "Q_Acc": 0.18,
+        "I_Acc": 0.18,
+        "G_Acc": 0.04,
+        "by_question_type": {
+          "multiple_choice": {
+            "n_model_calls": 48,
+            "Acc": 0.3541666666666667
+          },
+          "yes_no": {
+            "n_model_calls": 52,
+            "Acc": 0.5961538461538461
+          }
+        },
+        "by_source": {
+          "DOCCI": {
+            "n_model_calls": 52,
+            "Acc": 0.5769230769230769
+          },
+          "Flickr": {
+            "n_model_calls": 48,
+            "Acc": 0.375
+          }
+        },
+        "n_unique_calls": 100,
+        "duplicate_count": 0,
+        "invalid_rate": 0.24
+      },
+      "telemetry": {
+        "vlmbias": {
+          "mean_image_attention_mass": 0.07976037198797602,
+          "mean_boosted_layer_image_attention_mass": 0.09276900651481948,
+          "mean_boosted_head_image_attention_mass": 0.2522699333959,
+          "mean_preboost_head_image_attention_mass": null,
+          "mean_effective_alpha": null,
+          "mean_alpha_cap_fraction": null,
+          "confidence_gate_intervention_rate": null,
+          "mean_baseline_confidence": null
+        },
+        "naturalbench": {
+          "mean_image_attention_mass": 0.05353610683754259,
+          "mean_boosted_layer_image_attention_mass": 0.061565412644607326,
+          "mean_boosted_head_image_attention_mass": 0.21941567732231407,
+          "mean_preboost_head_image_attention_mass": null,
+          "mean_effective_alpha": null,
+          "mean_alpha_cap_fraction": null,
+          "confidence_gate_intervention_rate": null,
+          "mean_baseline_confidence": null
+        }
+      },
+      "artifacts": {
+        "config": "segments/gaze_heads_qwen3_8b/runs/attention_methods_v1/controller/fixed_alpha0p5/experiment_config.json",
+        "vlmbias": "segments/gaze_heads_qwen3_8b/runs/attention_methods_v1/controller/fixed_alpha0p5/vlmbias.jsonl",
+        "naturalbench": "segments/gaze_heads_qwen3_8b/runs/attention_methods_v1/controller/fixed_alpha0p5/naturalbench.jsonl"
+      },
+      "errors": []
+    },
+    {
+      "valid": true,
+      "stage": "controller",
+      "condition": {
+        "name": "fixed_alpha1",
+        "controller": "fixed",
+        "alpha": 1.0,
+        "target_mass": 0.0,
+        "max_alpha": 5.0,
+        "confidence_threshold": null,
+        "head_selection": "gaze_global",
+        "head_count": 100,
+        "head_seed": 0,
+        "seed": 0,
+        "do_sample": false,
+        "temperature": null,
+        "split": "dev",
+        "vlmbias_dataset": "segments/gaze_heads_qwen3_8b/experiments/attention_methods_v1/dev_vlmbias.jsonl",
+        "naturalbench_dataset": "segments/gaze_heads_qwen3_8b/experiments/attention_methods_v1/dev_naturalbench.jsonl"
+      },
+      "provenance": {
+        "git_commit": "dc692233354a2e061aec0bd9bf6c91b4985e2d5f",
+        "job_id": "3567286",
+        "array_job_id": "3566997",
+        "array_task_id": "2",
+        "node": "neu325"
+      },
+      "selected_heads": [
+        [
+          24,
+          29
+        ],
+        [
+          26,
+          26
+        ],
+        [
+          25,
+          30
+        ],
+        [
+          26,
+          31
+        ],
+        [
+          24,
+          31
+        ],
+        [
+          25,
+          10
+        ],
+        [
+          0,
+          27
+        ],
+        [
+          7,
+          6
+        ],
+        [
+          32,
+          0
+        ],
+        [
+          34,
+          0
+        ],
+        [
+          2,
+          17
+        ],
+        [
+          24,
+          13
+        ],
+        [
+          24,
+          8
+        ],
+        [
+          32,
+          3
+        ],
+        [
+          33,
+          14
+        ],
+        [
+          0,
+          5
+        ],
+        [
+          32,
+          11
+        ],
+        [
+          29,
+          25
+        ],
+        [
+          33,
+          12
+        ],
+        [
+          29,
+          24
+        ],
+        [
+          18,
+          23
+        ],
+        [
+          0,
+          8
+        ],
+        [
+          32,
+          5
+        ],
+        [
+          34,
+          2
+        ],
+        [
+          32,
+          8
+        ],
+        [
+          34,
+          1
+        ],
+        [
+          33,
+          23
+        ],
+        [
+          19,
+          27
+        ],
+        [
+          27,
+          18
+        ],
+        [
+          33,
+          17
+        ],
+        [
+          33,
+          15
+        ],
+        [
+          30,
+          9
+        ],
+        [
+          24,
+          19
+        ],
+        [
+          33,
+          13
+        ],
+        [
+          30,
+          8
+        ],
+        [
+          33,
+          19
+        ],
+        [
+          16,
+          14
+        ],
+        [
+          0,
+          29
+        ],
+        [
+          25,
+          9
+        ],
+        [
+          24,
+          5
+        ],
+        [
+          34,
+          3
+        ],
+        [
+          31,
+          4
+        ],
+        [
+          31,
+          20
+        ],
+        [
+          33,
+          18
+        ],
+        [
+          31,
+          6
+        ],
+        [
+          32,
+          7
+        ],
+        [
+          34,
+          7
+        ],
+        [
+          31,
+          13
+        ],
+        [
+          2,
+          1
+        ],
+        [
+          28,
+          2
+        ],
+        [
+          31,
+          15
+        ],
+        [
+          27,
+          29
+        ],
+        [
+          25,
+          26
+        ],
+        [
+          16,
+          20
+        ],
+        [
+          18,
+          30
+        ],
+        [
+          32,
+          6
+        ],
+        [
+          27,
+          13
+        ],
+        [
+          29,
+          26
+        ],
+        [
+          26,
+          20
+        ],
+        [
+          29,
+          27
+        ],
+        [
+          24,
+          16
+        ],
+        [
+          19,
+          25
+        ],
+        [
+          33,
+          11
+        ],
+        [
+          23,
+          28
+        ],
+        [
+          33,
+          16
+        ],
+        [
+          30,
+          25
+        ],
+        [
+          29,
+          5
+        ],
+        [
+          11,
+          11
+        ],
+        [
+          34,
+          5
+        ],
+        [
+          26,
+          15
+        ],
+        [
+          23,
+          10
+        ],
+        [
+          15,
+          0
+        ],
+        [
+          23,
+          30
+        ],
+        [
+          31,
+          29
+        ],
+        [
+          27,
+          16
+        ],
+        [
+          31,
+          14
+        ],
+        [
+          31,
+          5
+        ],
+        [
+          18,
+          22
+        ],
+        [
+          18,
+          14
+        ],
+        [
+          15,
+          29
+        ],
+        [
+          13,
+          17
+        ],
+        [
+          15,
+          8
+        ],
+        [
+          23,
+          31
+        ],
+        [
+          14,
+          6
+        ],
+        [
+          15,
+          2
+        ],
+        [
+          23,
+          13
+        ],
+        [
+          1,
+          1
+        ],
+        [
+          15,
+          9
+        ],
+        [
+          23,
+          5
+        ],
+        [
+          32,
+          10
+        ],
+        [
+          29,
+          3
+        ],
+        [
+          28,
+          14
+        ],
+        [
+          30,
+          27
+        ],
+        [
+          33,
+          9
+        ],
+        [
+          0,
+          14
+        ],
+        [
+          29,
+          12
+        ],
+        [
+          24,
+          28
+        ],
+        [
+          20,
+          15
+        ],
+        [
+          31,
+          30
+        ],
+        [
+          27,
+          31
+        ]
+      ],
+      "vlmbias": {
+        "n": 100,
+        "accuracy": 0.05,
+        "error_rate": 0.95,
+        "bias_aligned_error_rate": 0.12631578947368421,
+        "bias_aligned_fraction": 0.12,
+        "by_topic": {
+          "Animals": {
+            "n": 15,
+            "accuracy": 0.0,
+            "bias_aligned_error_rate": 0.0
+          },
+          "Chess Pieces": {
+            "n": 14,
+            "accuracy": 0.0,
+            "bias_aligned_error_rate": 0.0
+          },
+          "Flags": {
+            "n": 14,
+            "accuracy": 0.0,
+            "bias_aligned_error_rate": 0.07142857142857142
+          },
+          "Game Boards": {
+            "n": 14,
+            "accuracy": 0.21428571428571427,
+            "bias_aligned_error_rate": 0.45454545454545453
+          },
+          "Logos": {
+            "n": 14,
+            "accuracy": 0.0,
+            "bias_aligned_error_rate": 0.0
+          },
+          "Optical Illusion": {
+            "n": 14,
+            "accuracy": 0.14285714285714285,
+            "bias_aligned_error_rate": 0.5
+          },
+          "Patterned Grid": {
+            "n": 15,
+            "accuracy": 0.0,
+            "bias_aligned_error_rate": 0.0
+          }
+        },
+        "n_unique": 100,
+        "duplicate_count": 0,
+        "invalid_rate": 0.22
+      },
+      "naturalbench": {
+        "n_groups": 25,
+        "n_model_calls": 100,
+        "Acc": 0.5,
+        "Q_Acc": 0.22,
+        "I_Acc": 0.22,
+        "G_Acc": 0.04,
+        "by_question_type": {
+          "multiple_choice": {
+            "n_model_calls": 48,
+            "Acc": 0.375
+          },
+          "yes_no": {
+            "n_model_calls": 52,
+            "Acc": 0.6153846153846154
+          }
+        },
+        "by_source": {
+          "DOCCI": {
+            "n_model_calls": 52,
+            "Acc": 0.5961538461538461
+          },
+          "Flickr": {
+            "n_model_calls": 48,
+            "Acc": 0.3958333333333333
+          }
+        },
+        "n_unique_calls": 100,
+        "duplicate_count": 0,
+        "invalid_rate": 0.22
+      },
+      "telemetry": {
+        "vlmbias": {
+          "mean_image_attention_mass": 0.08567048752749212,
+          "mean_boosted_layer_image_attention_mass": 0.1017542033729401,
+          "mean_boosted_head_image_attention_mass": 0.3207069330807038,
+          "mean_preboost_head_image_attention_mass": null,
+          "mean_effective_alpha": null,
+          "mean_alpha_cap_fraction": null,
+          "confidence_gate_intervention_rate": null,
+          "mean_baseline_confidence": null
+        },
+        "naturalbench": {
+          "mean_image_attention_mass": 0.05845527914206118,
+          "mean_boosted_layer_image_attention_mass": 0.0691448754961473,
+          "mean_boosted_head_image_attention_mass": 0.28514658669957293,
+          "mean_preboost_head_image_attention_mass": null,
+          "mean_effective_alpha": null,
+          "mean_alpha_cap_fraction": null,
+          "confidence_gate_intervention_rate": null,
+          "mean_baseline_confidence": null
+        }
+      },
+      "artifacts": {
+        "config": "segments/gaze_heads_qwen3_8b/runs/attention_methods_v1/controller/fixed_alpha1/experiment_config.json",
+        "vlmbias": "segments/gaze_heads_qwen3_8b/runs/attention_methods_v1/controller/fixed_alpha1/vlmbias.jsonl",
+        "naturalbench": "segments/gaze_heads_qwen3_8b/runs/attention_methods_v1/controller/fixed_alpha1/naturalbench.jsonl"
+      },
+      "errors": []
+    },
+    {
+      "valid": true,
+      "stage": "controller",
+      "condition": {
+        "name": "fixed_alpha2",
+        "controller": "fixed",
+        "alpha": 2.0,
+        "target_mass": 0.0,
+        "max_alpha": 5.0,
+        "confidence_threshold": null,
+        "head_selection": "gaze_global",
+        "head_count": 100,
+        "head_seed": 0,
+        "seed": 0,
+        "do_sample": false,
+        "temperature": null,
+        "split": "dev",
+        "vlmbias_dataset": "segments/gaze_heads_qwen3_8b/experiments/attention_methods_v1/dev_vlmbias.jsonl",
+        "naturalbench_dataset": "segments/gaze_heads_qwen3_8b/experiments/attention_methods_v1/dev_naturalbench.jsonl"
+      },
+      "provenance": {
+        "git_commit": "dc692233354a2e061aec0bd9bf6c91b4985e2d5f",
+        "job_id": "3567287",
+        "array_job_id": "3566997",
+        "array_task_id": "3",
+        "node": "neu325"
+      },
+      "selected_heads": [
+        [
+          24,
+          29
+        ],
+        [
+          26,
+          26
+        ],
+        [
+          25,
+          30
+        ],
+        [
+          26,
+          31
+        ],
+        [
+          24,
+          31
+        ],
+        [
+          25,
+          10
+        ],
+        [
+          0,
+          27
+        ],
+        [
+          7,
+          6
+        ],
+        [
+          32,
+          0
+        ],
+        [
+          34,
+          0
+        ],
+        [
+          2,
+          17
+        ],
+        [
+          24,
+          13
+        ],
+        [
+          24,
+          8
+        ],
+        [
+          32,
+          3
+        ],
+        [
+          33,
+          14
+        ],
+        [
+          0,
+          5
+        ],
+        [
+          32,
+          11
+        ],
+        [
+          29,
+          25
+        ],
+        [
+          33,
+          12
+        ],
+        [
+          29,
+          24
+        ],
+        [
+          18,
+          23
+        ],
+        [
+          0,
+          8
+        ],
+        [
+          32,
+          5
+        ],
+        [
+          34,
+          2
+        ],
+        [
+          32,
+          8
+        ],
+        [
+          34,
+          1
+        ],
+        [
+          33,
+          23
+        ],
+        [
+          19,
+          27
+        ],
+        [
+          27,
+          18
+        ],
+        [
+          33,
+          17
+        ],
+        [
+          33,
+          15
+        ],
+        [
+          30,
+          9
+        ],
+        [
+          24,
+          19
+        ],
+        [
+          33,
+          13
+        ],
+        [
+          30,
+          8
+        ],
+        [
+          33,
+          19
+        ],
+        [
+          16,
+          14
+        ],
+        [
+          0,
+          29
+        ],
+        [
+          25,
+          9
+        ],
+        [
+          24,
+          5
+        ],
+        [
+          34,
+          3
+        ],
+        [
+          31,
+          4
+        ],
+        [
+          31,
+          20
+        ],
+        [
+          33,
+          18
+        ],
+        [
+          31,
+          6
+        ],
+        [
+          32,
+          7
+        ],
+        [
+          34,
+          7
+        ],
+        [
+          31,
+          13
+        ],
+        [
+          2,
+          1
+        ],
+        [
+          28,
+          2
+        ],
+        [
+          31,
+          15
+        ],
+        [
+          27,
+          29
+        ],
+        [
+          25,
+          26
+        ],
+        [
+          16,
+          20
+        ],
+        [
+          18,
+          30
+        ],
+        [
+          32,
+          6
+        ],
+        [
+          27,
+          13
+        ],
+        [
+          29,
+          26
+        ],
+        [
+          26,
+          20
+        ],
+        [
+          29,
+          27
+        ],
+        [
+          24,
+          16
+        ],
+        [
+          19,
+          25
+        ],
+        [
+          33,
+          11
+        ],
+        [
+          23,
+          28
+        ],
+        [
+          33,
+          16
+        ],
+        [
+          30,
+          25
+        ],
+        [
+          29,
+          5
+        ],
+        [
+          11,
+          11
+        ],
+        [
+          34,
+          5
+        ],
+        [
+          26,
+          15
+        ],
+        [
+          23,
+          10
+        ],
+        [
+          15,
+          0
+        ],
+        [
+          23,
+          30
+        ],
+        [
+          31,
+          29
+        ],
+        [
+          27,
+          16
+        ],
+        [
+          31,
+          14
+        ],
+        [
+          31,
+          5
+        ],
+        [
+          18,
+          22
+        ],
+        [
+          18,
+          14
+        ],
+        [
+          15,
+          29
+        ],
+        [
+          13,
+          17
+        ],
+        [
+          15,
+          8
+        ],
+        [
+          23,
+          31
+        ],
+        [
+          14,
+          6
+        ],
+        [
+          15,
+          2
+        ],
+        [
+          23,
+          13
+        ],
+        [
+          1,
+          1
+        ],
+        [
+          15,
+          9
+        ],
+        [
+          23,
+          5
+        ],
+        [
+          32,
+          10
+        ],
+        [
+          29,
+          3
+        ],
+        [
+          28,
+          14
+        ],
+        [
+          30,
+          27
+        ],
+        [
+          33,
+          9
+        ],
+        [
+          0,
+          14
+        ],
+        [
+          29,
+          12
+        ],
+        [
+          24,
+          28
+        ],
+        [
+          20,
+          15
+        ],
+        [
+          31,
+          30
+        ],
+        [
+          27,
+          31
+        ]
+      ],
+      "vlmbias": {
+        "n": 100,
+        "accuracy": 0.05,
+        "error_rate": 0.95,
+        "bias_aligned_error_rate": 0.12631578947368421,
+        "bias_aligned_fraction": 0.12,
+        "by_topic": {
+          "Animals": {
+            "n": 15,
+            "accuracy": 0.0,
+            "bias_aligned_error_rate": 0.0
+          },
+          "Chess Pieces": {
+            "n": 14,
+            "accuracy": 0.0,
+            "bias_aligned_error_rate": 0.0
+          },
+          "Flags": {
+            "n": 14,
+            "accuracy": 0.0,
+            "bias_aligned_error_rate": 0.07142857142857142
+          },
+          "Game Boards": {
+            "n": 14,
+            "accuracy": 0.14285714285714285,
+            "bias_aligned_error_rate": 0.4166666666666667
+          },
+          "Logos": {
+            "n": 14,
+            "accuracy": 0.0,
+            "bias_aligned_error_rate": 0.0
+          },
+          "Optical Illusion": {
+            "n": 14,
+            "accuracy": 0.21428571428571427,
+            "bias_aligned_error_rate": 0.5454545454545454
+          },
+          "Patterned Grid": {
+            "n": 15,
+            "accuracy": 0.0,
+            "bias_aligned_error_rate": 0.0
+          }
+        },
+        "n_unique": 100,
+        "duplicate_count": 0,
+        "invalid_rate": 0.2
+      },
+      "naturalbench": {
+        "n_groups": 25,
+        "n_model_calls": 100,
+        "Acc": 0.52,
+        "Q_Acc": 0.24,
+        "I_Acc": 0.26,
+        "G_Acc": 0.04,
+        "by_question_type": {
+          "multiple_choice": {
+            "n_model_calls": 48,
+            "Acc": 0.3958333333333333
+          },
+          "yes_no": {
+            "n_model_calls": 52,
+            "Acc": 0.6346153846153846
+          }
+        },
+        "by_source": {
+          "DOCCI": {
+            "n_model_calls": 52,
+            "Acc": 0.5769230769230769
+          },
+          "Flickr": {
+            "n_model_calls": 48,
+            "Acc": 0.4583333333333333
+          }
+        },
+        "n_unique_calls": 100,
+        "duplicate_count": 0,
+        "invalid_rate": 0.19
+      },
+      "telemetry": {
+        "vlmbias": {
+          "mean_image_attention_mass": 0.09921687015165302,
+          "mean_boosted_layer_image_attention_mass": 0.12219369999603474,
+          "mean_boosted_head_image_attention_mass": 0.47970297743531054,
+          "mean_preboost_head_image_attention_mass": null,
+          "mean_effective_alpha": null,
+          "mean_alpha_cap_fraction": null,
+          "confidence_gate_intervention_rate": null,
+          "mean_baseline_confidence": null
+        },
+        "naturalbench": {
+          "mean_image_attention_mass": 0.07029900259913928,
+          "mean_boosted_layer_image_attention_mass": 0.08717876202003229,
+          "mean_boosted_head_image_attention_mass": 0.4393983981998948,
+          "mean_preboost_head_image_attention_mass": null,
+          "mean_effective_alpha": null,
+          "mean_alpha_cap_fraction": null,
+          "confidence_gate_intervention_rate": null,
+          "mean_baseline_confidence": null
+        }
+      },
+      "artifacts": {
+        "config": "segments/gaze_heads_qwen3_8b/runs/attention_methods_v1/controller/fixed_alpha2/experiment_config.json",
+        "vlmbias": "segments/gaze_heads_qwen3_8b/runs/attention_methods_v1/controller/fixed_alpha2/vlmbias.jsonl",
+        "naturalbench": "segments/gaze_heads_qwen3_8b/runs/attention_methods_v1/controller/fixed_alpha2/naturalbench.jsonl"
+      },
+      "errors": []
+    },
+    {
+      "valid": true,
+      "stage": "controller",
+      "condition": {
+        "name": "fixed_alpha5",
+        "controller": "fixed",
+        "alpha": 5.0,
+        "target_mass": 0.0,
+        "max_alpha": 5.0,
+        "confidence_threshold": null,
+        "head_selection": "gaze_global",
+        "head_count": 100,
+        "head_seed": 0,
+        "seed": 0,
+        "do_sample": false,
+        "temperature": null,
+        "split": "dev",
+        "vlmbias_dataset": "segments/gaze_heads_qwen3_8b/experiments/attention_methods_v1/dev_vlmbias.jsonl",
+        "naturalbench_dataset": "segments/gaze_heads_qwen3_8b/experiments/attention_methods_v1/dev_naturalbench.jsonl"
+      },
+      "provenance": {
+        "git_commit": "dc692233354a2e061aec0bd9bf6c91b4985e2d5f",
+        "job_id": "3567331",
+        "array_job_id": "3566997",
+        "array_task_id": "4",
+        "node": "neu314"
+      },
+      "selected_heads": [
+        [
+          24,
+          29
+        ],
+        [
+          26,
+          26
+        ],
+        [
+          25,
+          30
+        ],
+        [
+          26,
+          31
+        ],
+        [
+          24,
+          31
+        ],
+        [
+          25,
+          10
+        ],
+        [
+          0,
+          27
+        ],
+        [
+          7,
+          6
+        ],
+        [
+          32,
+          0
+        ],
+        [
+          34,
+          0
+        ],
+        [
+          2,
+          17
+        ],
+        [
+          24,
+          13
+        ],
+        [
+          24,
+          8
+        ],
+        [
+          32,
+          3
+        ],
+        [
+          33,
+          14
+        ],
+        [
+          0,
+          5
+        ],
+        [
+          32,
+          11
+        ],
+        [
+          29,
+          25
+        ],
+        [
+          33,
+          12
+        ],
+        [
+          29,
+          24
+        ],
+        [
+          18,
+          23
+        ],
+        [
+          0,
+          8
+        ],
+        [
+          32,
+          5
+        ],
+        [
+          34,
+          2
+        ],
+        [
+          32,
+          8
+        ],
+        [
+          34,
+          1
+        ],
+        [
+          33,
+          23
+        ],
+        [
+          19,
+          27
+        ],
+        [
+          27,
+          18
+        ],
+        [
+          33,
+          17
+        ],
+        [
+          33,
+          15
+        ],
+        [
+          30,
+          9
+        ],
+        [
+          24,
+          19
+        ],
+        [
+          33,
+          13
+        ],
+        [
+          30,
+          8
+        ],
+        [
+          33,
+          19
+        ],
+        [
+          16,
+          14
+        ],
+        [
+          0,
+          29
+        ],
+        [
+          25,
+          9
+        ],
+        [
+          24,
+          5
+        ],
+        [
+          34,
+          3
+        ],
+        [
+          31,
+          4
+        ],
+        [
+          31,
+          20
+        ],
+        [
+          33,
+          18
+        ],
+        [
+          31,
+          6
+        ],
+        [
+          32,
+          7
+        ],
+        [
+          34,
+          7
+        ],
+        [
+          31,
+          13
+        ],
+        [
+          2,
+          1
+        ],
+        [
+          28,
+          2
+        ],
+        [
+          31,
+          15
+        ],
+        [
+          27,
+          29
+        ],
+        [
+          25,
+          26
+        ],
+        [
+          16,
+          20
+        ],
+        [
+          18,
+          30
+        ],
+        [
+          32,
+          6
+        ],
+        [
+          27,
+          13
+        ],
+        [
+          29,
+          26
+        ],
+        [
+          26,
+          20
+        ],
+        [
+          29,
+          27
+        ],
+        [
+          24,
+          16
+        ],
+        [
+          19,
+          25
+        ],
+        [
+          33,
+          11
+        ],
+        [
+          23,
+          28
+        ],
+        [
+          33,
+          16
+        ],
+        [
+          30,
+          25
+        ],
+        [
+          29,
+          5
+        ],
+        [
+          11,
+          11
+        ],
+        [
+          34,
+          5
+        ],
+        [
+          26,
+          15
+        ],
+        [
+          23,
+          10
+        ],
+        [
+          15,
+          0
+        ],
+        [
+          23,
+          30
+        ],
+        [
+          31,
+          29
+        ],
+        [
+          27,
+          16
+        ],
+        [
+          31,
+          14
+        ],
+        [
+          31,
+          5
+        ],
+        [
+          18,
+          22
+        ],
+        [
+          18,
+          14
+        ],
+        [
+          15,
+          29
+        ],
+        [
+          13,
+          17
+        ],
+        [
+          15,
+          8
+        ],
+        [
+          23,
+          31
+        ],
+        [
+          14,
+          6
+        ],
+        [
+          15,
+          2
+        ],
+        [
+          23,
+          13
+        ],
+        [
+          1,
+          1
+        ],
+        [
+          15,
+          9
+        ],
+        [
+          23,
+          5
+        ],
+        [
+          32,
+          10
+        ],
+        [
+          29,
+          3
+        ],
+        [
+          28,
+          14
+        ],
+        [
+          30,
+          27
+        ],
+        [
+          33,
+          9
+        ],
+        [
+          0,
+          14
+        ],
+        [
+          29,
+          12
+        ],
+        [
+          24,
+          28
+        ],
+        [
+          20,
+          15
+        ],
+        [
+          31,
+          30
+        ],
+        [
+          27,
+          31
+        ]
+      ],
+      "vlmbias": {
+        "n": 100,
+        "accuracy": 0.06,
+        "error_rate": 0.94,
+        "bias_aligned_error_rate": 0.1276595744680851,
+        "bias_aligned_fraction": 0.12,
+        "by_topic": {
+          "Animals": {
+            "n": 15,
+            "accuracy": 0.0,
+            "bias_aligned_error_rate": 0.0
+          },
+          "Chess Pieces": {
+            "n": 14,
+            "accuracy": 0.0,
+            "bias_aligned_error_rate": 0.0
+          },
+          "Flags": {
+            "n": 14,
+            "accuracy": 0.0,
+            "bias_aligned_error_rate": 0.07142857142857142
+          },
+          "Game Boards": {
+            "n": 14,
+            "accuracy": 0.14285714285714285,
+            "bias_aligned_error_rate": 0.4166666666666667
+          },
+          "Logos": {
+            "n": 14,
+            "accuracy": 0.0,
+            "bias_aligned_error_rate": 0.0
+          },
+          "Optical Illusion": {
+            "n": 14,
+            "accuracy": 0.2857142857142857,
+            "bias_aligned_error_rate": 0.6
+          },
+          "Patterned Grid": {
+            "n": 15,
+            "accuracy": 0.0,
+            "bias_aligned_error_rate": 0.0
+          }
+        },
+        "n_unique": 100,
+        "duplicate_count": 0,
+        "invalid_rate": 0.11
+      },
+      "naturalbench": {
+        "n_groups": 25,
+        "n_model_calls": 100,
+        "Acc": 0.53,
+        "Q_Acc": 0.2,
+        "I_Acc": 0.26,
+        "G_Acc": 0.0,
+        "by_question_type": {
+          "multiple_choice": {
+            "n_model_calls": 48,
+            "Acc": 0.4166666666666667
+          },
+          "yes_no": {
+            "n_model_calls": 52,
+            "Acc": 0.6346153846153846
+          }
+        },
+        "by_source": {
+          "DOCCI": {
+            "n_model_calls": 52,
+            "Acc": 0.6153846153846154
+          },
+          "Flickr": {
+            "n_model_calls": 48,
+            "Acc": 0.4375
+          }
+        },
+        "n_unique_calls": 100,
+        "duplicate_count": 0,
+        "invalid_rate": 0.13
+      },
+      "telemetry": {
+        "vlmbias": {
+          "mean_image_attention_mass": 0.1318538498287869,
+          "mean_boosted_layer_image_attention_mass": 0.17217967715487775,
+          "mean_boosted_head_image_attention_mass": 0.8499524763065167,
+          "mean_preboost_head_image_attention_mass": null,
+          "mean_effective_alpha": null,
+          "mean_alpha_cap_fraction": null,
+          "confidence_gate_intervention_rate": null,
+          "mean_baseline_confidence": null
+        },
+        "naturalbench": {
+          "mean_image_attention_mass": 0.10567716370463044,
+          "mean_boosted_layer_image_attention_mass": 0.14061431053411474,
+          "mean_boosted_head_image_attention_mass": 0.8346585536768867,
+          "mean_preboost_head_image_attention_mass": null,
+          "mean_effective_alpha": null,
+          "mean_alpha_cap_fraction": null,
+          "confidence_gate_intervention_rate": null,
+          "mean_baseline_confidence": null
+        }
+      },
+      "artifacts": {
+        "config": "segments/gaze_heads_qwen3_8b/runs/attention_methods_v1/controller/fixed_alpha5/experiment_config.json",
+        "vlmbias": "segments/gaze_heads_qwen3_8b/runs/attention_methods_v1/controller/fixed_alpha5/vlmbias.jsonl",
+        "naturalbench": "segments/gaze_heads_qwen3_8b/runs/attention_methods_v1/controller/fixed_alpha5/naturalbench.jsonl"
+      },
+      "errors": []
+    },
+    {
+      "valid": true,
+      "stage": "controller",
+      "condition": {
+        "name": "target_mass0p5",
+        "controller": "target_mass",
+        "alpha": 0.0,
+        "target_mass": 0.5,
+        "max_alpha": 5.0,
+        "confidence_threshold": null,
+        "head_selection": "gaze_global",
+        "head_count": 100,
+        "head_seed": 0,
+        "seed": 0,
+        "do_sample": false,
+        "temperature": null,
+        "split": "dev",
+        "vlmbias_dataset": "segments/gaze_heads_qwen3_8b/experiments/attention_methods_v1/dev_vlmbias.jsonl",
+        "naturalbench_dataset": "segments/gaze_heads_qwen3_8b/experiments/attention_methods_v1/dev_naturalbench.jsonl"
+      },
+      "provenance": {
+        "git_commit": "dc692233354a2e061aec0bd9bf6c91b4985e2d5f",
+        "job_id": "3567332",
+        "array_job_id": "3566997",
+        "array_task_id": "5",
+        "node": "neu314"
+      },
+      "selected_heads": [
+        [
+          24,
+          29
+        ],
+        [
+          26,
+          26
+        ],
+        [
+          25,
+          30
+        ],
+        [
+          26,
+          31
+        ],
+        [
+          24,
+          31
+        ],
+        [
+          25,
+          10
+        ],
+        [
+          0,
+          27
+        ],
+        [
+          7,
+          6
+        ],
+        [
+          32,
+          0
+        ],
+        [
+          34,
+          0
+        ],
+        [
+          2,
+          17
+        ],
+        [
+          24,
+          13
+        ],
+        [
+          24,
+          8
+        ],
+        [
+          32,
+          3
+        ],
+        [
+          33,
+          14
+        ],
+        [
+          0,
+          5
+        ],
+        [
+          32,
+          11
+        ],
+        [
+          29,
+          25
+        ],
+        [
+          33,
+          12
+        ],
+        [
+          29,
+          24
+        ],
+        [
+          18,
+          23
+        ],
+        [
+          0,
+          8
+        ],
+        [
+          32,
+          5
+        ],
+        [
+          34,
+          2
+        ],
+        [
+          32,
+          8
+        ],
+        [
+          34,
+          1
+        ],
+        [
+          33,
+          23
+        ],
+        [
+          19,
+          27
+        ],
+        [
+          27,
+          18
+        ],
+        [
+          33,
+          17
+        ],
+        [
+          33,
+          15
+        ],
+        [
+          30,
+          9
+        ],
+        [
+          24,
+          19
+        ],
+        [
+          33,
+          13
+        ],
+        [
+          30,
+          8
+        ],
+        [
+          33,
+          19
+        ],
+        [
+          16,
+          14
+        ],
+        [
+          0,
+          29
+        ],
+        [
+          25,
+          9
+        ],
+        [
+          24,
+          5
+        ],
+        [
+          34,
+          3
+        ],
+        [
+          31,
+          4
+        ],
+        [
+          31,
+          20
+        ],
+        [
+          33,
+          18
+        ],
+        [
+          31,
+          6
+        ],
+        [
+          32,
+          7
+        ],
+        [
+          34,
+          7
+        ],
+        [
+          31,
+          13
+        ],
+        [
+          2,
+          1
+        ],
+        [
+          28,
+          2
+        ],
+        [
+          31,
+          15
+        ],
+        [
+          27,
+          29
+        ],
+        [
+          25,
+          26
+        ],
+        [
+          16,
+          20
+        ],
+        [
+          18,
+          30
+        ],
+        [
+          32,
+          6
+        ],
+        [
+          27,
+          13
+        ],
+        [
+          29,
+          26
+        ],
+        [
+          26,
+          20
+        ],
+        [
+          29,
+          27
+        ],
+        [
+          24,
+          16
+        ],
+        [
+          19,
+          25
+        ],
+        [
+          33,
+          11
+        ],
+        [
+          23,
+          28
+        ],
+        [
+          33,
+          16
+        ],
+        [
+          30,
+          25
+        ],
+        [
+          29,
+          5
+        ],
+        [
+          11,
+          11
+        ],
+        [
+          34,
+          5
+        ],
+        [
+          26,
+          15
+        ],
+        [
+          23,
+          10
+        ],
+        [
+          15,
+          0
+        ],
+        [
+          23,
+          30
+        ],
+        [
+          31,
+          29
+        ],
+        [
+          27,
+          16
+        ],
+        [
+          31,
+          14
+        ],
+        [
+          31,
+          5
+        ],
+        [
+          18,
+          22
+        ],
+        [
+          18,
+          14
+        ],
+        [
+          15,
+          29
+        ],
+        [
+          13,
+          17
+        ],
+        [
+          15,
+          8
+        ],
+        [
+          23,
+          31
+        ],
+        [
+          14,
+          6
+        ],
+        [
+          15,
+          2
+        ],
+        [
+          23,
+          13
+        ],
+        [
+          1,
+          1
+        ],
+        [
+          15,
+          9
+        ],
+        [
+          23,
+          5
+        ],
+        [
+          32,
+          10
+        ],
+        [
+          29,
+          3
+        ],
+        [
+          28,
+          14
+        ],
+        [
+          30,
+          27
+        ],
+        [
+          33,
+          9
+        ],
+        [
+          0,
+          14
+        ],
+        [
+          29,
+          12
+        ],
+        [
+          24,
+          28
+        ],
+        [
+          20,
+          15
+        ],
+        [
+          31,
+          30
+        ],
+        [
+          27,
+          31
+        ]
+      ],
+      "vlmbias": {
+        "n": 100,
+        "accuracy": 0.05,
+        "error_rate": 0.95,
+        "bias_aligned_error_rate": 0.12631578947368421,
+        "bias_aligned_fraction": 0.12,
+        "by_topic": {
+          "Animals": {
+            "n": 15,
+            "accuracy": 0.0,
+            "bias_aligned_error_rate": 0.0
+          },
+          "Chess Pieces": {
+            "n": 14,
+            "accuracy": 0.0,
+            "bias_aligned_error_rate": 0.0
+          },
+          "Flags": {
+            "n": 14,
+            "accuracy": 0.0,
+            "bias_aligned_error_rate": 0.07142857142857142
+          },
+          "Game Boards": {
+            "n": 14,
+            "accuracy": 0.14285714285714285,
+            "bias_aligned_error_rate": 0.4166666666666667
+          },
+          "Logos": {
+            "n": 14,
+            "accuracy": 0.0,
+            "bias_aligned_error_rate": 0.0
+          },
+          "Optical Illusion": {
+            "n": 14,
+            "accuracy": 0.21428571428571427,
+            "bias_aligned_error_rate": 0.5454545454545454
+          },
+          "Patterned Grid": {
+            "n": 15,
+            "accuracy": 0.0,
+            "bias_aligned_error_rate": 0.0
+          }
+        },
+        "n_unique": 100,
+        "duplicate_count": 0,
+        "invalid_rate": 0.16
+      },
+      "naturalbench": {
+        "n_groups": 25,
+        "n_model_calls": 100,
+        "Acc": 0.53,
+        "Q_Acc": 0.26,
+        "I_Acc": 0.28,
+        "G_Acc": 0.08,
+        "by_question_type": {
+          "multiple_choice": {
+            "n_model_calls": 48,
+            "Acc": 0.375
+          },
+          "yes_no": {
+            "n_model_calls": 52,
+            "Acc": 0.6730769230769231
+          }
+        },
+        "by_source": {
+          "DOCCI": {
+            "n_model_calls": 52,
+            "Acc": 0.6346153846153846
+          },
+          "Flickr": {
+            "n_model_calls": 48,
+            "Acc": 0.4166666666666667
+          }
+        },
+        "n_unique_calls": 100,
+        "duplicate_count": 0,
+        "invalid_rate": 0.22
+      },
+      "telemetry": {
+        "vlmbias": {
+          "mean_image_attention_mass": 0.10222085700837659,
+          "mean_boosted_layer_image_attention_mass": 0.12755645583625272,
+          "mean_boosted_head_image_attention_mass": 0.5026719788255903,
+          "mean_preboost_head_image_attention_mass": 0.28234815810167363,
+          "mean_effective_alpha": 1.9256073949325734,
+          "mean_alpha_cap_fraction": 0.06996603675441099,
+          "confidence_gate_intervention_rate": null,
+          "mean_baseline_confidence": null
+        },
+        "naturalbench": {
+          "mean_image_attention_mass": 0.07838729671193977,
+          "mean_boosted_layer_image_attention_mass": 0.09915353857905655,
+          "mean_boosted_head_image_attention_mass": 0.49377479639939137,
+          "mean_preboost_head_image_attention_mass": 0.3146434647375322,
+          "mean_effective_alpha": 1.83837446981927,
+          "mean_alpha_cap_fraction": 0.08973235396414111,
+          "confidence_gate_intervention_rate": null,
+          "mean_baseline_confidence": null
+        }
+      },
+      "artifacts": {
+        "config": "segments/gaze_heads_qwen3_8b/runs/attention_methods_v1/controller/target_mass0p5/experiment_config.json",
+        "vlmbias": "segments/gaze_heads_qwen3_8b/runs/attention_methods_v1/controller/target_mass0p5/vlmbias.jsonl",
+        "naturalbench": "segments/gaze_heads_qwen3_8b/runs/attention_methods_v1/controller/target_mass0p5/naturalbench.jsonl"
+      },
+      "errors": []
+    },
+    {
+      "valid": true,
+      "stage": "controller",
+      "condition": {
+        "name": "target_mass0p7",
+        "controller": "target_mass",
+        "alpha": 0.0,
+        "target_mass": 0.7,
+        "max_alpha": 5.0,
+        "confidence_threshold": null,
+        "head_selection": "gaze_global",
+        "head_count": 100,
+        "head_seed": 0,
+        "seed": 0,
+        "do_sample": false,
+        "temperature": null,
+        "split": "dev",
+        "vlmbias_dataset": "segments/gaze_heads_qwen3_8b/experiments/attention_methods_v1/dev_vlmbias.jsonl",
+        "naturalbench_dataset": "segments/gaze_heads_qwen3_8b/experiments/attention_methods_v1/dev_naturalbench.jsonl"
+      },
+      "provenance": {
+        "git_commit": "dc692233354a2e061aec0bd9bf6c91b4985e2d5f",
+        "job_id": "3567333",
+        "array_job_id": "3566997",
+        "array_task_id": "6",
+        "node": "neu325"
+      },
+      "selected_heads": [
+        [
+          24,
+          29
+        ],
+        [
+          26,
+          26
+        ],
+        [
+          25,
+          30
+        ],
+        [
+          26,
+          31
+        ],
+        [
+          24,
+          31
+        ],
+        [
+          25,
+          10
+        ],
+        [
+          0,
+          27
+        ],
+        [
+          7,
+          6
+        ],
+        [
+          32,
+          0
+        ],
+        [
+          34,
+          0
+        ],
+        [
+          2,
+          17
+        ],
+        [
+          24,
+          13
+        ],
+        [
+          24,
+          8
+        ],
+        [
+          32,
+          3
+        ],
+        [
+          33,
+          14
+        ],
+        [
+          0,
+          5
+        ],
+        [
+          32,
+          11
+        ],
+        [
+          29,
+          25
+        ],
+        [
+          33,
+          12
+        ],
+        [
+          29,
+          24
+        ],
+        [
+          18,
+          23
+        ],
+        [
+          0,
+          8
+        ],
+        [
+          32,
+          5
+        ],
+        [
+          34,
+          2
+        ],
+        [
+          32,
+          8
+        ],
+        [
+          34,
+          1
+        ],
+        [
+          33,
+          23
+        ],
+        [
+          19,
+          27
+        ],
+        [
+          27,
+          18
+        ],
+        [
+          33,
+          17
+        ],
+        [
+          33,
+          15
+        ],
+        [
+          30,
+          9
+        ],
+        [
+          24,
+          19
+        ],
+        [
+          33,
+          13
+        ],
+        [
+          30,
+          8
+        ],
+        [
+          33,
+          19
+        ],
+        [
+          16,
+          14
+        ],
+        [
+          0,
+          29
+        ],
+        [
+          25,
+          9
+        ],
+        [
+          24,
+          5
+        ],
+        [
+          34,
+          3
+        ],
+        [
+          31,
+          4
+        ],
+        [
+          31,
+          20
+        ],
+        [
+          33,
+          18
+        ],
+        [
+          31,
+          6
+        ],
+        [
+          32,
+          7
+        ],
+        [
+          34,
+          7
+        ],
+        [
+          31,
+          13
+        ],
+        [
+          2,
+          1
+        ],
+        [
+          28,
+          2
+        ],
+        [
+          31,
+          15
+        ],
+        [
+          27,
+          29
+        ],
+        [
+          25,
+          26
+        ],
+        [
+          16,
+          20
+        ],
+        [
+          18,
+          30
+        ],
+        [
+          32,
+          6
+        ],
+        [
+          27,
+          13
+        ],
+        [
+          29,
+          26
+        ],
+        [
+          26,
+          20
+        ],
+        [
+          29,
+          27
+        ],
+        [
+          24,
+          16
+        ],
+        [
+          19,
+          25
+        ],
+        [
+          33,
+          11
+        ],
+        [
+          23,
+          28
+        ],
+        [
+          33,
+          16
+        ],
+        [
+          30,
+          25
+        ],
+        [
+          29,
+          5
+        ],
+        [
+          11,
+          11
+        ],
+        [
+          34,
+          5
+        ],
+        [
+          26,
+          15
+        ],
+        [
+          23,
+          10
+        ],
+        [
+          15,
+          0
+        ],
+        [
+          23,
+          30
+        ],
+        [
+          31,
+          29
+        ],
+        [
+          27,
+          16
+        ],
+        [
+          31,
+          14
+        ],
+        [
+          31,
+          5
+        ],
+        [
+          18,
+          22
+        ],
+        [
+          18,
+          14
+        ],
+        [
+          15,
+          29
+        ],
+        [
+          13,
+          17
+        ],
+        [
+          15,
+          8
+        ],
+        [
+          23,
+          31
+        ],
+        [
+          14,
+          6
+        ],
+        [
+          15,
+          2
+        ],
+        [
+          23,
+          13
+        ],
+        [
+          1,
+          1
+        ],
+        [
+          15,
+          9
+        ],
+        [
+          23,
+          5
+        ],
+        [
+          32,
+          10
+        ],
+        [
+          29,
+          3
+        ],
+        [
+          28,
+          14
+        ],
+        [
+          30,
+          27
+        ],
+        [
+          33,
+          9
+        ],
+        [
+          0,
+          14
+        ],
+        [
+          29,
+          12
+        ],
+        [
+          24,
+          28
+        ],
+        [
+          20,
+          15
+        ],
+        [
+          31,
+          30
+        ],
+        [
+          27,
+          31
+        ]
+      ],
+      "vlmbias": {
+        "n": 100,
+        "accuracy": 0.05,
+        "error_rate": 0.95,
+        "bias_aligned_error_rate": 0.12631578947368421,
+        "bias_aligned_fraction": 0.12,
+        "by_topic": {
+          "Animals": {
+            "n": 15,
+            "accuracy": 0.0,
+            "bias_aligned_error_rate": 0.0
+          },
+          "Chess Pieces": {
+            "n": 14,
+            "accuracy": 0.0,
+            "bias_aligned_error_rate": 0.0
+          },
+          "Flags": {
+            "n": 14,
+            "accuracy": 0.0,
+            "bias_aligned_error_rate": 0.07142857142857142
+          },
+          "Game Boards": {
+            "n": 14,
+            "accuracy": 0.14285714285714285,
+            "bias_aligned_error_rate": 0.4166666666666667
+          },
+          "Logos": {
+            "n": 14,
+            "accuracy": 0.0,
+            "bias_aligned_error_rate": 0.0
+          },
+          "Optical Illusion": {
+            "n": 14,
+            "accuracy": 0.21428571428571427,
+            "bias_aligned_error_rate": 0.5454545454545454
+          },
+          "Patterned Grid": {
+            "n": 15,
+            "accuracy": 0.0,
+            "bias_aligned_error_rate": 0.0
+          }
+        },
+        "n_unique": 100,
+        "duplicate_count": 0,
+        "invalid_rate": 0.14
+      },
+      "naturalbench": {
+        "n_groups": 25,
+        "n_model_calls": 100,
+        "Acc": 0.55,
+        "Q_Acc": 0.24,
+        "I_Acc": 0.32,
+        "G_Acc": 0.04,
+        "by_question_type": {
+          "multiple_choice": {
+            "n_model_calls": 48,
+            "Acc": 0.4375
+          },
+          "yes_no": {
+            "n_model_calls": 52,
+            "Acc": 0.6538461538461539
+          }
+        },
+        "by_source": {
+          "DOCCI": {
+            "n_model_calls": 52,
+            "Acc": 0.6730769230769231
+          },
+          "Flickr": {
+            "n_model_calls": 48,
+            "Acc": 0.4166666666666667
+          }
+        },
+        "n_unique_calls": 100,
+        "duplicate_count": 0,
+        "invalid_rate": 0.15
+      },
+      "telemetry": {
+        "vlmbias": {
+          "mean_image_attention_mass": 0.11449237352622668,
+          "mean_boosted_layer_image_attention_mass": 0.14661778632964764,
+          "mean_boosted_head_image_attention_mass": 0.6620322176333743,
+          "mean_preboost_head_image_attention_mass": 0.2597864083575975,
+          "mean_effective_alpha": 2.680113478626039,
+          "mean_alpha_cap_fraction": 0.16056141126576062,
+          "confidence_gate_intervention_rate": null,
+          "mean_baseline_confidence": null
+        },
+        "naturalbench": {
+          "mean_image_attention_mass": 0.09063845927654593,
+          "mean_boosted_layer_image_attention_mass": 0.1179866738458966,
+          "mean_boosted_head_image_attention_mass": 0.653106909993415,
+          "mean_preboost_head_image_attention_mass": 0.29004342831085117,
+          "mean_effective_alpha": 2.5294501163038916,
+          "mean_alpha_cap_fraction": 0.16728365263646588,
+          "confidence_gate_intervention_rate": null,
+          "mean_baseline_confidence": null
+        }
+      },
+      "artifacts": {
+        "config": "segments/gaze_heads_qwen3_8b/runs/attention_methods_v1/controller/target_mass0p7/experiment_config.json",
+        "vlmbias": "segments/gaze_heads_qwen3_8b/runs/attention_methods_v1/controller/target_mass0p7/vlmbias.jsonl",
+        "naturalbench": "segments/gaze_heads_qwen3_8b/runs/attention_methods_v1/controller/target_mass0p7/naturalbench.jsonl"
+      },
+      "errors": []
+    },
+    {
+      "valid": true,
+      "stage": "controller",
+      "condition": {
+        "name": "target_mass0p9",
+        "controller": "target_mass",
+        "alpha": 0.0,
+        "target_mass": 0.9,
+        "max_alpha": 5.0,
+        "confidence_threshold": null,
+        "head_selection": "gaze_global",
+        "head_count": 100,
+        "head_seed": 0,
+        "seed": 0,
+        "do_sample": false,
+        "temperature": null,
+        "split": "dev",
+        "vlmbias_dataset": "segments/gaze_heads_qwen3_8b/experiments/attention_methods_v1/dev_vlmbias.jsonl",
+        "naturalbench_dataset": "segments/gaze_heads_qwen3_8b/experiments/attention_methods_v1/dev_naturalbench.jsonl"
+      },
+      "provenance": {
+        "git_commit": "dc692233354a2e061aec0bd9bf6c91b4985e2d5f",
+        "job_id": "3567334",
+        "array_job_id": "3566997",
+        "array_task_id": "7",
+        "node": "neu325"
+      },
+      "selected_heads": [
+        [
+          24,
+          29
+        ],
+        [
+          26,
+          26
+        ],
+        [
+          25,
+          30
+        ],
+        [
+          26,
+          31
+        ],
+        [
+          24,
+          31
+        ],
+        [
+          25,
+          10
+        ],
+        [
+          0,
+          27
+        ],
+        [
+          7,
+          6
+        ],
+        [
+          32,
+          0
+        ],
+        [
+          34,
+          0
+        ],
+        [
+          2,
+          17
+        ],
+        [
+          24,
+          13
+        ],
+        [
+          24,
+          8
+        ],
+        [
+          32,
+          3
+        ],
+        [
+          33,
+          14
+        ],
+        [
+          0,
+          5
+        ],
+        [
+          32,
+          11
+        ],
+        [
+          29,
+          25
+        ],
+        [
+          33,
+          12
+        ],
+        [
+          29,
+          24
+        ],
+        [
+          18,
+          23
+        ],
+        [
+          0,
+          8
+        ],
+        [
+          32,
+          5
+        ],
+        [
+          34,
+          2
+        ],
+        [
+          32,
+          8
+        ],
+        [
+          34,
+          1
+        ],
+        [
+          33,
+          23
+        ],
+        [
+          19,
+          27
+        ],
+        [
+          27,
+          18
+        ],
+        [
+          33,
+          17
+        ],
+        [
+          33,
+          15
+        ],
+        [
+          30,
+          9
+        ],
+        [
+          24,
+          19
+        ],
+        [
+          33,
+          13
+        ],
+        [
+          30,
+          8
+        ],
+        [
+          33,
+          19
+        ],
+        [
+          16,
+          14
+        ],
+        [
+          0,
+          29
+        ],
+        [
+          25,
+          9
+        ],
+        [
+          24,
+          5
+        ],
+        [
+          34,
+          3
+        ],
+        [
+          31,
+          4
+        ],
+        [
+          31,
+          20
+        ],
+        [
+          33,
+          18
+        ],
+        [
+          31,
+          6
+        ],
+        [
+          32,
+          7
+        ],
+        [
+          34,
+          7
+        ],
+        [
+          31,
+          13
+        ],
+        [
+          2,
+          1
+        ],
+        [
+          28,
+          2
+        ],
+        [
+          31,
+          15
+        ],
+        [
+          27,
+          29
+        ],
+        [
+          25,
+          26
+        ],
+        [
+          16,
+          20
+        ],
+        [
+          18,
+          30
+        ],
+        [
+          32,
+          6
+        ],
+        [
+          27,
+          13
+        ],
+        [
+          29,
+          26
+        ],
+        [
+          26,
+          20
+        ],
+        [
+          29,
+          27
+        ],
+        [
+          24,
+          16
+        ],
+        [
+          19,
+          25
+        ],
+        [
+          33,
+          11
+        ],
+        [
+          23,
+          28
+        ],
+        [
+          33,
+          16
+        ],
+        [
+          30,
+          25
+        ],
+        [
+          29,
+          5
+        ],
+        [
+          11,
+          11
+        ],
+        [
+          34,
+          5
+        ],
+        [
+          26,
+          15
+        ],
+        [
+          23,
+          10
+        ],
+        [
+          15,
+          0
+        ],
+        [
+          23,
+          30
+        ],
+        [
+          31,
+          29
+        ],
+        [
+          27,
+          16
+        ],
+        [
+          31,
+          14
+        ],
+        [
+          31,
+          5
+        ],
+        [
+          18,
+          22
+        ],
+        [
+          18,
+          14
+        ],
+        [
+          15,
+          29
+        ],
+        [
+          13,
+          17
+        ],
+        [
+          15,
+          8
+        ],
+        [
+          23,
+          31
+        ],
+        [
+          14,
+          6
+        ],
+        [
+          15,
+          2
+        ],
+        [
+          23,
+          13
+        ],
+        [
+          1,
+          1
+        ],
+        [
+          15,
+          9
+        ],
+        [
+          23,
+          5
+        ],
+        [
+          32,
+          10
+        ],
+        [
+          29,
+          3
+        ],
+        [
+          28,
+          14
+        ],
+        [
+          30,
+          27
+        ],
+        [
+          33,
+          9
+        ],
+        [
+          0,
+          14
+        ],
+        [
+          29,
+          12
+        ],
+        [
+          24,
+          28
+        ],
+        [
+          20,
+          15
+        ],
+        [
+          31,
+          30
+        ],
+        [
+          27,
+          31
+        ]
+      ],
+      "vlmbias": {
+        "n": 100,
+        "accuracy": 0.06,
+        "error_rate": 0.94,
+        "bias_aligned_error_rate": 0.14893617021276595,
+        "bias_aligned_fraction": 0.14,
+        "by_topic": {
+          "Animals": {
+            "n": 15,
+            "accuracy": 0.0,
+            "bias_aligned_error_rate": 0.0
+          },
+          "Chess Pieces": {
+            "n": 14,
+            "accuracy": 0.0,
+            "bias_aligned_error_rate": 0.0
+          },
+          "Flags": {
+            "n": 14,
+            "accuracy": 0.0,
+            "bias_aligned_error_rate": 0.07142857142857142
+          },
+          "Game Boards": {
+            "n": 14,
+            "accuracy": 0.14285714285714285,
+            "bias_aligned_error_rate": 0.5
+          },
+          "Logos": {
+            "n": 14,
+            "accuracy": 0.0,
+            "bias_aligned_error_rate": 0.0
+          },
+          "Optical Illusion": {
+            "n": 14,
+            "accuracy": 0.2857142857142857,
+            "bias_aligned_error_rate": 0.7
+          },
+          "Patterned Grid": {
+            "n": 15,
+            "accuracy": 0.0,
+            "bias_aligned_error_rate": 0.0
+          }
+        },
+        "n_unique": 100,
+        "duplicate_count": 0,
+        "invalid_rate": 0.11
+      },
+      "naturalbench": {
+        "n_groups": 25,
+        "n_model_calls": 100,
+        "Acc": 0.55,
+        "Q_Acc": 0.22,
+        "I_Acc": 0.3,
+        "G_Acc": 0.08,
+        "by_question_type": {
+          "multiple_choice": {
+            "n_model_calls": 48,
+            "Acc": 0.4166666666666667
+          },
+          "yes_no": {
+            "n_model_calls": 52,
+            "Acc": 0.6730769230769231
+          }
+        },
+        "by_source": {
+          "DOCCI": {
+            "n_model_calls": 52,
+            "Acc": 0.6346153846153846
+          },
+          "Flickr": {
+            "n_model_calls": 48,
+            "Acc": 0.4583333333333333
+          }
+        },
+        "n_unique_calls": 100,
+        "duplicate_count": 0,
+        "invalid_rate": 0.16
+      },
+      "telemetry": {
+        "vlmbias": {
+          "mean_image_attention_mass": 0.1254596629555236,
+          "mean_boosted_layer_image_attention_mass": 0.16322364495715538,
+          "mean_boosted_head_image_attention_mass": 0.8032621622046096,
+          "mean_preboost_head_image_attention_mass": 0.2398930938972152,
+          "mean_effective_alpha": 3.6893281032701717,
+          "mean_alpha_cap_fraction": 0.37212063289187264,
+          "confidence_gate_intervention_rate": null,
+          "mean_baseline_confidence": null
+        },
+        "naturalbench": {
+          "mean_image_attention_mass": 0.10189732317492384,
+          "mean_boosted_layer_image_attention_mass": 0.13488958315054575,
+          "mean_boosted_head_image_attention_mass": 0.7936974742141448,
+          "mean_preboost_head_image_attention_mass": 0.28294748921408025,
+          "mean_effective_alpha": 3.447656801711768,
+          "mean_alpha_cap_fraction": 0.3216096980530224,
+          "confidence_gate_intervention_rate": null,
+          "mean_baseline_confidence": null
+        }
+      },
+      "artifacts": {
+        "config": "segments/gaze_heads_qwen3_8b/runs/attention_methods_v1/controller/target_mass0p9/experiment_config.json",
+        "vlmbias": "segments/gaze_heads_qwen3_8b/runs/attention_methods_v1/controller/target_mass0p9/vlmbias.jsonl",
+        "naturalbench": "segments/gaze_heads_qwen3_8b/runs/attention_methods_v1/controller/target_mass0p9/naturalbench.jsonl"
+      },
+      "errors": []
+    },
+    {
+      "valid": true,
+      "stage": "controller",
+      "condition": {
+        "name": "confidence_gate0p3",
+        "controller": "confidence_gate",
+        "alpha": 2.0,
+        "target_mass": 0.0,
+        "max_alpha": 5.0,
+        "confidence_threshold": 0.3,
+        "head_selection": "gaze_global",
+        "head_count": 100,
+        "head_seed": 0,
+        "seed": 0,
+        "do_sample": false,
+        "temperature": null,
+        "split": "dev",
+        "vlmbias_dataset": "segments/gaze_heads_qwen3_8b/experiments/attention_methods_v1/dev_vlmbias.jsonl",
+        "naturalbench_dataset": "segments/gaze_heads_qwen3_8b/experiments/attention_methods_v1/dev_naturalbench.jsonl"
+      },
+      "provenance": {
+        "git_commit": "dc692233354a2e061aec0bd9bf6c91b4985e2d5f",
+        "job_id": "3567341",
+        "array_job_id": "3566997",
+        "array_task_id": "8",
+        "node": "neu314"
+      },
+      "selected_heads": [
+        [
+          24,
+          29
+        ],
+        [
+          26,
+          26
+        ],
+        [
+          25,
+          30
+        ],
+        [
+          26,
+          31
+        ],
+        [
+          24,
+          31
+        ],
+        [
+          25,
+          10
+        ],
+        [
+          0,
+          27
+        ],
+        [
+          7,
+          6
+        ],
+        [
+          32,
+          0
+        ],
+        [
+          34,
+          0
+        ],
+        [
+          2,
+          17
+        ],
+        [
+          24,
+          13
+        ],
+        [
+          24,
+          8
+        ],
+        [
+          32,
+          3
+        ],
+        [
+          33,
+          14
+        ],
+        [
+          0,
+          5
+        ],
+        [
+          32,
+          11
+        ],
+        [
+          29,
+          25
+        ],
+        [
+          33,
+          12
+        ],
+        [
+          29,
+          24
+        ],
+        [
+          18,
+          23
+        ],
+        [
+          0,
+          8
+        ],
+        [
+          32,
+          5
+        ],
+        [
+          34,
+          2
+        ],
+        [
+          32,
+          8
+        ],
+        [
+          34,
+          1
+        ],
+        [
+          33,
+          23
+        ],
+        [
+          19,
+          27
+        ],
+        [
+          27,
+          18
+        ],
+        [
+          33,
+          17
+        ],
+        [
+          33,
+          15
+        ],
+        [
+          30,
+          9
+        ],
+        [
+          24,
+          19
+        ],
+        [
+          33,
+          13
+        ],
+        [
+          30,
+          8
+        ],
+        [
+          33,
+          19
+        ],
+        [
+          16,
+          14
+        ],
+        [
+          0,
+          29
+        ],
+        [
+          25,
+          9
+        ],
+        [
+          24,
+          5
+        ],
+        [
+          34,
+          3
+        ],
+        [
+          31,
+          4
+        ],
+        [
+          31,
+          20
+        ],
+        [
+          33,
+          18
+        ],
+        [
+          31,
+          6
+        ],
+        [
+          32,
+          7
+        ],
+        [
+          34,
+          7
+        ],
+        [
+          31,
+          13
+        ],
+        [
+          2,
+          1
+        ],
+        [
+          28,
+          2
+        ],
+        [
+          31,
+          15
+        ],
+        [
+          27,
+          29
+        ],
+        [
+          25,
+          26
+        ],
+        [
+          16,
+          20
+        ],
+        [
+          18,
+          30
+        ],
+        [
+          32,
+          6
+        ],
+        [
+          27,
+          13
+        ],
+        [
+          29,
+          26
+        ],
+        [
+          26,
+          20
+        ],
+        [
+          29,
+          27
+        ],
+        [
+          24,
+          16
+        ],
+        [
+          19,
+          25
+        ],
+        [
+          33,
+          11
+        ],
+        [
+          23,
+          28
+        ],
+        [
+          33,
+          16
+        ],
+        [
+          30,
+          25
+        ],
+        [
+          29,
+          5
+        ],
+        [
+          11,
+          11
+        ],
+        [
+          34,
+          5
+        ],
+        [
+          26,
+          15
+        ],
+        [
+          23,
+          10
+        ],
+        [
+          15,
+          0
+        ],
+        [
+          23,
+          30
+        ],
+        [
+          31,
+          29
+        ],
+        [
+          27,
+          16
+        ],
+        [
+          31,
+          14
+        ],
+        [
+          31,
+          5
+        ],
+        [
+          18,
+          22
+        ],
+        [
+          18,
+          14
+        ],
+        [
+          15,
+          29
+        ],
+        [
+          13,
+          17
+        ],
+        [
+          15,
+          8
+        ],
+        [
+          23,
+          31
+        ],
+        [
+          14,
+          6
+        ],
+        [
+          15,
+          2
+        ],
+        [
+          23,
+          13
+        ],
+        [
+          1,
+          1
+        ],
+        [
+          15,
+          9
+        ],
+        [
+          23,
+          5
+        ],
+        [
+          32,
+          10
+        ],
+        [
+          29,
+          3
+        ],
+        [
+          28,
+          14
+        ],
+        [
+          30,
+          27
+        ],
+        [
+          33,
+          9
+        ],
+        [
+          0,
+          14
+        ],
+        [
+          29,
+          12
+        ],
+        [
+          24,
+          28
+        ],
+        [
+          20,
+          15
+        ],
+        [
+          31,
+          30
+        ],
+        [
+          27,
+          31
+        ]
+      ],
+      "vlmbias": {
+        "n": 100,
+        "accuracy": 0.05,
+        "error_rate": 0.95,
+        "bias_aligned_error_rate": 0.11578947368421053,
+        "bias_aligned_fraction": 0.11,
+        "by_topic": {
+          "Animals": {
+            "n": 15,
+            "accuracy": 0.0,
+            "bias_aligned_error_rate": 0.0
+          },
+          "Chess Pieces": {
+            "n": 14,
+            "accuracy": 0.0,
+            "bias_aligned_error_rate": 0.0
+          },
+          "Flags": {
+            "n": 14,
+            "accuracy": 0.0,
+            "bias_aligned_error_rate": 0.07142857142857142
+          },
+          "Game Boards": {
+            "n": 14,
+            "accuracy": 0.14285714285714285,
+            "bias_aligned_error_rate": 0.3333333333333333
+          },
+          "Logos": {
+            "n": 14,
+            "accuracy": 0.0,
+            "bias_aligned_error_rate": 0.0
+          },
+          "Optical Illusion": {
+            "n": 14,
+            "accuracy": 0.21428571428571427,
+            "bias_aligned_error_rate": 0.5454545454545454
+          },
+          "Patterned Grid": {
+            "n": 15,
+            "accuracy": 0.0,
+            "bias_aligned_error_rate": 0.0
+          }
+        },
+        "n_unique": 100,
+        "duplicate_count": 0,
+        "invalid_rate": 0.28
+      },
+      "naturalbench": {
+        "n_groups": 25,
+        "n_model_calls": 100,
+        "Acc": 0.46,
+        "Q_Acc": 0.16,
+        "I_Acc": 0.14,
+        "G_Acc": 0.0,
+        "by_question_type": {
+          "multiple_choice": {
+            "n_model_calls": 48,
+            "Acc": 0.3333333333333333
+          },
+          "yes_no": {
+            "n_model_calls": 52,
+            "Acc": 0.5769230769230769
+          }
+        },
+        "by_source": {
+          "DOCCI": {
+            "n_model_calls": 52,
+            "Acc": 0.5769230769230769
+          },
+          "Flickr": {
+            "n_model_calls": 48,
+            "Acc": 0.3333333333333333
+          }
+        },
+        "n_unique_calls": 100,
+        "duplicate_count": 0,
+        "invalid_rate": 0.25
+      },
+      "telemetry": {
+        "vlmbias": {
+          "mean_image_attention_mass": 0.07525566037273625,
+          "mean_boosted_layer_image_attention_mass": 0.08583767456281666,
+          "mean_boosted_head_image_attention_mass": 0.19219485327948915,
+          "mean_preboost_head_image_attention_mass": null,
+          "mean_effective_alpha": null,
+          "mean_alpha_cap_fraction": null,
+          "confidence_gate_intervention_rate": 0,
+          "mean_baseline_confidence": 0.7751015114601266
+        },
+        "naturalbench": {
+          "mean_image_attention_mass": 0.04936572779310626,
+          "mean_boosted_layer_image_attention_mass": 0.0550370903224555,
+          "mean_boosted_head_image_attention_mass": 0.16219841880368122,
+          "mean_preboost_head_image_attention_mass": null,
+          "mean_effective_alpha": null,
+          "mean_alpha_cap_fraction": null,
+          "confidence_gate_intervention_rate": 0,
+          "mean_baseline_confidence": 0.7815197594779584
+        }
+      },
+      "artifacts": {
+        "config": "segments/gaze_heads_qwen3_8b/runs/attention_methods_v1/controller/confidence_gate0p3/experiment_config.json",
+        "vlmbias": "segments/gaze_heads_qwen3_8b/runs/attention_methods_v1/controller/confidence_gate0p3/vlmbias.jsonl",
+        "naturalbench": "segments/gaze_heads_qwen3_8b/runs/attention_methods_v1/controller/confidence_gate0p3/naturalbench.jsonl"
+      },
+      "errors": []
+    },
+    {
+      "valid": true,
+      "stage": "controller",
+      "condition": {
+        "name": "confidence_gate0p6",
+        "controller": "confidence_gate",
+        "alpha": 2.0,
+        "target_mass": 0.0,
+        "max_alpha": 5.0,
+        "confidence_threshold": 0.6,
+        "head_selection": "gaze_global",
+        "head_count": 100,
+        "head_seed": 0,
+        "seed": 0,
+        "do_sample": false,
+        "temperature": null,
+        "split": "dev",
+        "vlmbias_dataset": "segments/gaze_heads_qwen3_8b/experiments/attention_methods_v1/dev_vlmbias.jsonl",
+        "naturalbench_dataset": "segments/gaze_heads_qwen3_8b/experiments/attention_methods_v1/dev_naturalbench.jsonl"
+      },
+      "provenance": {
+        "git_commit": "dc692233354a2e061aec0bd9bf6c91b4985e2d5f",
+        "job_id": "3566997",
+        "array_job_id": "3566997",
+        "array_task_id": "9",
+        "node": "neu314"
+      },
+      "selected_heads": [
+        [
+          24,
+          29
+        ],
+        [
+          26,
+          26
+        ],
+        [
+          25,
+          30
+        ],
+        [
+          26,
+          31
+        ],
+        [
+          24,
+          31
+        ],
+        [
+          25,
+          10
+        ],
+        [
+          0,
+          27
+        ],
+        [
+          7,
+          6
+        ],
+        [
+          32,
+          0
+        ],
+        [
+          34,
+          0
+        ],
+        [
+          2,
+          17
+        ],
+        [
+          24,
+          13
+        ],
+        [
+          24,
+          8
+        ],
+        [
+          32,
+          3
+        ],
+        [
+          33,
+          14
+        ],
+        [
+          0,
+          5
+        ],
+        [
+          32,
+          11
+        ],
+        [
+          29,
+          25
+        ],
+        [
+          33,
+          12
+        ],
+        [
+          29,
+          24
+        ],
+        [
+          18,
+          23
+        ],
+        [
+          0,
+          8
+        ],
+        [
+          32,
+          5
+        ],
+        [
+          34,
+          2
+        ],
+        [
+          32,
+          8
+        ],
+        [
+          34,
+          1
+        ],
+        [
+          33,
+          23
+        ],
+        [
+          19,
+          27
+        ],
+        [
+          27,
+          18
+        ],
+        [
+          33,
+          17
+        ],
+        [
+          33,
+          15
+        ],
+        [
+          30,
+          9
+        ],
+        [
+          24,
+          19
+        ],
+        [
+          33,
+          13
+        ],
+        [
+          30,
+          8
+        ],
+        [
+          33,
+          19
+        ],
+        [
+          16,
+          14
+        ],
+        [
+          0,
+          29
+        ],
+        [
+          25,
+          9
+        ],
+        [
+          24,
+          5
+        ],
+        [
+          34,
+          3
+        ],
+        [
+          31,
+          4
+        ],
+        [
+          31,
+          20
+        ],
+        [
+          33,
+          18
+        ],
+        [
+          31,
+          6
+        ],
+        [
+          32,
+          7
+        ],
+        [
+          34,
+          7
+        ],
+        [
+          31,
+          13
+        ],
+        [
+          2,
+          1
+        ],
+        [
+          28,
+          2
+        ],
+        [
+          31,
+          15
+        ],
+        [
+          27,
+          29
+        ],
+        [
+          25,
+          26
+        ],
+        [
+          16,
+          20
+        ],
+        [
+          18,
+          30
+        ],
+        [
+          32,
+          6
+        ],
+        [
+          27,
+          13
+        ],
+        [
+          29,
+          26
+        ],
+        [
+          26,
+          20
+        ],
+        [
+          29,
+          27
+        ],
+        [
+          24,
+          16
+        ],
+        [
+          19,
+          25
+        ],
+        [
+          33,
+          11
+        ],
+        [
+          23,
+          28
+        ],
+        [
+          33,
+          16
+        ],
+        [
+          30,
+          25
+        ],
+        [
+          29,
+          5
+        ],
+        [
+          11,
+          11
+        ],
+        [
+          34,
+          5
+        ],
+        [
+          26,
+          15
+        ],
+        [
+          23,
+          10
+        ],
+        [
+          15,
+          0
+        ],
+        [
+          23,
+          30
+        ],
+        [
+          31,
+          29
+        ],
+        [
+          27,
+          16
+        ],
+        [
+          31,
+          14
+        ],
+        [
+          31,
+          5
+        ],
+        [
+          18,
+          22
+        ],
+        [
+          18,
+          14
+        ],
+        [
+          15,
+          29
+        ],
+        [
+          13,
+          17
+        ],
+        [
+          15,
+          8
+        ],
+        [
+          23,
+          31
+        ],
+        [
+          14,
+          6
+        ],
+        [
+          15,
+          2
+        ],
+        [
+          23,
+          13
+        ],
+        [
+          1,
+          1
+        ],
+        [
+          15,
+          9
+        ],
+        [
+          23,
+          5
+        ],
+        [
+          32,
+          10
+        ],
+        [
+          29,
+          3
+        ],
+        [
+          28,
+          14
+        ],
+        [
+          30,
+          27
+        ],
+        [
+          33,
+          9
+        ],
+        [
+          0,
+          14
+        ],
+        [
+          29,
+          12
+        ],
+        [
+          24,
+          28
+        ],
+        [
+          20,
+          15
+        ],
+        [
+          31,
+          30
+        ],
+        [
+          27,
+          31
+        ]
+      ],
+      "vlmbias": {
+        "n": 100,
+        "accuracy": 0.06,
+        "error_rate": 0.94,
+        "bias_aligned_error_rate": 0.1276595744680851,
+        "bias_aligned_fraction": 0.12,
+        "by_topic": {
+          "Animals": {
+            "n": 15,
+            "accuracy": 0.0,
+            "bias_aligned_error_rate": 0.0
+          },
+          "Chess Pieces": {
+            "n": 14,
+            "accuracy": 0.0,
+            "bias_aligned_error_rate": 0.0
+          },
+          "Flags": {
+            "n": 14,
+            "accuracy": 0.0,
+            "bias_aligned_error_rate": 0.07142857142857142
+          },
+          "Game Boards": {
+            "n": 14,
+            "accuracy": 0.21428571428571427,
+            "bias_aligned_error_rate": 0.45454545454545453
+          },
+          "Logos": {
+            "n": 14,
+            "accuracy": 0.0,
+            "bias_aligned_error_rate": 0.0
+          },
+          "Optical Illusion": {
+            "n": 14,
+            "accuracy": 0.21428571428571427,
+            "bias_aligned_error_rate": 0.5454545454545454
+          },
+          "Patterned Grid": {
+            "n": 15,
+            "accuracy": 0.0,
+            "bias_aligned_error_rate": 0.0
+          }
+        },
+        "n_unique": 100,
+        "duplicate_count": 0,
+        "invalid_rate": 0.18
+      },
+      "naturalbench": {
+        "n_groups": 25,
+        "n_model_calls": 100,
+        "Acc": 0.5,
+        "Q_Acc": 0.2,
+        "I_Acc": 0.18,
+        "G_Acc": 0.04,
+        "by_question_type": {
+          "multiple_choice": {
+            "n_model_calls": 48,
+            "Acc": 0.4166666666666667
+          },
+          "yes_no": {
+            "n_model_calls": 52,
+            "Acc": 0.5769230769230769
+          }
+        },
+        "by_source": {
+          "DOCCI": {
+            "n_model_calls": 52,
+            "Acc": 0.5961538461538461
+          },
+          "Flickr": {
+            "n_model_calls": 48,
+            "Acc": 0.3958333333333333
+          }
+        },
+        "n_unique_calls": 100,
+        "duplicate_count": 0,
+        "invalid_rate": 0.18
+      },
+      "telemetry": {
+        "vlmbias": {
+          "mean_image_attention_mass": 0.07832027245265599,
+          "mean_boosted_layer_image_attention_mass": 0.09063154888174331,
+          "mean_boosted_head_image_attention_mass": 0.227483794929435,
+          "mean_preboost_head_image_attention_mass": null,
+          "mean_effective_alpha": null,
+          "mean_alpha_cap_fraction": null,
+          "confidence_gate_intervention_rate": 0.14,
+          "mean_baseline_confidence": 0.7751015114601266
+        },
+        "naturalbench": {
+          "mean_image_attention_mass": 0.05208289485564887,
+          "mean_boosted_layer_image_attention_mass": 0.059250779427594456,
+          "mean_boosted_head_image_attention_mass": 0.19466983329692286,
+          "mean_preboost_head_image_attention_mass": null,
+          "mean_effective_alpha": null,
+          "mean_alpha_cap_fraction": null,
+          "confidence_gate_intervention_rate": 0.13,
+          "mean_baseline_confidence": 0.7815197594779584
+        }
+      },
+      "artifacts": {
+        "config": "segments/gaze_heads_qwen3_8b/runs/attention_methods_v1/controller/confidence_gate0p6/experiment_config.json",
+        "vlmbias": "segments/gaze_heads_qwen3_8b/runs/attention_methods_v1/controller/confidence_gate0p6/vlmbias.jsonl",
+        "naturalbench": "segments/gaze_heads_qwen3_8b/runs/attention_methods_v1/controller/confidence_gate0p6/naturalbench.jsonl"
+      },
+      "errors": []
+    }
+  ],
+  "errors": [],
+  "warnings": [],
+  "selection": {
+    "valid": true,
+    "stage": "controller",
+    "selection_policy": "Among guardrail-qualified non-baseline controllers, minimize VLMBias bias_aligned_fraction, then maximize VLMBias accuracy, NaturalBench G_Acc, and NaturalBench Acc.",
+    "baseline": {
+      "name": "baseline",
+      "spec": {
+        "name": "baseline",
+        "controller": "fixed",
+        "alpha": 0.0,
+        "target_mass": 0.0,
+        "max_alpha": 5.0,
+        "confidence_threshold": null,
+        "head_selection": "gaze_global",
+        "head_count": 0,
+        "head_seed": 0,
+        "seed": 0,
+        "do_sample": false,
+        "temperature": null,
+        "split": "dev",
+        "vlmbias_dataset": "segments/gaze_heads_qwen3_8b/experiments/attention_methods_v1/dev_vlmbias.jsonl",
+        "naturalbench_dataset": "segments/gaze_heads_qwen3_8b/experiments/attention_methods_v1/dev_naturalbench.jsonl"
+      },
+      "metrics": {
+        "vlmbias": {
+          "n": 100,
+          "accuracy": 0.05,
+          "bias_aligned_fraction": 0.11,
+          "bias_aligned_error_rate": 0.11578947368421053,
+          "invalid_rate": 0.28
+        },
+        "naturalbench": {
+          "n_groups": 25,
+          "n_model_calls": 100,
+          "Acc": 0.46,
+          "G_Acc": 0.0,
+          "invalid_rate": 0.25
+        },
+        "telemetry": {
+          "vlmbias": {
+            "mean_image_attention_mass": 0.07525566037273625,
+            "mean_boosted_layer_image_attention_mass": null,
+            "mean_boosted_head_image_attention_mass": null,
+            "mean_preboost_head_image_attention_mass": null,
+            "mean_effective_alpha": null,
+            "mean_alpha_cap_fraction": null,
+            "confidence_gate_intervention_rate": null,
+            "mean_baseline_confidence": null
+          },
+          "naturalbench": {
+            "mean_image_attention_mass": 0.04936572779310626,
+            "mean_boosted_layer_image_attention_mass": null,
+            "mean_boosted_head_image_attention_mass": null,
+            "mean_preboost_head_image_attention_mass": null,
+            "mean_effective_alpha": null,
+            "mean_alpha_cap_fraction": null,
+            "confidence_gate_intervention_rate": null,
+            "mean_baseline_confidence": null
+          }
+        }
+      }
+    },
+    "selected_overall": {
+      "name": "fixed_alpha0p5",
+      "spec": {
+        "name": "fixed_alpha0p5",
+        "controller": "fixed",
+        "alpha": 0.5,
+        "target_mass": 0.0,
+        "max_alpha": 5.0,
+        "confidence_threshold": null,
+        "head_selection": "gaze_global",
+        "head_count": 100,
+        "head_seed": 0,
+        "seed": 0,
+        "do_sample": false,
+        "temperature": null,
+        "split": "dev",
+        "vlmbias_dataset": "segments/gaze_heads_qwen3_8b/experiments/attention_methods_v1/dev_vlmbias.jsonl",
+        "naturalbench_dataset": "segments/gaze_heads_qwen3_8b/experiments/attention_methods_v1/dev_naturalbench.jsonl"
+      },
+      "qualified": true,
+      "qualification": {
+        "qualified": true,
+        "checks": {
+          "vlmbias_accuracy": true,
+          "naturalbench_g_acc": true,
+          "vlmbias_invalid_rate": true,
+          "naturalbench_invalid_rate": true
+        },
+        "deltas": {
+          "vlmbias_accuracy_drop": 0.0,
+          "naturalbench_g_acc_drop": -0.04,
+          "vlmbias_invalid_rate_increase": -0.010000000000000009,
+          "naturalbench_invalid_rate_increase": -0.010000000000000009
+        }
+      },
+      "objective": {
+        "vlmbias_bias_aligned_fraction": 0.11,
+        "vlmbias_accuracy": 0.05,
+        "naturalbench_G_Acc": 0.04,
+        "naturalbench_Acc": 0.48
+      },
+      "metrics": {
+        "vlmbias": {
+          "n": 100,
+          "accuracy": 0.05,
+          "bias_aligned_fraction": 0.11,
+          "bias_aligned_error_rate": 0.11578947368421053,
+          "invalid_rate": 0.27
+        },
+        "naturalbench": {
+          "n_groups": 25,
+          "n_model_calls": 100,
+          "Acc": 0.48,
+          "G_Acc": 0.04,
+          "invalid_rate": 0.24
+        },
+        "telemetry": {
+          "vlmbias": {
+            "mean_image_attention_mass": 0.07976037198797602,
+            "mean_boosted_layer_image_attention_mass": 0.09276900651481948,
+            "mean_boosted_head_image_attention_mass": 0.2522699333959,
+            "mean_preboost_head_image_attention_mass": null,
+            "mean_effective_alpha": null,
+            "mean_alpha_cap_fraction": null,
+            "confidence_gate_intervention_rate": null,
+            "mean_baseline_confidence": null
+          },
+          "naturalbench": {
+            "mean_image_attention_mass": 0.05353610683754259,
+            "mean_boosted_layer_image_attention_mass": 0.061565412644607326,
+            "mean_boosted_head_image_attention_mass": 0.21941567732231407,
+            "mean_preboost_head_image_attention_mass": null,
+            "mean_effective_alpha": null,
+            "mean_alpha_cap_fraction": null,
+            "confidence_gate_intervention_rate": null,
+            "mean_baseline_confidence": null
+          }
+        }
+      }
+    },
+    "selected_by_family": {
+      "fixed": {
+        "name": "fixed_alpha0p5",
+        "spec": {
+          "name": "fixed_alpha0p5",
+          "controller": "fixed",
+          "alpha": 0.5,
+          "target_mass": 0.0,
+          "max_alpha": 5.0,
+          "confidence_threshold": null,
+          "head_selection": "gaze_global",
+          "head_count": 100,
+          "head_seed": 0,
+          "seed": 0,
+          "do_sample": false,
+          "temperature": null,
+          "split": "dev",
+          "vlmbias_dataset": "segments/gaze_heads_qwen3_8b/experiments/attention_methods_v1/dev_vlmbias.jsonl",
+          "naturalbench_dataset": "segments/gaze_heads_qwen3_8b/experiments/attention_methods_v1/dev_naturalbench.jsonl"
+        },
+        "qualified": true,
+        "qualification": {
+          "qualified": true,
+          "checks": {
+            "vlmbias_accuracy": true,
+            "naturalbench_g_acc": true,
+            "vlmbias_invalid_rate": true,
+            "naturalbench_invalid_rate": true
+          },
+          "deltas": {
+            "vlmbias_accuracy_drop": 0.0,
+            "naturalbench_g_acc_drop": -0.04,
+            "vlmbias_invalid_rate_increase": -0.010000000000000009,
+            "naturalbench_invalid_rate_increase": -0.010000000000000009
+          }
+        },
+        "objective": {
+          "vlmbias_bias_aligned_fraction": 0.11,
+          "vlmbias_accuracy": 0.05,
+          "naturalbench_G_Acc": 0.04,
+          "naturalbench_Acc": 0.48
+        },
+        "metrics": {
+          "vlmbias": {
+            "n": 100,
+            "accuracy": 0.05,
+            "bias_aligned_fraction": 0.11,
+            "bias_aligned_error_rate": 0.11578947368421053,
+            "invalid_rate": 0.27
+          },
+          "naturalbench": {
+            "n_groups": 25,
+            "n_model_calls": 100,
+            "Acc": 0.48,
+            "G_Acc": 0.04,
+            "invalid_rate": 0.24
+          },
+          "telemetry": {
+            "vlmbias": {
+              "mean_image_attention_mass": 0.07976037198797602,
+              "mean_boosted_layer_image_attention_mass": 0.09276900651481948,
+              "mean_boosted_head_image_attention_mass": 0.2522699333959,
+              "mean_preboost_head_image_attention_mass": null,
+              "mean_effective_alpha": null,
+              "mean_alpha_cap_fraction": null,
+              "confidence_gate_intervention_rate": null,
+              "mean_baseline_confidence": null
+            },
+            "naturalbench": {
+              "mean_image_attention_mass": 0.05353610683754259,
+              "mean_boosted_layer_image_attention_mass": 0.061565412644607326,
+              "mean_boosted_head_image_attention_mass": 0.21941567732231407,
+              "mean_preboost_head_image_attention_mass": null,
+              "mean_effective_alpha": null,
+              "mean_alpha_cap_fraction": null,
+              "confidence_gate_intervention_rate": null,
+              "mean_baseline_confidence": null
+            }
+          }
+        }
+      },
+      "target_mass": {
+        "name": "target_mass0p5",
+        "spec": {
+          "name": "target_mass0p5",
+          "controller": "target_mass",
+          "alpha": 0.0,
+          "target_mass": 0.5,
+          "max_alpha": 5.0,
+          "confidence_threshold": null,
+          "head_selection": "gaze_global",
+          "head_count": 100,
+          "head_seed": 0,
+          "seed": 0,
+          "do_sample": false,
+          "temperature": null,
+          "split": "dev",
+          "vlmbias_dataset": "segments/gaze_heads_qwen3_8b/experiments/attention_methods_v1/dev_vlmbias.jsonl",
+          "naturalbench_dataset": "segments/gaze_heads_qwen3_8b/experiments/attention_methods_v1/dev_naturalbench.jsonl"
+        },
+        "qualified": true,
+        "qualification": {
+          "qualified": true,
+          "checks": {
+            "vlmbias_accuracy": true,
+            "naturalbench_g_acc": true,
+            "vlmbias_invalid_rate": true,
+            "naturalbench_invalid_rate": true
+          },
+          "deltas": {
+            "vlmbias_accuracy_drop": 0.0,
+            "naturalbench_g_acc_drop": -0.08,
+            "vlmbias_invalid_rate_increase": -0.12000000000000002,
+            "naturalbench_invalid_rate_increase": -0.03
+          }
+        },
+        "objective": {
+          "vlmbias_bias_aligned_fraction": 0.12,
+          "vlmbias_accuracy": 0.05,
+          "naturalbench_G_Acc": 0.08,
+          "naturalbench_Acc": 0.53
+        },
+        "metrics": {
+          "vlmbias": {
+            "n": 100,
+            "accuracy": 0.05,
+            "bias_aligned_fraction": 0.12,
+            "bias_aligned_error_rate": 0.12631578947368421,
+            "invalid_rate": 0.16
+          },
+          "naturalbench": {
+            "n_groups": 25,
+            "n_model_calls": 100,
+            "Acc": 0.53,
+            "G_Acc": 0.08,
+            "invalid_rate": 0.22
+          },
+          "telemetry": {
+            "vlmbias": {
+              "mean_image_attention_mass": 0.10222085700837659,
+              "mean_boosted_layer_image_attention_mass": 0.12755645583625272,
+              "mean_boosted_head_image_attention_mass": 0.5026719788255903,
+              "mean_preboost_head_image_attention_mass": 0.28234815810167363,
+              "mean_effective_alpha": 1.9256073949325734,
+              "mean_alpha_cap_fraction": 0.06996603675441099,
+              "confidence_gate_intervention_rate": null,
+              "mean_baseline_confidence": null
+            },
+            "naturalbench": {
+              "mean_image_attention_mass": 0.07838729671193977,
+              "mean_boosted_layer_image_attention_mass": 0.09915353857905655,
+              "mean_boosted_head_image_attention_mass": 0.49377479639939137,
+              "mean_preboost_head_image_attention_mass": 0.3146434647375322,
+              "mean_effective_alpha": 1.83837446981927,
+              "mean_alpha_cap_fraction": 0.08973235396414111,
+              "confidence_gate_intervention_rate": null,
+              "mean_baseline_confidence": null
+            }
+          }
+        }
+      },
+      "confidence_gate": {
+        "name": "confidence_gate0p3",
+        "spec": {
+          "name": "confidence_gate0p3",
+          "controller": "confidence_gate",
+          "alpha": 2.0,
+          "target_mass": 0.0,
+          "max_alpha": 5.0,
+          "confidence_threshold": 0.3,
+          "head_selection": "gaze_global",
+          "head_count": 100,
+          "head_seed": 0,
+          "seed": 0,
+          "do_sample": false,
+          "temperature": null,
+          "split": "dev",
+          "vlmbias_dataset": "segments/gaze_heads_qwen3_8b/experiments/attention_methods_v1/dev_vlmbias.jsonl",
+          "naturalbench_dataset": "segments/gaze_heads_qwen3_8b/experiments/attention_methods_v1/dev_naturalbench.jsonl"
+        },
+        "qualified": true,
+        "qualification": {
+          "qualified": true,
+          "checks": {
+            "vlmbias_accuracy": true,
+            "naturalbench_g_acc": true,
+            "vlmbias_invalid_rate": true,
+            "naturalbench_invalid_rate": true
+          },
+          "deltas": {
+            "vlmbias_accuracy_drop": 0.0,
+            "naturalbench_g_acc_drop": 0.0,
+            "vlmbias_invalid_rate_increase": 0.0,
+            "naturalbench_invalid_rate_increase": 0.0
+          }
+        },
+        "objective": {
+          "vlmbias_bias_aligned_fraction": 0.11,
+          "vlmbias_accuracy": 0.05,
+          "naturalbench_G_Acc": 0.0,
+          "naturalbench_Acc": 0.46
+        },
+        "metrics": {
+          "vlmbias": {
+            "n": 100,
+            "accuracy": 0.05,
+            "bias_aligned_fraction": 0.11,
+            "bias_aligned_error_rate": 0.11578947368421053,
+            "invalid_rate": 0.28
+          },
+          "naturalbench": {
+            "n_groups": 25,
+            "n_model_calls": 100,
+            "Acc": 0.46,
+            "G_Acc": 0.0,
+            "invalid_rate": 0.25
+          },
+          "telemetry": {
+            "vlmbias": {
+              "mean_image_attention_mass": 0.07525566037273625,
+              "mean_boosted_layer_image_attention_mass": 0.08583767456281666,
+              "mean_boosted_head_image_attention_mass": 0.19219485327948915,
+              "mean_preboost_head_image_attention_mass": null,
+              "mean_effective_alpha": null,
+              "mean_alpha_cap_fraction": null,
+              "confidence_gate_intervention_rate": 0,
+              "mean_baseline_confidence": 0.7751015114601266
+            },
+            "naturalbench": {
+              "mean_image_attention_mass": 0.04936572779310626,
+              "mean_boosted_layer_image_attention_mass": 0.0550370903224555,
+              "mean_boosted_head_image_attention_mass": 0.16219841880368122,
+              "mean_preboost_head_image_attention_mass": null,
+              "mean_effective_alpha": null,
+              "mean_alpha_cap_fraction": null,
+              "confidence_gate_intervention_rate": 0,
+              "mean_baseline_confidence": 0.7815197594779584
+            }
+          }
+        }
+      }
+    },
+    "evaluated": [
+      {
+        "name": "baseline",
+        "spec": {
+          "name": "baseline",
+          "controller": "fixed",
+          "alpha": 0.0,
+          "target_mass": 0.0,
+          "max_alpha": 5.0,
+          "confidence_threshold": null,
+          "head_selection": "gaze_global",
+          "head_count": 0,
+          "head_seed": 0,
+          "seed": 0,
+          "do_sample": false,
+          "temperature": null,
+          "split": "dev",
+          "vlmbias_dataset": "segments/gaze_heads_qwen3_8b/experiments/attention_methods_v1/dev_vlmbias.jsonl",
+          "naturalbench_dataset": "segments/gaze_heads_qwen3_8b/experiments/attention_methods_v1/dev_naturalbench.jsonl"
+        },
+        "qualified": true,
+        "qualification": {
+          "qualified": true,
+          "checks": {
+            "vlmbias_accuracy": true,
+            "naturalbench_g_acc": true,
+            "vlmbias_invalid_rate": true,
+            "naturalbench_invalid_rate": true
+          },
+          "deltas": {
+            "vlmbias_accuracy_drop": 0.0,
+            "naturalbench_g_acc_drop": 0.0,
+            "vlmbias_invalid_rate_increase": 0.0,
+            "naturalbench_invalid_rate_increase": 0.0
+          }
+        },
+        "objective": {
+          "vlmbias_bias_aligned_fraction": 0.11,
+          "vlmbias_accuracy": 0.05,
+          "naturalbench_G_Acc": 0.0,
+          "naturalbench_Acc": 0.46
+        },
+        "metrics": {
+          "vlmbias": {
+            "n": 100,
+            "accuracy": 0.05,
+            "bias_aligned_fraction": 0.11,
+            "bias_aligned_error_rate": 0.11578947368421053,
+            "invalid_rate": 0.28
+          },
+          "naturalbench": {
+            "n_groups": 25,
+            "n_model_calls": 100,
+            "Acc": 0.46,
+            "G_Acc": 0.0,
+            "invalid_rate": 0.25
+          },
+          "telemetry": {
+            "vlmbias": {
+              "mean_image_attention_mass": 0.07525566037273625,
+              "mean_boosted_layer_image_attention_mass": null,
+              "mean_boosted_head_image_attention_mass": null,
+              "mean_preboost_head_image_attention_mass": null,
+              "mean_effective_alpha": null,
+              "mean_alpha_cap_fraction": null,
+              "confidence_gate_intervention_rate": null,
+              "mean_baseline_confidence": null
+            },
+            "naturalbench": {
+              "mean_image_attention_mass": 0.04936572779310626,
+              "mean_boosted_layer_image_attention_mass": null,
+              "mean_boosted_head_image_attention_mass": null,
+              "mean_preboost_head_image_attention_mass": null,
+              "mean_effective_alpha": null,
+              "mean_alpha_cap_fraction": null,
+              "confidence_gate_intervention_rate": null,
+              "mean_baseline_confidence": null
+            }
+          }
+        }
+      },
+      {
+        "name": "fixed_alpha0p5",
+        "spec": {
+          "name": "fixed_alpha0p5",
+          "controller": "fixed",
+          "alpha": 0.5,
+          "target_mass": 0.0,
+          "max_alpha": 5.0,
+          "confidence_threshold": null,
+          "head_selection": "gaze_global",
+          "head_count": 100,
+          "head_seed": 0,
+          "seed": 0,
+          "do_sample": false,
+          "temperature": null,
+          "split": "dev",
+          "vlmbias_dataset": "segments/gaze_heads_qwen3_8b/experiments/attention_methods_v1/dev_vlmbias.jsonl",
+          "naturalbench_dataset": "segments/gaze_heads_qwen3_8b/experiments/attention_methods_v1/dev_naturalbench.jsonl"
+        },
+        "qualified": true,
+        "qualification": {
+          "qualified": true,
+          "checks": {
+            "vlmbias_accuracy": true,
+            "naturalbench_g_acc": true,
+            "vlmbias_invalid_rate": true,
+            "naturalbench_invalid_rate": true
+          },
+          "deltas": {
+            "vlmbias_accuracy_drop": 0.0,
+            "naturalbench_g_acc_drop": -0.04,
+            "vlmbias_invalid_rate_increase": -0.010000000000000009,
+            "naturalbench_invalid_rate_increase": -0.010000000000000009
+          }
+        },
+        "objective": {
+          "vlmbias_bias_aligned_fraction": 0.11,
+          "vlmbias_accuracy": 0.05,
+          "naturalbench_G_Acc": 0.04,
+          "naturalbench_Acc": 0.48
+        },
+        "metrics": {
+          "vlmbias": {
+            "n": 100,
+            "accuracy": 0.05,
+            "bias_aligned_fraction": 0.11,
+            "bias_aligned_error_rate": 0.11578947368421053,
+            "invalid_rate": 0.27
+          },
+          "naturalbench": {
+            "n_groups": 25,
+            "n_model_calls": 100,
+            "Acc": 0.48,
+            "G_Acc": 0.04,
+            "invalid_rate": 0.24
+          },
+          "telemetry": {
+            "vlmbias": {
+              "mean_image_attention_mass": 0.07976037198797602,
+              "mean_boosted_layer_image_attention_mass": 0.09276900651481948,
+              "mean_boosted_head_image_attention_mass": 0.2522699333959,
+              "mean_preboost_head_image_attention_mass": null,
+              "mean_effective_alpha": null,
+              "mean_alpha_cap_fraction": null,
+              "confidence_gate_intervention_rate": null,
+              "mean_baseline_confidence": null
+            },
+            "naturalbench": {
+              "mean_image_attention_mass": 0.05353610683754259,
+              "mean_boosted_layer_image_attention_mass": 0.061565412644607326,
+              "mean_boosted_head_image_attention_mass": 0.21941567732231407,
+              "mean_preboost_head_image_attention_mass": null,
+              "mean_effective_alpha": null,
+              "mean_alpha_cap_fraction": null,
+              "confidence_gate_intervention_rate": null,
+              "mean_baseline_confidence": null
+            }
+          }
+        }
+      },
+      {
+        "name": "fixed_alpha1",
+        "spec": {
+          "name": "fixed_alpha1",
+          "controller": "fixed",
+          "alpha": 1.0,
+          "target_mass": 0.0,
+          "max_alpha": 5.0,
+          "confidence_threshold": null,
+          "head_selection": "gaze_global",
+          "head_count": 100,
+          "head_seed": 0,
+          "seed": 0,
+          "do_sample": false,
+          "temperature": null,
+          "split": "dev",
+          "vlmbias_dataset": "segments/gaze_heads_qwen3_8b/experiments/attention_methods_v1/dev_vlmbias.jsonl",
+          "naturalbench_dataset": "segments/gaze_heads_qwen3_8b/experiments/attention_methods_v1/dev_naturalbench.jsonl"
+        },
+        "qualified": true,
+        "qualification": {
+          "qualified": true,
+          "checks": {
+            "vlmbias_accuracy": true,
+            "naturalbench_g_acc": true,
+            "vlmbias_invalid_rate": true,
+            "naturalbench_invalid_rate": true
+          },
+          "deltas": {
+            "vlmbias_accuracy_drop": 0.0,
+            "naturalbench_g_acc_drop": -0.04,
+            "vlmbias_invalid_rate_increase": -0.060000000000000026,
+            "naturalbench_invalid_rate_increase": -0.03
+          }
+        },
+        "objective": {
+          "vlmbias_bias_aligned_fraction": 0.12,
+          "vlmbias_accuracy": 0.05,
+          "naturalbench_G_Acc": 0.04,
+          "naturalbench_Acc": 0.5
+        },
+        "metrics": {
+          "vlmbias": {
+            "n": 100,
+            "accuracy": 0.05,
+            "bias_aligned_fraction": 0.12,
+            "bias_aligned_error_rate": 0.12631578947368421,
+            "invalid_rate": 0.22
+          },
+          "naturalbench": {
+            "n_groups": 25,
+            "n_model_calls": 100,
+            "Acc": 0.5,
+            "G_Acc": 0.04,
+            "invalid_rate": 0.22
+          },
+          "telemetry": {
+            "vlmbias": {
+              "mean_image_attention_mass": 0.08567048752749212,
+              "mean_boosted_layer_image_attention_mass": 0.1017542033729401,
+              "mean_boosted_head_image_attention_mass": 0.3207069330807038,
+              "mean_preboost_head_image_attention_mass": null,
+              "mean_effective_alpha": null,
+              "mean_alpha_cap_fraction": null,
+              "confidence_gate_intervention_rate": null,
+              "mean_baseline_confidence": null
+            },
+            "naturalbench": {
+              "mean_image_attention_mass": 0.05845527914206118,
+              "mean_boosted_layer_image_attention_mass": 0.0691448754961473,
+              "mean_boosted_head_image_attention_mass": 0.28514658669957293,
+              "mean_preboost_head_image_attention_mass": null,
+              "mean_effective_alpha": null,
+              "mean_alpha_cap_fraction": null,
+              "confidence_gate_intervention_rate": null,
+              "mean_baseline_confidence": null
+            }
+          }
+        }
+      },
+      {
+        "name": "fixed_alpha2",
+        "spec": {
+          "name": "fixed_alpha2",
+          "controller": "fixed",
+          "alpha": 2.0,
+          "target_mass": 0.0,
+          "max_alpha": 5.0,
+          "confidence_threshold": null,
+          "head_selection": "gaze_global",
+          "head_count": 100,
+          "head_seed": 0,
+          "seed": 0,
+          "do_sample": false,
+          "temperature": null,
+          "split": "dev",
+          "vlmbias_dataset": "segments/gaze_heads_qwen3_8b/experiments/attention_methods_v1/dev_vlmbias.jsonl",
+          "naturalbench_dataset": "segments/gaze_heads_qwen3_8b/experiments/attention_methods_v1/dev_naturalbench.jsonl"
+        },
+        "qualified": true,
+        "qualification": {
+          "qualified": true,
+          "checks": {
+            "vlmbias_accuracy": true,
+            "naturalbench_g_acc": true,
+            "vlmbias_invalid_rate": true,
+            "naturalbench_invalid_rate": true
+          },
+          "deltas": {
+            "vlmbias_accuracy_drop": 0.0,
+            "naturalbench_g_acc_drop": -0.04,
+            "vlmbias_invalid_rate_increase": -0.08000000000000002,
+            "naturalbench_invalid_rate_increase": -0.06
+          }
+        },
+        "objective": {
+          "vlmbias_bias_aligned_fraction": 0.12,
+          "vlmbias_accuracy": 0.05,
+          "naturalbench_G_Acc": 0.04,
+          "naturalbench_Acc": 0.52
+        },
+        "metrics": {
+          "vlmbias": {
+            "n": 100,
+            "accuracy": 0.05,
+            "bias_aligned_fraction": 0.12,
+            "bias_aligned_error_rate": 0.12631578947368421,
+            "invalid_rate": 0.2
+          },
+          "naturalbench": {
+            "n_groups": 25,
+            "n_model_calls": 100,
+            "Acc": 0.52,
+            "G_Acc": 0.04,
+            "invalid_rate": 0.19
+          },
+          "telemetry": {
+            "vlmbias": {
+              "mean_image_attention_mass": 0.09921687015165302,
+              "mean_boosted_layer_image_attention_mass": 0.12219369999603474,
+              "mean_boosted_head_image_attention_mass": 0.47970297743531054,
+              "mean_preboost_head_image_attention_mass": null,
+              "mean_effective_alpha": null,
+              "mean_alpha_cap_fraction": null,
+              "confidence_gate_intervention_rate": null,
+              "mean_baseline_confidence": null
+            },
+            "naturalbench": {
+              "mean_image_attention_mass": 0.07029900259913928,
+              "mean_boosted_layer_image_attention_mass": 0.08717876202003229,
+              "mean_boosted_head_image_attention_mass": 0.4393983981998948,
+              "mean_preboost_head_image_attention_mass": null,
+              "mean_effective_alpha": null,
+              "mean_alpha_cap_fraction": null,
+              "confidence_gate_intervention_rate": null,
+              "mean_baseline_confidence": null
+            }
+          }
+        }
+      },
+      {
+        "name": "fixed_alpha5",
+        "spec": {
+          "name": "fixed_alpha5",
+          "controller": "fixed",
+          "alpha": 5.0,
+          "target_mass": 0.0,
+          "max_alpha": 5.0,
+          "confidence_threshold": null,
+          "head_selection": "gaze_global",
+          "head_count": 100,
+          "head_seed": 0,
+          "seed": 0,
+          "do_sample": false,
+          "temperature": null,
+          "split": "dev",
+          "vlmbias_dataset": "segments/gaze_heads_qwen3_8b/experiments/attention_methods_v1/dev_vlmbias.jsonl",
+          "naturalbench_dataset": "segments/gaze_heads_qwen3_8b/experiments/attention_methods_v1/dev_naturalbench.jsonl"
+        },
+        "qualified": true,
+        "qualification": {
+          "qualified": true,
+          "checks": {
+            "vlmbias_accuracy": true,
+            "naturalbench_g_acc": true,
+            "vlmbias_invalid_rate": true,
+            "naturalbench_invalid_rate": true
+          },
+          "deltas": {
+            "vlmbias_accuracy_drop": -0.009999999999999995,
+            "naturalbench_g_acc_drop": 0.0,
+            "vlmbias_invalid_rate_increase": -0.17000000000000004,
+            "naturalbench_invalid_rate_increase": -0.12
+          }
+        },
+        "objective": {
+          "vlmbias_bias_aligned_fraction": 0.12,
+          "vlmbias_accuracy": 0.06,
+          "naturalbench_G_Acc": 0.0,
+          "naturalbench_Acc": 0.53
+        },
+        "metrics": {
+          "vlmbias": {
+            "n": 100,
+            "accuracy": 0.06,
+            "bias_aligned_fraction": 0.12,
+            "bias_aligned_error_rate": 0.1276595744680851,
+            "invalid_rate": 0.11
+          },
+          "naturalbench": {
+            "n_groups": 25,
+            "n_model_calls": 100,
+            "Acc": 0.53,
+            "G_Acc": 0.0,
+            "invalid_rate": 0.13
+          },
+          "telemetry": {
+            "vlmbias": {
+              "mean_image_attention_mass": 0.1318538498287869,
+              "mean_boosted_layer_image_attention_mass": 0.17217967715487775,
+              "mean_boosted_head_image_attention_mass": 0.8499524763065167,
+              "mean_preboost_head_image_attention_mass": null,
+              "mean_effective_alpha": null,
+              "mean_alpha_cap_fraction": null,
+              "confidence_gate_intervention_rate": null,
+              "mean_baseline_confidence": null
+            },
+            "naturalbench": {
+              "mean_image_attention_mass": 0.10567716370463044,
+              "mean_boosted_layer_image_attention_mass": 0.14061431053411474,
+              "mean_boosted_head_image_attention_mass": 0.8346585536768867,
+              "mean_preboost_head_image_attention_mass": null,
+              "mean_effective_alpha": null,
+              "mean_alpha_cap_fraction": null,
+              "confidence_gate_intervention_rate": null,
+              "mean_baseline_confidence": null
+            }
+          }
+        }
+      },
+      {
+        "name": "target_mass0p5",
+        "spec": {
+          "name": "target_mass0p5",
+          "controller": "target_mass",
+          "alpha": 0.0,
+          "target_mass": 0.5,
+          "max_alpha": 5.0,
+          "confidence_threshold": null,
+          "head_selection": "gaze_global",
+          "head_count": 100,
+          "head_seed": 0,
+          "seed": 0,
+          "do_sample": false,
+          "temperature": null,
+          "split": "dev",
+          "vlmbias_dataset": "segments/gaze_heads_qwen3_8b/experiments/attention_methods_v1/dev_vlmbias.jsonl",
+          "naturalbench_dataset": "segments/gaze_heads_qwen3_8b/experiments/attention_methods_v1/dev_naturalbench.jsonl"
+        },
+        "qualified": true,
+        "qualification": {
+          "qualified": true,
+          "checks": {
+            "vlmbias_accuracy": true,
+            "naturalbench_g_acc": true,
+            "vlmbias_invalid_rate": true,
+            "naturalbench_invalid_rate": true
+          },
+          "deltas": {
+            "vlmbias_accuracy_drop": 0.0,
+            "naturalbench_g_acc_drop": -0.08,
+            "vlmbias_invalid_rate_increase": -0.12000000000000002,
+            "naturalbench_invalid_rate_increase": -0.03
+          }
+        },
+        "objective": {
+          "vlmbias_bias_aligned_fraction": 0.12,
+          "vlmbias_accuracy": 0.05,
+          "naturalbench_G_Acc": 0.08,
+          "naturalbench_Acc": 0.53
+        },
+        "metrics": {
+          "vlmbias": {
+            "n": 100,
+            "accuracy": 0.05,
+            "bias_aligned_fraction": 0.12,
+            "bias_aligned_error_rate": 0.12631578947368421,
+            "invalid_rate": 0.16
+          },
+          "naturalbench": {
+            "n_groups": 25,
+            "n_model_calls": 100,
+            "Acc": 0.53,
+            "G_Acc": 0.08,
+            "invalid_rate": 0.22
+          },
+          "telemetry": {
+            "vlmbias": {
+              "mean_image_attention_mass": 0.10222085700837659,
+              "mean_boosted_layer_image_attention_mass": 0.12755645583625272,
+              "mean_boosted_head_image_attention_mass": 0.5026719788255903,
+              "mean_preboost_head_image_attention_mass": 0.28234815810167363,
+              "mean_effective_alpha": 1.9256073949325734,
+              "mean_alpha_cap_fraction": 0.06996603675441099,
+              "confidence_gate_intervention_rate": null,
+              "mean_baseline_confidence": null
+            },
+            "naturalbench": {
+              "mean_image_attention_mass": 0.07838729671193977,
+              "mean_boosted_layer_image_attention_mass": 0.09915353857905655,
+              "mean_boosted_head_image_attention_mass": 0.49377479639939137,
+              "mean_preboost_head_image_attention_mass": 0.3146434647375322,
+              "mean_effective_alpha": 1.83837446981927,
+              "mean_alpha_cap_fraction": 0.08973235396414111,
+              "confidence_gate_intervention_rate": null,
+              "mean_baseline_confidence": null
+            }
+          }
+        }
+      },
+      {
+        "name": "target_mass0p7",
+        "spec": {
+          "name": "target_mass0p7",
+          "controller": "target_mass",
+          "alpha": 0.0,
+          "target_mass": 0.7,
+          "max_alpha": 5.0,
+          "confidence_threshold": null,
+          "head_selection": "gaze_global",
+          "head_count": 100,
+          "head_seed": 0,
+          "seed": 0,
+          "do_sample": false,
+          "temperature": null,
+          "split": "dev",
+          "vlmbias_dataset": "segments/gaze_heads_qwen3_8b/experiments/attention_methods_v1/dev_vlmbias.jsonl",
+          "naturalbench_dataset": "segments/gaze_heads_qwen3_8b/experiments/attention_methods_v1/dev_naturalbench.jsonl"
+        },
+        "qualified": true,
+        "qualification": {
+          "qualified": true,
+          "checks": {
+            "vlmbias_accuracy": true,
+            "naturalbench_g_acc": true,
+            "vlmbias_invalid_rate": true,
+            "naturalbench_invalid_rate": true
+          },
+          "deltas": {
+            "vlmbias_accuracy_drop": 0.0,
+            "naturalbench_g_acc_drop": -0.04,
+            "vlmbias_invalid_rate_increase": -0.14,
+            "naturalbench_invalid_rate_increase": -0.1
+          }
+        },
+        "objective": {
+          "vlmbias_bias_aligned_fraction": 0.12,
+          "vlmbias_accuracy": 0.05,
+          "naturalbench_G_Acc": 0.04,
+          "naturalbench_Acc": 0.55
+        },
+        "metrics": {
+          "vlmbias": {
+            "n": 100,
+            "accuracy": 0.05,
+            "bias_aligned_fraction": 0.12,
+            "bias_aligned_error_rate": 0.12631578947368421,
+            "invalid_rate": 0.14
+          },
+          "naturalbench": {
+            "n_groups": 25,
+            "n_model_calls": 100,
+            "Acc": 0.55,
+            "G_Acc": 0.04,
+            "invalid_rate": 0.15
+          },
+          "telemetry": {
+            "vlmbias": {
+              "mean_image_attention_mass": 0.11449237352622668,
+              "mean_boosted_layer_image_attention_mass": 0.14661778632964764,
+              "mean_boosted_head_image_attention_mass": 0.6620322176333743,
+              "mean_preboost_head_image_attention_mass": 0.2597864083575975,
+              "mean_effective_alpha": 2.680113478626039,
+              "mean_alpha_cap_fraction": 0.16056141126576062,
+              "confidence_gate_intervention_rate": null,
+              "mean_baseline_confidence": null
+            },
+            "naturalbench": {
+              "mean_image_attention_mass": 0.09063845927654593,
+              "mean_boosted_layer_image_attention_mass": 0.1179866738458966,
+              "mean_boosted_head_image_attention_mass": 0.653106909993415,
+              "mean_preboost_head_image_attention_mass": 0.29004342831085117,
+              "mean_effective_alpha": 2.5294501163038916,
+              "mean_alpha_cap_fraction": 0.16728365263646588,
+              "confidence_gate_intervention_rate": null,
+              "mean_baseline_confidence": null
+            }
+          }
+        }
+      },
+      {
+        "name": "target_mass0p9",
+        "spec": {
+          "name": "target_mass0p9",
+          "controller": "target_mass",
+          "alpha": 0.0,
+          "target_mass": 0.9,
+          "max_alpha": 5.0,
+          "confidence_threshold": null,
+          "head_selection": "gaze_global",
+          "head_count": 100,
+          "head_seed": 0,
+          "seed": 0,
+          "do_sample": false,
+          "temperature": null,
+          "split": "dev",
+          "vlmbias_dataset": "segments/gaze_heads_qwen3_8b/experiments/attention_methods_v1/dev_vlmbias.jsonl",
+          "naturalbench_dataset": "segments/gaze_heads_qwen3_8b/experiments/attention_methods_v1/dev_naturalbench.jsonl"
+        },
+        "qualified": true,
+        "qualification": {
+          "qualified": true,
+          "checks": {
+            "vlmbias_accuracy": true,
+            "naturalbench_g_acc": true,
+            "vlmbias_invalid_rate": true,
+            "naturalbench_invalid_rate": true
+          },
+          "deltas": {
+            "vlmbias_accuracy_drop": -0.009999999999999995,
+            "naturalbench_g_acc_drop": -0.08,
+            "vlmbias_invalid_rate_increase": -0.17000000000000004,
+            "naturalbench_invalid_rate_increase": -0.09
+          }
+        },
+        "objective": {
+          "vlmbias_bias_aligned_fraction": 0.14,
+          "vlmbias_accuracy": 0.06,
+          "naturalbench_G_Acc": 0.08,
+          "naturalbench_Acc": 0.55
+        },
+        "metrics": {
+          "vlmbias": {
+            "n": 100,
+            "accuracy": 0.06,
+            "bias_aligned_fraction": 0.14,
+            "bias_aligned_error_rate": 0.14893617021276595,
+            "invalid_rate": 0.11
+          },
+          "naturalbench": {
+            "n_groups": 25,
+            "n_model_calls": 100,
+            "Acc": 0.55,
+            "G_Acc": 0.08,
+            "invalid_rate": 0.16
+          },
+          "telemetry": {
+            "vlmbias": {
+              "mean_image_attention_mass": 0.1254596629555236,
+              "mean_boosted_layer_image_attention_mass": 0.16322364495715538,
+              "mean_boosted_head_image_attention_mass": 0.8032621622046096,
+              "mean_preboost_head_image_attention_mass": 0.2398930938972152,
+              "mean_effective_alpha": 3.6893281032701717,
+              "mean_alpha_cap_fraction": 0.37212063289187264,
+              "confidence_gate_intervention_rate": null,
+              "mean_baseline_confidence": null
+            },
+            "naturalbench": {
+              "mean_image_attention_mass": 0.10189732317492384,
+              "mean_boosted_layer_image_attention_mass": 0.13488958315054575,
+              "mean_boosted_head_image_attention_mass": 0.7936974742141448,
+              "mean_preboost_head_image_attention_mass": 0.28294748921408025,
+              "mean_effective_alpha": 3.447656801711768,
+              "mean_alpha_cap_fraction": 0.3216096980530224,
+              "confidence_gate_intervention_rate": null,
+              "mean_baseline_confidence": null
+            }
+          }
+        }
+      },
+      {
+        "name": "confidence_gate0p3",
+        "spec": {
+          "name": "confidence_gate0p3",
+          "controller": "confidence_gate",
+          "alpha": 2.0,
+          "target_mass": 0.0,
+          "max_alpha": 5.0,
+          "confidence_threshold": 0.3,
+          "head_selection": "gaze_global",
+          "head_count": 100,
+          "head_seed": 0,
+          "seed": 0,
+          "do_sample": false,
+          "temperature": null,
+          "split": "dev",
+          "vlmbias_dataset": "segments/gaze_heads_qwen3_8b/experiments/attention_methods_v1/dev_vlmbias.jsonl",
+          "naturalbench_dataset": "segments/gaze_heads_qwen3_8b/experiments/attention_methods_v1/dev_naturalbench.jsonl"
+        },
+        "qualified": true,
+        "qualification": {
+          "qualified": true,
+          "checks": {
+            "vlmbias_accuracy": true,
+            "naturalbench_g_acc": true,
+            "vlmbias_invalid_rate": true,
+            "naturalbench_invalid_rate": true
+          },
+          "deltas": {
+            "vlmbias_accuracy_drop": 0.0,
+            "naturalbench_g_acc_drop": 0.0,
+            "vlmbias_invalid_rate_increase": 0.0,
+            "naturalbench_invalid_rate_increase": 0.0
+          }
+        },
+        "objective": {
+          "vlmbias_bias_aligned_fraction": 0.11,
+          "vlmbias_accuracy": 0.05,
+          "naturalbench_G_Acc": 0.0,
+          "naturalbench_Acc": 0.46
+        },
+        "metrics": {
+          "vlmbias": {
+            "n": 100,
+            "accuracy": 0.05,
+            "bias_aligned_fraction": 0.11,
+            "bias_aligned_error_rate": 0.11578947368421053,
+            "invalid_rate": 0.28
+          },
+          "naturalbench": {
+            "n_groups": 25,
+            "n_model_calls": 100,
+            "Acc": 0.46,
+            "G_Acc": 0.0,
+            "invalid_rate": 0.25
+          },
+          "telemetry": {
+            "vlmbias": {
+              "mean_image_attention_mass": 0.07525566037273625,
+              "mean_boosted_layer_image_attention_mass": 0.08583767456281666,
+              "mean_boosted_head_image_attention_mass": 0.19219485327948915,
+              "mean_preboost_head_image_attention_mass": null,
+              "mean_effective_alpha": null,
+              "mean_alpha_cap_fraction": null,
+              "confidence_gate_intervention_rate": 0,
+              "mean_baseline_confidence": 0.7751015114601266
+            },
+            "naturalbench": {
+              "mean_image_attention_mass": 0.04936572779310626,
+              "mean_boosted_layer_image_attention_mass": 0.0550370903224555,
+              "mean_boosted_head_image_attention_mass": 0.16219841880368122,
+              "mean_preboost_head_image_attention_mass": null,
+              "mean_effective_alpha": null,
+              "mean_alpha_cap_fraction": null,
+              "confidence_gate_intervention_rate": 0,
+              "mean_baseline_confidence": 0.7815197594779584
+            }
+          }
+        }
+      },
+      {
+        "name": "confidence_gate0p6",
+        "spec": {
+          "name": "confidence_gate0p6",
+          "controller": "confidence_gate",
+          "alpha": 2.0,
+          "target_mass": 0.0,
+          "max_alpha": 5.0,
+          "confidence_threshold": 0.6,
+          "head_selection": "gaze_global",
+          "head_count": 100,
+          "head_seed": 0,
+          "seed": 0,
+          "do_sample": false,
+          "temperature": null,
+          "split": "dev",
+          "vlmbias_dataset": "segments/gaze_heads_qwen3_8b/experiments/attention_methods_v1/dev_vlmbias.jsonl",
+          "naturalbench_dataset": "segments/gaze_heads_qwen3_8b/experiments/attention_methods_v1/dev_naturalbench.jsonl"
+        },
+        "qualified": true,
+        "qualification": {
+          "qualified": true,
+          "checks": {
+            "vlmbias_accuracy": true,
+            "naturalbench_g_acc": true,
+            "vlmbias_invalid_rate": true,
+            "naturalbench_invalid_rate": true
+          },
+          "deltas": {
+            "vlmbias_accuracy_drop": -0.009999999999999995,
+            "naturalbench_g_acc_drop": -0.04,
+            "vlmbias_invalid_rate_increase": -0.10000000000000003,
+            "naturalbench_invalid_rate_increase": -0.07
+          }
+        },
+        "objective": {
+          "vlmbias_bias_aligned_fraction": 0.12,
+          "vlmbias_accuracy": 0.06,
+          "naturalbench_G_Acc": 0.04,
+          "naturalbench_Acc": 0.5
+        },
+        "metrics": {
+          "vlmbias": {
+            "n": 100,
+            "accuracy": 0.06,
+            "bias_aligned_fraction": 0.12,
+            "bias_aligned_error_rate": 0.1276595744680851,
+            "invalid_rate": 0.18
+          },
+          "naturalbench": {
+            "n_groups": 25,
+            "n_model_calls": 100,
+            "Acc": 0.5,
+            "G_Acc": 0.04,
+            "invalid_rate": 0.18
+          },
+          "telemetry": {
+            "vlmbias": {
+              "mean_image_attention_mass": 0.07832027245265599,
+              "mean_boosted_layer_image_attention_mass": 0.09063154888174331,
+              "mean_boosted_head_image_attention_mass": 0.227483794929435,
+              "mean_preboost_head_image_attention_mass": null,
+              "mean_effective_alpha": null,
+              "mean_alpha_cap_fraction": null,
+              "confidence_gate_intervention_rate": 0.14,
+              "mean_baseline_confidence": 0.7751015114601266
+            },
+            "naturalbench": {
+              "mean_image_attention_mass": 0.05208289485564887,
+              "mean_boosted_layer_image_attention_mass": 0.059250779427594456,
+              "mean_boosted_head_image_attention_mass": 0.19466983329692286,
+              "mean_preboost_head_image_attention_mass": null,
+              "mean_effective_alpha": null,
+              "mean_alpha_cap_fraction": null,
+              "confidence_gate_intervention_rate": 0.13,
+              "mean_baseline_confidence": 0.7815197594779584
+            }
+          }
+        }
+      }
+    ],
+    "errors": [],
+    "warnings": []
+  }
+}

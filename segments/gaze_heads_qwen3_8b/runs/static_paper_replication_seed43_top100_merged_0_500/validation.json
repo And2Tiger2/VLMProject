@@ -1,0 +1,25 @@
+{
+  "valid": true,
+  "stage": "static",
+  "n_rows": 6000,
+  "expected_rows": 6000,
+  "n_unique_rows": 6000,
+  "duplicate_count": 0,
+  "empty_rates": {
+    "gaze_top100": 0.008,
+    "non_gaze_paper_100": 0.03133333333333333
+  },
+  "target_attention_mass": {
+    "n": 5886,
+    "minimum": 0.9999609386920929,
+    "mean": 0.9999997978926246,
+    "missing_on_empty_outputs": 114,
+    "missing_on_nonempty_outputs": 0
+  },
+  "unique_outputs_by_condition": {
+    "gaze_top100": 2936,
+    "non_gaze_paper_100": 2718
+  },
+  "errors": [],
+  "warnings": []
+}

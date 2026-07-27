@@ -1,0 +1,355 @@
+{
+  "valid": true,
+  "stage": "static_paper_kimi_aggregate",
+  "judge": "moonshotai/Kimi-VL-A3B-Instruct",
+  "numbered_judge_images": true,
+  "seeds": [
+    42,
+    43,
+    44
+  ],
+  "top_k": 100,
+  "n_comics": 500,
+  "rows_per_seed": 6000,
+  "independent_gaze_rows": 3000,
+  "control_rows_per_seed": 3000,
+  "repeated_gaze_policy": "seed 42 is the reference; generation rows must match exactly, while repeated Kimi judgments quantify judge stability",
+  "repeated_gaze_judge_diagnostics": {
+    "43": {
+      "compared_with_seed": 42,
+      "n_rows": 3000,
+      "generation_disagreements": 0,
+      "judge_label_disagreements": 89,
+      "judge_label_agreement": 0.9703333333333334,
+      "correctness_disagreements": 60,
+      "correctness_agreement": 0.98,
+      "examples": [
+        [
+          "comic101",
+          6
+        ],
+        [
+          "comic104",
+          4
+        ],
+        [
+          "comic111",
+          1
+        ],
+        [
+          "comic117",
+          2
+        ],
+        [
+          "comic119",
+          6
+        ]
+      ]
+    },
+    "44": {
+      "compared_with_seed": 42,
+      "n_rows": 3000,
+      "generation_disagreements": 0,
+      "judge_label_disagreements": 105,
+      "judge_label_agreement": 0.965,
+      "correctness_disagreements": 61,
+      "correctness_agreement": 0.9796666666666667,
+      "examples": [
+        [
+          "comic101",
+          6
+        ],
+        [
+          "comic104",
+          4
+        ],
+        [
+          "comic109",
+          5
+        ],
+        [
+          "comic111",
+          4
+        ],
+        [
+          "comic117",
+          2
+        ]
+      ]
+    }
+  },
+  "bootstrap_unit": "comic strip",
+  "n_bootstrap": 10000,
+  "source_paths": {
+    "42": "segments/gaze_heads_qwen3_8b/runs/static_paper_replication_seed42_top100_merged_0_500/kimi_judge/judgments.jsonl",
+    "43": "segments/gaze_heads_qwen3_8b/runs/static_paper_replication_seed43_top100_merged_0_500/kimi_judge/judgments.jsonl",
+    "44": "segments/gaze_heads_qwen3_8b/runs/static_paper_replication_seed44_top100_merged_0_500/kimi_judge/judgments.jsonl"
+  },
+  "aggregate": {
+    "gaze_accuracy_reference_seed": 0.7063333333333333,
+    "gaze_accuracy_mean_across_judge_repeats": 0.7082222222222222,
+    "gaze_accuracy_judge_repeat_range": [
+      0.7063333333333333,
+      0.7106666666666668
+    ],
+    "gaze_cluster_ci": [
+      0.6886666666666666,
+      0.7236666666666668
+    ],
+    "control_accuracy_mean_across_seeds": 0.4468888888888889,
+    "control_accuracy_seed_std": 0.25002229530213527,
+    "control_accuracy_seed_range": [
+      0.20266666666666666,
+      0.7023333333333333
+    ],
+    "delta_mean_across_control_seeds": 0.26133333333333336,
+    "delta_seed_std": 0.24783888135462345,
+    "delta_seed_standard_error": 0.14308984486574758,
+    "delta_seed_range": [
+      0.008333333333333331,
+      0.5036666666666667
+    ],
+    "delta_control_seed_t_interval": [
+      -0.3543325782706251,
+      0.8769992449372919
+    ],
+    "control_score_accuracy_correlation": 0.6652802966502404,
+    "control_head_pairwise_overlap": {
+      "42-43": 21,
+      "42-44": 19,
+      "43-44": 29
+    }
+  },
+  "per_seed": {
+    "42": {
+      "n_comics": 500,
+      "gaze_accuracy": 0.7063333333333333,
+      "gaze_ci": [
+        0.6886666666666666,
+        0.7236666666666668
+      ],
+      "control_accuracy": 0.20266666666666666,
+      "control_ci": [
+        0.19066666666666665,
+        0.21499999999999997
+      ],
+      "delta": 0.5036666666666667,
+      "delta_ci": [
+        0.483,
+        0.524
+      ],
+      "gaze": {
+        "accuracy": 0.7063333333333334,
+        "n": 3000,
+        "per_panel_accuracy": {
+          "1": 0.808,
+          "2": 0.774,
+          "3": 0.804,
+          "4": 0.702,
+          "5": 0.642,
+          "6": 0.508
+        },
+        "junk_count": 414,
+        "baseline_match_count": 1,
+        "empty_count": 24
+      },
+      "control": {
+        "accuracy": 0.20266666666666666,
+        "n": 3000,
+        "per_panel_accuracy": {
+          "1": 0.616,
+          "2": 0.238,
+          "3": 0.17,
+          "4": 0.104,
+          "5": 0.068,
+          "6": 0.02
+        },
+        "junk_count": 371,
+        "baseline_match_count": 3,
+        "empty_count": 77
+      },
+      "control_head_diagnostics": {
+        "available": true,
+        "n_heads": 100,
+        "scores_path": "segments/gaze_heads_qwen3_8b/runs/gaze_discovery_seed42_merged/gaze_scores.npy",
+        "mean_gaze_score": 0.01768422901542492,
+        "median_gaze_score": 0.014051624928268815,
+        "p90_gaze_score": 0.039741851645499295,
+        "max_gaze_score": 0.05427722734767789,
+        "layer_counts": {
+          "20": 7,
+          "21": 6,
+          "22": 6,
+          "23": 4,
+          "24": 6,
+          "25": 5,
+          "26": 7,
+          "27": 7,
+          "28": 8,
+          "29": 6,
+          "30": 6,
+          "31": 4,
+          "32": 6,
+          "33": 3,
+          "34": 9,
+          "35": 10
+        }
+      }
+    },
+    "43": {
+      "n_comics": 500,
+      "gaze_accuracy": 0.7076666666666667,
+      "gaze_ci": [
+        0.69,
+        0.725
+      ],
+      "control_accuracy": 0.4356666666666667,
+      "control_ci": [
+        0.41633333333333333,
+        0.455
+      ],
+      "delta": 0.272,
+      "delta_ci": [
+        0.25033333333333335,
+        0.2943333333333334
+      ],
+      "gaze": {
+        "accuracy": 0.7076666666666667,
+        "n": 3000,
+        "per_panel_accuracy": {
+          "1": 0.8,
+          "2": 0.768,
+          "3": 0.802,
+          "4": 0.71,
+          "5": 0.654,
+          "6": 0.512
+        },
+        "junk_count": 417,
+        "baseline_match_count": 1,
+        "empty_count": 24
+      },
+      "control": {
+        "accuracy": 0.43566666666666665,
+        "n": 3000,
+        "per_panel_accuracy": {
+          "1": 0.76,
+          "2": 0.458,
+          "3": 0.39,
+          "4": 0.328,
+          "5": 0.348,
+          "6": 0.33
+        },
+        "junk_count": 422,
+        "baseline_match_count": 15,
+        "empty_count": 94
+      },
+      "control_head_diagnostics": {
+        "available": true,
+        "n_heads": 100,
+        "scores_path": "segments/gaze_heads_qwen3_8b/runs/gaze_discovery_seed42_merged/gaze_scores.npy",
+        "mean_gaze_score": 0.017177370953920926,
+        "median_gaze_score": 0.014526541081408141,
+        "p90_gaze_score": 0.03759533170244686,
+        "max_gaze_score": 0.053097283679487496,
+        "layer_counts": {
+          "20": 9,
+          "21": 5,
+          "22": 8,
+          "23": 6,
+          "24": 3,
+          "25": 7,
+          "26": 6,
+          "27": 8,
+          "28": 5,
+          "29": 5,
+          "30": 6,
+          "31": 7,
+          "32": 6,
+          "33": 4,
+          "34": 6,
+          "35": 9
+        }
+      }
+    },
+    "44": {
+      "n_comics": 500,
+      "gaze_accuracy": 0.7106666666666668,
+      "gaze_ci": [
+        0.693,
+        0.7286666666666666
+      ],
+      "control_accuracy": 0.7023333333333333,
+      "control_ci": [
+        0.683,
+        0.721
+      ],
+      "delta": 0.008333333333333331,
+      "delta_ci": [
+        -0.012000000000000004,
+        0.029
+      ],
+      "gaze": {
+        "accuracy": 0.7106666666666667,
+        "n": 3000,
+        "per_panel_accuracy": {
+          "1": 0.8,
+          "2": 0.778,
+          "3": 0.8,
+          "4": 0.708,
+          "5": 0.654,
+          "6": 0.524
+        },
+        "junk_count": 412,
+        "baseline_match_count": 1,
+        "empty_count": 24
+      },
+      "control": {
+        "accuracy": 0.7023333333333334,
+        "n": 3000,
+        "per_panel_accuracy": {
+          "1": 0.818,
+          "2": 0.732,
+          "3": 0.73,
+          "4": 0.646,
+          "5": 0.656,
+          "6": 0.632
+        },
+        "junk_count": 233,
+        "baseline_match_count": 11,
+        "empty_count": 55
+      },
+      "control_head_diagnostics": {
+        "available": true,
+        "n_heads": 100,
+        "scores_path": "segments/gaze_heads_qwen3_8b/runs/gaze_discovery_seed42_merged/gaze_scores.npy",
+        "mean_gaze_score": 0.018603339126200467,
+        "median_gaze_score": 0.016481736251743012,
+        "p90_gaze_score": 0.037852787464524834,
+        "max_gaze_score": 0.05274336181033868,
+        "layer_counts": {
+          "20": 9,
+          "21": 5,
+          "22": 9,
+          "23": 6,
+          "24": 5,
+          "25": 8,
+          "26": 3,
+          "27": 9,
+          "28": 9,
+          "29": 7,
+          "30": 4,
+          "31": 6,
+          "32": 3,
+          "33": 5,
+          "34": 6,
+          "35": 6
+        }
+      }
+    }
+  },
+  "errors": [],
+  "warnings": [
+    "seed 43 Kimi labels disagree with seed 42 on 89/3000 repeated gaze rows; generation text is checked separately",
+    "seed 44 Kimi labels disagree with seed 42 on 105/3000 repeated gaze rows; generation text is checked separately"
+  ]
+}

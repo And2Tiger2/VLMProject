@@ -1,0 +1,16 @@
+{
+  "batch_size": 4,
+  "generations": "segments/gaze_heads_qwen3_8b/runs/static_control_distribution_paper_seed45_top100_merged_0_100/generations.jsonl",
+  "image_token_limit": 1024,
+  "judgment_schema_version": 6,
+  "label_panels": true,
+  "limit": 0,
+  "limit_selection": "all",
+  "max_new_tokens": 2,
+  "max_parse_failure_rate": 0.01,
+  "model_id": "moonshotai/Kimi-VL-A3B-Instruct",
+  "n_panels": 6,
+  "revision": "cc6452511d00c99f3b3bed213e96ab7802c415c8",
+  "seed": 45,
+  "task": "judge_gaze_generations_kimi"
+}

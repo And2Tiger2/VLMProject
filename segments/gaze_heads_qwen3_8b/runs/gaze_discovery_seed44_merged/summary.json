@@ -1,0 +1,126 @@
+{
+  "valid_samples": 500,
+  "n_layers": 36,
+  "n_heads": 32,
+  "n_panels": 6,
+  "top_head": {
+    "layer": 24,
+    "head": 29,
+    "score": 0.23326434687920847
+  },
+  "top_head_selectivity": 0.1559995943669152,
+  "top_head_routing_accuracy": 1.0,
+  "max_head_routing_accuracy": 1.0,
+  "merged_from": [
+    {
+      "path": "segments/gaze_heads_qwen3_8b/runs/gaze_discovery_seed44_0_50",
+      "valid_samples": 50,
+      "start_comic_idx": 0,
+      "max_comics": 50,
+      "top_head": {
+        "layer": 24,
+        "head": 29,
+        "score": 0.2153029622789472
+      }
+    },
+    {
+      "path": "segments/gaze_heads_qwen3_8b/runs/gaze_discovery_seed44_50_50",
+      "valid_samples": 50,
+      "start_comic_idx": 50,
+      "max_comics": 50,
+      "top_head": {
+        "layer": 24,
+        "head": 29,
+        "score": 0.2321050212966899
+      }
+    },
+    {
+      "path": "segments/gaze_heads_qwen3_8b/runs/gaze_discovery_seed44_100_50",
+      "valid_samples": 50,
+      "start_comic_idx": 100,
+      "max_comics": 50,
+      "top_head": {
+        "layer": 24,
+        "head": 29,
+        "score": 0.22164773271729546
+      }
+    },
+    {
+      "path": "segments/gaze_heads_qwen3_8b/runs/gaze_discovery_seed44_150_50",
+      "valid_samples": 50,
+      "start_comic_idx": 150,
+      "max_comics": 50,
+      "top_head": {
+        "layer": 24,
+        "head": 29,
+        "score": 0.24347015177520612
+      }
+    },
+    {
+      "path": "segments/gaze_heads_qwen3_8b/runs/gaze_discovery_seed44_200_50",
+      "valid_samples": 50,
+      "start_comic_idx": 200,
+      "max_comics": 50,
+      "top_head": {
+        "layer": 24,
+        "head": 29,
+        "score": 0.22922952835060031
+      }
+    },
+    {
+      "path": "segments/gaze_heads_qwen3_8b/runs/gaze_discovery_seed44_250_50",
+      "valid_samples": 50,
+      "start_comic_idx": 250,
+      "max_comics": 50,
+      "top_head": {
+        "layer": 24,
+        "head": 29,
+        "score": 0.22857236846660575
+      }
+    },
+    {
+      "path": "segments/gaze_heads_qwen3_8b/runs/gaze_discovery_seed44_300_50",
+      "valid_samples": 50,
+      "start_comic_idx": 300,
+      "max_comics": 50,
+      "top_head": {
+        "layer": 24,
+        "head": 29,
+        "score": 0.23178178654673198
+      }
+    },
+    {
+      "path": "segments/gaze_heads_qwen3_8b/runs/gaze_discovery_seed44_350_50",
+      "valid_samples": 50,
+      "start_comic_idx": 350,
+      "max_comics": 50,
+      "top_head": {
+        "layer": 24,
+        "head": 29,
+        "score": 0.227370517787834
+      }
+    },
+    {
+      "path": "segments/gaze_heads_qwen3_8b/runs/gaze_discovery_seed44_400_50",
+      "valid_samples": 50,
+      "start_comic_idx": 400,
+      "max_comics": 50,
+      "top_head": {
+        "layer": 24,
+        "head": 29,
+        "score": 0.25517592527593175
+      }
+    },
+    {
+      "path": "segments/gaze_heads_qwen3_8b/runs/gaze_discovery_seed44_450_50",
+      "valid_samples": 50,
+      "start_comic_idx": 450,
+      "max_comics": 50,
+      "top_head": {
+        "layer": 24,
+        "head": 29,
+        "score": 0.24798747429624202
+      }
+    }
+  ]
+}

@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "experiment_family": "Qwen/Qwen3-VL-8B-Instruct gaze heads",
+  "generated_at_utc": "2026-07-27T05:33:30Z",
+  "source_commit": "fdc2bf63b5cd92f23a2d7f713481c610b9200478",
+  "verified_reports": [
+    "segments/gaze_heads_qwen3_8b/reports/dataset_validation.json",
+    "segments/gaze_heads_qwen3_8b/runs/gaze_discovery_seed42_merged/validation.json",
+    "segments/gaze_heads_qwen3_8b/runs/gaze_discovery_seed43_merged/validation.json",
+    "segments/gaze_heads_qwen3_8b/runs/gaze_discovery_seed44_merged/validation.json",
+    "segments/gaze_heads_qwen3_8b/runs/kimi_judge_calibration_60_numbered/calibration_results.json",
+    "segments/gaze_heads_qwen3_8b/runs/static_paper_replication_seed42_top100_merged_0_500/validation.json",
+    "segments/gaze_heads_qwen3_8b/runs/static_paper_replication_seed43_top100_merged_0_500/validation.json",
+    "segments/gaze_heads_qwen3_8b/runs/static_paper_replication_seed44_top100_merged_0_500/validation.json",
+    "segments/gaze_heads_qwen3_8b/reports/static_paper_kimi_full/aggregate_results.json",
+    "segments/gaze_heads_qwen3_8b/reports/control_distribution_100/aggregate_results.json",
+    "segments/gaze_heads_qwen3_8b/reports/attention_methods_v1/controller/aggregate_results.json",
+    "segments/gaze_heads_qwen3_8b/reports/attention_methods_v1/heads/aggregate_results.json",
+    "segments/gaze_heads_qwen3_8b/reports/attention_methods_v1/robustness/aggregate_results.json"
+  ],
+  "optional_families_present": [],
+  "included_v1_stages": [
+    "controller",
+    "heads",
+    "robustness"
+  ],
+  "exclusions": {
+    "smoke_runs": "Mechanics checks are not scientific results.",
+    "failed_jobs": "Partial and failed Slurm outputs are excluded.",
+    "v1_confirm": "Invalid comparison: baseline used held-out data while treatments inherited development paths.",
+    "raw_jsonl": "Raw generations and judgments remain off GitHub; compact aggregates contain graph-ready metrics.",
+    "slurm_logs": "Scheduler stdout/stderr is transient operational metadata."
+  }
+}

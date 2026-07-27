@@ -1,0 +1,1284 @@
+{
+  "valid": true,
+  "stage": "heads",
+  "selection_policy": "Only gaze-ranked global or layer-band configurations are eligible to be locked. Random and low-score sets are mechanistic controls. Within qualified gaze settings, use the controller-stage objective.",
+  "baseline": {
+    "name": "baseline",
+    "spec": {
+      "name": "baseline",
+      "controller": "fixed",
+      "alpha": 0.0,
+      "target_mass": 0.0,
+      "max_alpha": 5.0,
+      "confidence_threshold": null,
+      "head_selection": "gaze_global",
+      "head_count": 0,
+      "head_seed": 0,
+      "seed": 0,
+      "do_sample": false,
+      "temperature": null,
+      "split": "dev",
+      "vlmbias_dataset": "segments/gaze_heads_qwen3_8b/experiments/attention_methods_v1/dev_vlmbias.jsonl",
+      "naturalbench_dataset": "segments/gaze_heads_qwen3_8b/experiments/attention_methods_v1/dev_naturalbench.jsonl"
+    },
+    "metrics": {
+      "vlmbias": {
+        "n": 100,
+        "accuracy": 0.05,
+        "bias_aligned_fraction": 0.11,
+        "bias_aligned_error_rate": 0.11578947368421053,
+        "invalid_rate": 0.28
+      },
+      "naturalbench": {
+        "n_groups": 25,
+        "n_model_calls": 100,
+        "Acc": 0.46,
+        "G_Acc": 0.0,
+        "invalid_rate": 0.25
+      },
+      "telemetry": {
+        "vlmbias": {
+          "mean_image_attention_mass": 0.07525566037273625,
+          "mean_boosted_layer_image_attention_mass": null,
+          "mean_boosted_head_image_attention_mass": null,
+          "mean_preboost_head_image_attention_mass": null,
+          "mean_effective_alpha": null,
+          "mean_alpha_cap_fraction": null,
+          "confidence_gate_intervention_rate": null,
+          "mean_baseline_confidence": null
+        },
+        "naturalbench": {
+          "mean_image_attention_mass": 0.04936572779310626,
+          "mean_boosted_layer_image_attention_mass": null,
+          "mean_boosted_head_image_attention_mass": null,
+          "mean_preboost_head_image_attention_mass": null,
+          "mean_effective_alpha": null,
+          "mean_alpha_cap_fraction": null,
+          "confidence_gate_intervention_rate": null,
+          "mean_baseline_confidence": null
+        }
+      }
+    }
+  },
+  "selected_head": {
+    "name": "global_top50",
+    "spec": {
+      "name": "global_top50",
+      "controller": "fixed",
+      "alpha": 0.5,
+      "target_mass": 0.0,
+      "max_alpha": 5.0,
+      "confidence_threshold": null,
+      "head_selection": "gaze_global",
+      "head_count": 50,
+      "head_seed": 0,
+      "seed": 0,
+      "do_sample": false,
+      "temperature": null,
+      "split": "dev",
+      "vlmbias_dataset": "segments/gaze_heads_qwen3_8b/experiments/attention_methods_v1/dev_vlmbias.jsonl",
+      "naturalbench_dataset": "segments/gaze_heads_qwen3_8b/experiments/attention_methods_v1/dev_naturalbench.jsonl",
+      "source_controller": "fixed_alpha0p5"
+    },
+    "qualified": true,
+    "qualification": {
+      "qualified": true,
+      "checks": {
+        "vlmbias_accuracy": true,
+        "naturalbench_g_acc": true,
+        "vlmbias_invalid_rate": true,
+        "naturalbench_invalid_rate": true
+      },
+      "deltas": {
+        "vlmbias_accuracy_drop": -0.009999999999999995,
+        "naturalbench_g_acc_drop": -0.04,
+        "vlmbias_invalid_rate_increase": -0.020000000000000018,
+        "naturalbench_invalid_rate_increase": -0.04000000000000001
+      }
+    },
+    "objective": {
+      "vlmbias_bias_aligned_fraction": 0.11,
+      "vlmbias_accuracy": 0.06,
+      "naturalbench_G_Acc": 0.04,
+      "naturalbench_Acc": 0.49
+    },
+    "metrics": {
+      "vlmbias": {
+        "n": 100,
+        "accuracy": 0.06,
+        "bias_aligned_fraction": 0.11,
+        "bias_aligned_error_rate": 0.11702127659574468,
+        "invalid_rate": 0.26
+      },
+      "naturalbench": {
+        "n_groups": 25,
+        "n_model_calls": 100,
+        "Acc": 0.49,
+        "G_Acc": 0.04,
+        "invalid_rate": 0.21
+      },
+      "telemetry": {
+        "vlmbias": {
+          "mean_image_attention_mass": 0.07823890591318651,
+          "mean_boosted_layer_image_attention_mass": 0.09111391664485766,
+          "mean_boosted_head_image_attention_mass": 0.2522056510092947,
+          "mean_preboost_head_image_attention_mass": null,
+          "mean_effective_alpha": null,
+          "mean_alpha_cap_fraction": null,
+          "confidence_gate_intervention_rate": null,
+          "mean_baseline_confidence": null
+        },
+        "naturalbench": {
+          "mean_image_attention_mass": 0.050486322300167995,
+          "mean_boosted_layer_image_attention_mass": 0.054930735661821696,
+          "mean_boosted_head_image_attention_mass": 0.20083035781020847,
+          "mean_preboost_head_image_attention_mass": null,
+          "mean_effective_alpha": null,
+          "mean_alpha_cap_fraction": null,
+          "confidence_gate_intervention_rate": null,
+          "mean_baseline_confidence": null
+        }
+      }
+    }
+  },
+  "controls": [
+    {
+      "name": "layer_matched_random50_seed55",
+      "spec": {
+        "name": "layer_matched_random50_seed55",
+        "controller": "fixed",
+        "alpha": 0.5,
+        "target_mass": 0.0,
+        "max_alpha": 5.0,
+        "confidence_threshold": null,
+        "head_selection": "layer_matched_random",
+        "head_count": 50,
+        "head_seed": 55,
+        "seed": 0,
+        "do_sample": false,
+        "temperature": null,
+        "split": "dev",
+        "vlmbias_dataset": "segments/gaze_heads_qwen3_8b/experiments/attention_methods_v1/dev_vlmbias.jsonl",
+        "naturalbench_dataset": "segments/gaze_heads_qwen3_8b/experiments/attention_methods_v1/dev_naturalbench.jsonl",
+        "source_controller": "fixed_alpha0p5"
+      },
+      "qualified": false,
+      "qualification": {
+        "qualified": false,
+        "checks": {
+          "vlmbias_accuracy": true,
+          "naturalbench_g_acc": true,
+          "vlmbias_invalid_rate": false,
+          "naturalbench_invalid_rate": true
+        },
+        "deltas": {
+          "vlmbias_accuracy_drop": 0.0,
+          "naturalbench_g_acc_drop": 0.0,
+          "vlmbias_invalid_rate_increase": 0.02999999999999997,
+          "naturalbench_invalid_rate_increase": -0.010000000000000009
+        }
+      },
+      "objective": {
+        "vlmbias_bias_aligned_fraction": 0.11,
+        "vlmbias_accuracy": 0.05,
+        "naturalbench_G_Acc": 0.0,
+        "naturalbench_Acc": 0.48
+      },
+      "metrics": {
+        "vlmbias": {
+          "n": 100,
+          "accuracy": 0.05,
+          "bias_aligned_fraction": 0.11,
+          "bias_aligned_error_rate": 0.11578947368421053,
+          "invalid_rate": 0.31
+        },
+        "naturalbench": {
+          "n_groups": 25,
+          "n_model_calls": 100,
+          "Acc": 0.48,
+          "G_Acc": 0.0,
+          "invalid_rate": 0.24
+        },
+        "telemetry": {
+          "vlmbias": {
+            "mean_image_attention_mass": 0.07658980165686131,
+            "mean_boosted_layer_image_attention_mass": 0.08767314315640945,
+            "mean_boosted_head_image_attention_mass": 0.1017652044112621,
+            "mean_preboost_head_image_attention_mass": null,
+            "mean_effective_alpha": null,
+            "mean_alpha_cap_fraction": null,
+            "confidence_gate_intervention_rate": null,
+            "mean_baseline_confidence": null
+          },
+          "naturalbench": {
+            "mean_image_attention_mass": 0.04982492598047463,
+            "mean_boosted_layer_image_attention_mass": 0.05285773881204317,
+            "mean_boosted_head_image_attention_mass": 0.052424759758121615,
+            "mean_preboost_head_image_attention_mass": null,
+            "mean_effective_alpha": null,
+            "mean_alpha_cap_fraction": null,
+            "confidence_gate_intervention_rate": null,
+            "mean_baseline_confidence": null
+          }
+        }
+      }
+    },
+    {
+      "name": "layer_matched_random50_seed56",
+      "spec": {
+        "name": "layer_matched_random50_seed56",
+        "controller": "fixed",
+        "alpha": 0.5,
+        "target_mass": 0.0,
+        "max_alpha": 5.0,
+        "confidence_threshold": null,
+        "head_selection": "layer_matched_random",
+        "head_count": 50,
+        "head_seed": 56,
+        "seed": 0,
+        "do_sample": false,
+        "temperature": null,
+        "split": "dev",
+        "vlmbias_dataset": "segments/gaze_heads_qwen3_8b/experiments/attention_methods_v1/dev_vlmbias.jsonl",
+        "naturalbench_dataset": "segments/gaze_heads_qwen3_8b/experiments/attention_methods_v1/dev_naturalbench.jsonl",
+        "source_controller": "fixed_alpha0p5"
+      },
+      "qualified": true,
+      "qualification": {
+        "qualified": true,
+        "checks": {
+          "vlmbias_accuracy": true,
+          "naturalbench_g_acc": true,
+          "vlmbias_invalid_rate": true,
+          "naturalbench_invalid_rate": true
+        },
+        "deltas": {
+          "vlmbias_accuracy_drop": 0.0,
+          "naturalbench_g_acc_drop": 0.0,
+          "vlmbias_invalid_rate_increase": 0.0,
+          "naturalbench_invalid_rate_increase": 0.0
+        }
+      },
+      "objective": {
+        "vlmbias_bias_aligned_fraction": 0.11,
+        "vlmbias_accuracy": 0.05,
+        "naturalbench_G_Acc": 0.0,
+        "naturalbench_Acc": 0.45
+      },
+      "metrics": {
+        "vlmbias": {
+          "n": 100,
+          "accuracy": 0.05,
+          "bias_aligned_fraction": 0.11,
+          "bias_aligned_error_rate": 0.11578947368421053,
+          "invalid_rate": 0.28
+        },
+        "naturalbench": {
+          "n_groups": 25,
+          "n_model_calls": 100,
+          "Acc": 0.45,
+          "G_Acc": 0.0,
+          "invalid_rate": 0.25
+        },
+        "telemetry": {
+          "vlmbias": {
+            "mean_image_attention_mass": 0.07650683315051014,
+            "mean_boosted_layer_image_attention_mass": 0.0875589671756893,
+            "mean_boosted_head_image_attention_mass": 0.10349141012582141,
+            "mean_preboost_head_image_attention_mass": null,
+            "mean_effective_alpha": null,
+            "mean_alpha_cap_fraction": null,
+            "confidence_gate_intervention_rate": null,
+            "mean_baseline_confidence": null
+          },
+          "naturalbench": {
+            "mean_image_attention_mass": 0.04931325252191595,
+            "mean_boosted_layer_image_attention_mass": 0.051908037044774445,
+            "mean_boosted_head_image_attention_mass": 0.057248183359373726,
+            "mean_preboost_head_image_attention_mass": null,
+            "mean_effective_alpha": null,
+            "mean_alpha_cap_fraction": null,
+            "confidence_gate_intervention_rate": null,
+            "mean_baseline_confidence": null
+          }
+        }
+      }
+    },
+    {
+      "name": "layer_matched_low50",
+      "spec": {
+        "name": "layer_matched_low50",
+        "controller": "fixed",
+        "alpha": 0.5,
+        "target_mass": 0.0,
+        "max_alpha": 5.0,
+        "confidence_threshold": null,
+        "head_selection": "layer_matched_low",
+        "head_count": 50,
+        "head_seed": 0,
+        "seed": 0,
+        "do_sample": false,
+        "temperature": null,
+        "split": "dev",
+        "vlmbias_dataset": "segments/gaze_heads_qwen3_8b/experiments/attention_methods_v1/dev_vlmbias.jsonl",
+        "naturalbench_dataset": "segments/gaze_heads_qwen3_8b/experiments/attention_methods_v1/dev_naturalbench.jsonl",
+        "source_controller": "fixed_alpha0p5"
+      },
+      "qualified": true,
+      "qualification": {
+        "qualified": true,
+        "checks": {
+          "vlmbias_accuracy": true,
+          "naturalbench_g_acc": true,
+          "vlmbias_invalid_rate": true,
+          "naturalbench_invalid_rate": true
+        },
+        "deltas": {
+          "vlmbias_accuracy_drop": 0.0,
+          "naturalbench_g_acc_drop": -0.04,
+          "vlmbias_invalid_rate_increase": -0.020000000000000018,
+          "naturalbench_invalid_rate_increase": -0.010000000000000009
+        }
+      },
+      "objective": {
+        "vlmbias_bias_aligned_fraction": 0.11,
+        "vlmbias_accuracy": 0.05,
+        "naturalbench_G_Acc": 0.04,
+        "naturalbench_Acc": 0.46
+      },
+      "metrics": {
+        "vlmbias": {
+          "n": 100,
+          "accuracy": 0.05,
+          "bias_aligned_fraction": 0.11,
+          "bias_aligned_error_rate": 0.11578947368421053,
+          "invalid_rate": 0.26
+        },
+        "naturalbench": {
+          "n_groups": 25,
+          "n_model_calls": 100,
+          "Acc": 0.46,
+          "G_Acc": 0.04,
+          "invalid_rate": 0.24
+        },
+        "telemetry": {
+          "vlmbias": {
+            "mean_image_attention_mass": 0.07513563585979746,
+            "mean_boosted_layer_image_attention_mass": 0.08482805803811606,
+            "mean_boosted_head_image_attention_mass": 0.03415774859713419,
+            "mean_preboost_head_image_attention_mass": null,
+            "mean_effective_alpha": null,
+            "mean_alpha_cap_fraction": null,
+            "confidence_gate_intervention_rate": null,
+            "mean_baseline_confidence": null
+          },
+          "naturalbench": {
+            "mean_image_attention_mass": 0.04944312389181168,
+            "mean_boosted_layer_image_attention_mass": 0.05214230754467494,
+            "mean_boosted_head_image_attention_mass": 0.01585454693486099,
+            "mean_preboost_head_image_attention_mass": null,
+            "mean_effective_alpha": null,
+            "mean_alpha_cap_fraction": null,
+            "confidence_gate_intervention_rate": null,
+            "mean_baseline_confidence": null
+          }
+        }
+      }
+    },
+    {
+      "name": "paper_random50_seed55",
+      "spec": {
+        "name": "paper_random50_seed55",
+        "controller": "fixed",
+        "alpha": 0.5,
+        "target_mass": 0.0,
+        "max_alpha": 5.0,
+        "confidence_threshold": null,
+        "head_selection": "paper_random",
+        "head_count": 50,
+        "head_seed": 55,
+        "seed": 0,
+        "do_sample": false,
+        "temperature": null,
+        "split": "dev",
+        "vlmbias_dataset": "segments/gaze_heads_qwen3_8b/experiments/attention_methods_v1/dev_vlmbias.jsonl",
+        "naturalbench_dataset": "segments/gaze_heads_qwen3_8b/experiments/attention_methods_v1/dev_naturalbench.jsonl",
+        "source_controller": "fixed_alpha0p5"
+      },
+      "qualified": true,
+      "qualification": {
+        "qualified": true,
+        "checks": {
+          "vlmbias_accuracy": true,
+          "naturalbench_g_acc": true,
+          "vlmbias_invalid_rate": true,
+          "naturalbench_invalid_rate": true
+        },
+        "deltas": {
+          "vlmbias_accuracy_drop": 0.0,
+          "naturalbench_g_acc_drop": -0.04,
+          "vlmbias_invalid_rate_increase": 0.009999999999999953,
+          "naturalbench_invalid_rate_increase": -0.01999999999999999
+        }
+      },
+      "objective": {
+        "vlmbias_bias_aligned_fraction": 0.11,
+        "vlmbias_accuracy": 0.05,
+        "naturalbench_G_Acc": 0.04,
+        "naturalbench_Acc": 0.47
+      },
+      "metrics": {
+        "vlmbias": {
+          "n": 100,
+          "accuracy": 0.05,
+          "bias_aligned_fraction": 0.11,
+          "bias_aligned_error_rate": 0.11578947368421053,
+          "invalid_rate": 0.29
+        },
+        "naturalbench": {
+          "n_groups": 25,
+          "n_model_calls": 100,
+          "Acc": 0.47,
+          "G_Acc": 0.04,
+          "invalid_rate": 0.23
+        },
+        "telemetry": {
+          "vlmbias": {
+            "mean_image_attention_mass": 0.07649716272565649,
+            "mean_boosted_layer_image_attention_mass": 0.08622364431594509,
+            "mean_boosted_head_image_attention_mass": 0.118637504560778,
+            "mean_preboost_head_image_attention_mass": null,
+            "mean_effective_alpha": null,
+            "mean_alpha_cap_fraction": null,
+            "confidence_gate_intervention_rate": null,
+            "mean_baseline_confidence": null
+          },
+          "naturalbench": {
+            "mean_image_attention_mass": 0.0503118178023767,
+            "mean_boosted_layer_image_attention_mass": 0.051976685835203776,
+            "mean_boosted_head_image_attention_mass": 0.0762204586726375,
+            "mean_preboost_head_image_attention_mass": null,
+            "mean_effective_alpha": null,
+            "mean_alpha_cap_fraction": null,
+            "confidence_gate_intervention_rate": null,
+            "mean_baseline_confidence": null
+          }
+        }
+      }
+    }
+  ],
+  "evaluated": [
+    {
+      "name": "global_top10",
+      "spec": {
+        "name": "global_top10",
+        "controller": "fixed",
+        "alpha": 0.5,
+        "target_mass": 0.0,
+        "max_alpha": 5.0,
+        "confidence_threshold": null,
+        "head_selection": "gaze_global",
+        "head_count": 10,
+        "head_seed": 0,
+        "seed": 0,
+        "do_sample": false,
+        "temperature": null,
+        "split": "dev",
+        "vlmbias_dataset": "segments/gaze_heads_qwen3_8b/experiments/attention_methods_v1/dev_vlmbias.jsonl",
+        "naturalbench_dataset": "segments/gaze_heads_qwen3_8b/experiments/attention_methods_v1/dev_naturalbench.jsonl",
+        "source_controller": "fixed_alpha0p5"
+      },
+      "qualified": false,
+      "qualification": {
+        "qualified": false,
+        "checks": {
+          "vlmbias_accuracy": true,
+          "naturalbench_g_acc": true,
+          "vlmbias_invalid_rate": false,
+          "naturalbench_invalid_rate": true
+        },
+        "deltas": {
+          "vlmbias_accuracy_drop": 0.010000000000000002,
+          "naturalbench_g_acc_drop": -0.04,
+          "vlmbias_invalid_rate_increase": 0.03999999999999998,
+          "naturalbench_invalid_rate_increase": -0.010000000000000009
+        }
+      },
+      "objective": {
+        "vlmbias_bias_aligned_fraction": 0.11,
+        "vlmbias_accuracy": 0.04,
+        "naturalbench_G_Acc": 0.04,
+        "naturalbench_Acc": 0.49
+      },
+      "metrics": {
+        "vlmbias": {
+          "n": 100,
+          "accuracy": 0.04,
+          "bias_aligned_fraction": 0.11,
+          "bias_aligned_error_rate": 0.11458333333333333,
+          "invalid_rate": 0.32
+        },
+        "naturalbench": {
+          "n_groups": 25,
+          "n_model_calls": 100,
+          "Acc": 0.49,
+          "G_Acc": 0.04,
+          "invalid_rate": 0.24
+        },
+        "telemetry": {
+          "vlmbias": {
+            "mean_image_attention_mass": 0.07661295916550002,
+            "mean_boosted_layer_image_attention_mass": 0.08301933164306155,
+            "mean_boosted_head_image_attention_mass": 0.3141288147963487,
+            "mean_preboost_head_image_attention_mass": null,
+            "mean_effective_alpha": null,
+            "mean_alpha_cap_fraction": null,
+            "confidence_gate_intervention_rate": null,
+            "mean_baseline_confidence": null
+          },
+          "naturalbench": {
+            "mean_image_attention_mass": 0.04953800298234758,
+            "mean_boosted_layer_image_attention_mass": 0.05097014862445316,
+            "mean_boosted_head_image_attention_mass": 0.26954464140392487,
+            "mean_preboost_head_image_attention_mass": null,
+            "mean_effective_alpha": null,
+            "mean_alpha_cap_fraction": null,
+            "confidence_gate_intervention_rate": null,
+            "mean_baseline_confidence": null
+          }
+        }
+      }
+    },
+    {
+      "name": "global_top50",
+      "spec": {
+        "name": "global_top50",
+        "controller": "fixed",
+        "alpha": 0.5,
+        "target_mass": 0.0,
+        "max_alpha": 5.0,
+        "confidence_threshold": null,
+        "head_selection": "gaze_global",
+        "head_count": 50,
+        "head_seed": 0,
+        "seed": 0,
+        "do_sample": false,
+        "temperature": null,
+        "split": "dev",
+        "vlmbias_dataset": "segments/gaze_heads_qwen3_8b/experiments/attention_methods_v1/dev_vlmbias.jsonl",
+        "naturalbench_dataset": "segments/gaze_heads_qwen3_8b/experiments/attention_methods_v1/dev_naturalbench.jsonl",
+        "source_controller": "fixed_alpha0p5"
+      },
+      "qualified": true,
+      "qualification": {
+        "qualified": true,
+        "checks": {
+          "vlmbias_accuracy": true,
+          "naturalbench_g_acc": true,
+          "vlmbias_invalid_rate": true,
+          "naturalbench_invalid_rate": true
+        },
+        "deltas": {
+          "vlmbias_accuracy_drop": -0.009999999999999995,
+          "naturalbench_g_acc_drop": -0.04,
+          "vlmbias_invalid_rate_increase": -0.020000000000000018,
+          "naturalbench_invalid_rate_increase": -0.04000000000000001
+        }
+      },
+      "objective": {
+        "vlmbias_bias_aligned_fraction": 0.11,
+        "vlmbias_accuracy": 0.06,
+        "naturalbench_G_Acc": 0.04,
+        "naturalbench_Acc": 0.49
+      },
+      "metrics": {
+        "vlmbias": {
+          "n": 100,
+          "accuracy": 0.06,
+          "bias_aligned_fraction": 0.11,
+          "bias_aligned_error_rate": 0.11702127659574468,
+          "invalid_rate": 0.26
+        },
+        "naturalbench": {
+          "n_groups": 25,
+          "n_model_calls": 100,
+          "Acc": 0.49,
+          "G_Acc": 0.04,
+          "invalid_rate": 0.21
+        },
+        "telemetry": {
+          "vlmbias": {
+            "mean_image_attention_mass": 0.07823890591318651,
+            "mean_boosted_layer_image_attention_mass": 0.09111391664485766,
+            "mean_boosted_head_image_attention_mass": 0.2522056510092947,
+            "mean_preboost_head_image_attention_mass": null,
+            "mean_effective_alpha": null,
+            "mean_alpha_cap_fraction": null,
+            "confidence_gate_intervention_rate": null,
+            "mean_baseline_confidence": null
+          },
+          "naturalbench": {
+            "mean_image_attention_mass": 0.050486322300167995,
+            "mean_boosted_layer_image_attention_mass": 0.054930735661821696,
+            "mean_boosted_head_image_attention_mass": 0.20083035781020847,
+            "mean_preboost_head_image_attention_mass": null,
+            "mean_effective_alpha": null,
+            "mean_alpha_cap_fraction": null,
+            "confidence_gate_intervention_rate": null,
+            "mean_baseline_confidence": null
+          }
+        }
+      }
+    },
+    {
+      "name": "global_top100",
+      "spec": {
+        "name": "global_top100",
+        "controller": "fixed",
+        "alpha": 0.5,
+        "target_mass": 0.0,
+        "max_alpha": 5.0,
+        "confidence_threshold": null,
+        "head_selection": "gaze_global",
+        "head_count": 100,
+        "head_seed": 0,
+        "seed": 0,
+        "do_sample": false,
+        "temperature": null,
+        "split": "dev",
+        "vlmbias_dataset": "segments/gaze_heads_qwen3_8b/experiments/attention_methods_v1/dev_vlmbias.jsonl",
+        "naturalbench_dataset": "segments/gaze_heads_qwen3_8b/experiments/attention_methods_v1/dev_naturalbench.jsonl",
+        "source_controller": "fixed_alpha0p5"
+      },
+      "qualified": true,
+      "qualification": {
+        "qualified": true,
+        "checks": {
+          "vlmbias_accuracy": true,
+          "naturalbench_g_acc": true,
+          "vlmbias_invalid_rate": true,
+          "naturalbench_invalid_rate": true
+        },
+        "deltas": {
+          "vlmbias_accuracy_drop": 0.0,
+          "naturalbench_g_acc_drop": -0.04,
+          "vlmbias_invalid_rate_increase": -0.010000000000000009,
+          "naturalbench_invalid_rate_increase": -0.010000000000000009
+        }
+      },
+      "objective": {
+        "vlmbias_bias_aligned_fraction": 0.11,
+        "vlmbias_accuracy": 0.05,
+        "naturalbench_G_Acc": 0.04,
+        "naturalbench_Acc": 0.48
+      },
+      "metrics": {
+        "vlmbias": {
+          "n": 100,
+          "accuracy": 0.05,
+          "bias_aligned_fraction": 0.11,
+          "bias_aligned_error_rate": 0.11578947368421053,
+          "invalid_rate": 0.27
+        },
+        "naturalbench": {
+          "n_groups": 25,
+          "n_model_calls": 100,
+          "Acc": 0.48,
+          "G_Acc": 0.04,
+          "invalid_rate": 0.24
+        },
+        "telemetry": {
+          "vlmbias": {
+            "mean_image_attention_mass": 0.07976037198797602,
+            "mean_boosted_layer_image_attention_mass": 0.09276900651481948,
+            "mean_boosted_head_image_attention_mass": 0.2522699333959,
+            "mean_preboost_head_image_attention_mass": null,
+            "mean_effective_alpha": null,
+            "mean_alpha_cap_fraction": null,
+            "confidence_gate_intervention_rate": null,
+            "mean_baseline_confidence": null
+          },
+          "naturalbench": {
+            "mean_image_attention_mass": 0.05353610683754259,
+            "mean_boosted_layer_image_attention_mass": 0.061565412644607326,
+            "mean_boosted_head_image_attention_mass": 0.21941567732231407,
+            "mean_preboost_head_image_attention_mass": null,
+            "mean_effective_alpha": null,
+            "mean_alpha_cap_fraction": null,
+            "confidence_gate_intervention_rate": null,
+            "mean_baseline_confidence": null
+          }
+        }
+      }
+    },
+    {
+      "name": "early_top50",
+      "spec": {
+        "name": "early_top50",
+        "controller": "fixed",
+        "alpha": 0.5,
+        "target_mass": 0.0,
+        "max_alpha": 5.0,
+        "confidence_threshold": null,
+        "head_selection": "gaze_early",
+        "head_count": 50,
+        "head_seed": 0,
+        "seed": 0,
+        "do_sample": false,
+        "temperature": null,
+        "split": "dev",
+        "vlmbias_dataset": "segments/gaze_heads_qwen3_8b/experiments/attention_methods_v1/dev_vlmbias.jsonl",
+        "naturalbench_dataset": "segments/gaze_heads_qwen3_8b/experiments/attention_methods_v1/dev_naturalbench.jsonl",
+        "source_controller": "fixed_alpha0p5"
+      },
+      "qualified": true,
+      "qualification": {
+        "qualified": true,
+        "checks": {
+          "vlmbias_accuracy": true,
+          "naturalbench_g_acc": true,
+          "vlmbias_invalid_rate": true,
+          "naturalbench_invalid_rate": true
+        },
+        "deltas": {
+          "vlmbias_accuracy_drop": 0.010000000000000002,
+          "naturalbench_g_acc_drop": -0.04,
+          "vlmbias_invalid_rate_increase": -0.020000000000000018,
+          "naturalbench_invalid_rate_increase": 0.010000000000000009
+        }
+      },
+      "objective": {
+        "vlmbias_bias_aligned_fraction": 0.13,
+        "vlmbias_accuracy": 0.04,
+        "naturalbench_G_Acc": 0.04,
+        "naturalbench_Acc": 0.45
+      },
+      "metrics": {
+        "vlmbias": {
+          "n": 100,
+          "accuracy": 0.04,
+          "bias_aligned_fraction": 0.13,
+          "bias_aligned_error_rate": 0.13541666666666666,
+          "invalid_rate": 0.26
+        },
+        "naturalbench": {
+          "n_groups": 25,
+          "n_model_calls": 100,
+          "Acc": 0.45,
+          "G_Acc": 0.04,
+          "invalid_rate": 0.26
+        },
+        "telemetry": {
+          "vlmbias": {
+            "mean_image_attention_mass": 0.08018374566320093,
+            "mean_boosted_layer_image_attention_mass": 0.0599898395816692,
+            "mean_boosted_head_image_attention_mass": 0.19964978292781974,
+            "mean_preboost_head_image_attention_mass": null,
+            "mean_effective_alpha": null,
+            "mean_alpha_cap_fraction": null,
+            "confidence_gate_intervention_rate": null,
+            "mean_baseline_confidence": null
+          },
+          "naturalbench": {
+            "mean_image_attention_mass": 0.051933628214906935,
+            "mean_boosted_layer_image_attention_mass": 0.05055183135266243,
+            "mean_boosted_head_image_attention_mass": 0.19999487868613666,
+            "mean_preboost_head_image_attention_mass": null,
+            "mean_effective_alpha": null,
+            "mean_alpha_cap_fraction": null,
+            "confidence_gate_intervention_rate": null,
+            "mean_baseline_confidence": null
+          }
+        }
+      }
+    },
+    {
+      "name": "middle_top50",
+      "spec": {
+        "name": "middle_top50",
+        "controller": "fixed",
+        "alpha": 0.5,
+        "target_mass": 0.0,
+        "max_alpha": 5.0,
+        "confidence_threshold": null,
+        "head_selection": "gaze_middle",
+        "head_count": 50,
+        "head_seed": 0,
+        "seed": 0,
+        "do_sample": false,
+        "temperature": null,
+        "split": "dev",
+        "vlmbias_dataset": "segments/gaze_heads_qwen3_8b/experiments/attention_methods_v1/dev_vlmbias.jsonl",
+        "naturalbench_dataset": "segments/gaze_heads_qwen3_8b/experiments/attention_methods_v1/dev_naturalbench.jsonl",
+        "source_controller": "fixed_alpha0p5"
+      },
+      "qualified": false,
+      "qualification": {
+        "qualified": false,
+        "checks": {
+          "vlmbias_accuracy": true,
+          "naturalbench_g_acc": true,
+          "vlmbias_invalid_rate": false,
+          "naturalbench_invalid_rate": true
+        },
+        "deltas": {
+          "vlmbias_accuracy_drop": 0.010000000000000002,
+          "naturalbench_g_acc_drop": 0.0,
+          "vlmbias_invalid_rate_increase": 0.03999999999999998,
+          "naturalbench_invalid_rate_increase": 0.010000000000000009
+        }
+      },
+      "objective": {
+        "vlmbias_bias_aligned_fraction": 0.1,
+        "vlmbias_accuracy": 0.04,
+        "naturalbench_G_Acc": 0.0,
+        "naturalbench_Acc": 0.45
+      },
+      "metrics": {
+        "vlmbias": {
+          "n": 100,
+          "accuracy": 0.04,
+          "bias_aligned_fraction": 0.1,
+          "bias_aligned_error_rate": 0.10416666666666667,
+          "invalid_rate": 0.32
+        },
+        "naturalbench": {
+          "n_groups": 25,
+          "n_model_calls": 100,
+          "Acc": 0.45,
+          "G_Acc": 0.0,
+          "invalid_rate": 0.26
+        },
+        "telemetry": {
+          "vlmbias": {
+            "mean_image_attention_mass": 0.07729427341566976,
+            "mean_boosted_layer_image_attention_mass": 0.11108981549993835,
+            "mean_boosted_head_image_attention_mass": 0.27718168993753745,
+            "mean_preboost_head_image_attention_mass": null,
+            "mean_effective_alpha": null,
+            "mean_alpha_cap_fraction": null,
+            "confidence_gate_intervention_rate": null,
+            "mean_baseline_confidence": null
+          },
+          "naturalbench": {
+            "mean_image_attention_mass": 0.051668146211563404,
+            "mean_boosted_layer_image_attention_mass": 0.07624101275437031,
+            "mean_boosted_head_image_attention_mass": 0.22863383221694014,
+            "mean_preboost_head_image_attention_mass": null,
+            "mean_effective_alpha": null,
+            "mean_alpha_cap_fraction": null,
+            "confidence_gate_intervention_rate": null,
+            "mean_baseline_confidence": null
+          }
+        }
+      }
+    },
+    {
+      "name": "late_top50",
+      "spec": {
+        "name": "late_top50",
+        "controller": "fixed",
+        "alpha": 0.5,
+        "target_mass": 0.0,
+        "max_alpha": 5.0,
+        "confidence_threshold": null,
+        "head_selection": "gaze_late",
+        "head_count": 50,
+        "head_seed": 0,
+        "seed": 0,
+        "do_sample": false,
+        "temperature": null,
+        "split": "dev",
+        "vlmbias_dataset": "segments/gaze_heads_qwen3_8b/experiments/attention_methods_v1/dev_vlmbias.jsonl",
+        "naturalbench_dataset": "segments/gaze_heads_qwen3_8b/experiments/attention_methods_v1/dev_naturalbench.jsonl",
+        "source_controller": "fixed_alpha0p5"
+      },
+      "qualified": true,
+      "qualification": {
+        "qualified": true,
+        "checks": {
+          "vlmbias_accuracy": true,
+          "naturalbench_g_acc": true,
+          "vlmbias_invalid_rate": true,
+          "naturalbench_invalid_rate": true
+        },
+        "deltas": {
+          "vlmbias_accuracy_drop": -0.009999999999999995,
+          "naturalbench_g_acc_drop": -0.04,
+          "vlmbias_invalid_rate_increase": 0.019999999999999962,
+          "naturalbench_invalid_rate_increase": -0.01999999999999999
+        }
+      },
+      "objective": {
+        "vlmbias_bias_aligned_fraction": 0.11,
+        "vlmbias_accuracy": 0.06,
+        "naturalbench_G_Acc": 0.04,
+        "naturalbench_Acc": 0.48
+      },
+      "metrics": {
+        "vlmbias": {
+          "n": 100,
+          "accuracy": 0.06,
+          "bias_aligned_fraction": 0.11,
+          "bias_aligned_error_rate": 0.11702127659574468,
+          "invalid_rate": 0.3
+        },
+        "naturalbench": {
+          "n_groups": 25,
+          "n_model_calls": 100,
+          "Acc": 0.48,
+          "G_Acc": 0.04,
+          "invalid_rate": 0.23
+        },
+        "telemetry": {
+          "vlmbias": {
+            "mean_image_attention_mass": 0.07732096741564815,
+            "mean_boosted_layer_image_attention_mass": 0.08952415521655901,
+            "mean_boosted_head_image_attention_mass": 0.19228838433398507,
+            "mean_preboost_head_image_attention_mass": null,
+            "mean_effective_alpha": null,
+            "mean_alpha_cap_fraction": null,
+            "confidence_gate_intervention_rate": null,
+            "mean_baseline_confidence": null
+          },
+          "naturalbench": {
+            "mean_image_attention_mass": 0.050987305658119216,
+            "mean_boosted_layer_image_attention_mass": 0.050454922360085856,
+            "mean_boosted_head_image_attention_mass": 0.142170784700676,
+            "mean_preboost_head_image_attention_mass": null,
+            "mean_effective_alpha": null,
+            "mean_alpha_cap_fraction": null,
+            "confidence_gate_intervention_rate": null,
+            "mean_baseline_confidence": null
+          }
+        }
+      }
+    },
+    {
+      "name": "layer_matched_random50_seed55",
+      "spec": {
+        "name": "layer_matched_random50_seed55",
+        "controller": "fixed",
+        "alpha": 0.5,
+        "target_mass": 0.0,
+        "max_alpha": 5.0,
+        "confidence_threshold": null,
+        "head_selection": "layer_matched_random",
+        "head_count": 50,
+        "head_seed": 55,
+        "seed": 0,
+        "do_sample": false,
+        "temperature": null,
+        "split": "dev",
+        "vlmbias_dataset": "segments/gaze_heads_qwen3_8b/experiments/attention_methods_v1/dev_vlmbias.jsonl",
+        "naturalbench_dataset": "segments/gaze_heads_qwen3_8b/experiments/attention_methods_v1/dev_naturalbench.jsonl",
+        "source_controller": "fixed_alpha0p5"
+      },
+      "qualified": false,
+      "qualification": {
+        "qualified": false,
+        "checks": {
+          "vlmbias_accuracy": true,
+          "naturalbench_g_acc": true,
+          "vlmbias_invalid_rate": false,
+          "naturalbench_invalid_rate": true
+        },
+        "deltas": {
+          "vlmbias_accuracy_drop": 0.0,
+          "naturalbench_g_acc_drop": 0.0,
+          "vlmbias_invalid_rate_increase": 0.02999999999999997,
+          "naturalbench_invalid_rate_increase": -0.010000000000000009
+        }
+      },
+      "objective": {
+        "vlmbias_bias_aligned_fraction": 0.11,
+        "vlmbias_accuracy": 0.05,
+        "naturalbench_G_Acc": 0.0,
+        "naturalbench_Acc": 0.48
+      },
+      "metrics": {
+        "vlmbias": {
+          "n": 100,
+          "accuracy": 0.05,
+          "bias_aligned_fraction": 0.11,
+          "bias_aligned_error_rate": 0.11578947368421053,
+          "invalid_rate": 0.31
+        },
+        "naturalbench": {
+          "n_groups": 25,
+          "n_model_calls": 100,
+          "Acc": 0.48,
+          "G_Acc": 0.0,
+          "invalid_rate": 0.24
+        },
+        "telemetry": {
+          "vlmbias": {
+            "mean_image_attention_mass": 0.07658980165686131,
+            "mean_boosted_layer_image_attention_mass": 0.08767314315640945,
+            "mean_boosted_head_image_attention_mass": 0.1017652044112621,
+            "mean_preboost_head_image_attention_mass": null,
+            "mean_effective_alpha": null,
+            "mean_alpha_cap_fraction": null,
+            "confidence_gate_intervention_rate": null,
+            "mean_baseline_confidence": null
+          },
+          "naturalbench": {
+            "mean_image_attention_mass": 0.04982492598047463,
+            "mean_boosted_layer_image_attention_mass": 0.05285773881204317,
+            "mean_boosted_head_image_attention_mass": 0.052424759758121615,
+            "mean_preboost_head_image_attention_mass": null,
+            "mean_effective_alpha": null,
+            "mean_alpha_cap_fraction": null,
+            "confidence_gate_intervention_rate": null,
+            "mean_baseline_confidence": null
+          }
+        }
+      }
+    },
+    {
+      "name": "layer_matched_random50_seed56",
+      "spec": {
+        "name": "layer_matched_random50_seed56",
+        "controller": "fixed",
+        "alpha": 0.5,
+        "target_mass": 0.0,
+        "max_alpha": 5.0,
+        "confidence_threshold": null,
+        "head_selection": "layer_matched_random",
+        "head_count": 50,
+        "head_seed": 56,
+        "seed": 0,
+        "do_sample": false,
+        "temperature": null,
+        "split": "dev",
+        "vlmbias_dataset": "segments/gaze_heads_qwen3_8b/experiments/attention_methods_v1/dev_vlmbias.jsonl",
+        "naturalbench_dataset": "segments/gaze_heads_qwen3_8b/experiments/attention_methods_v1/dev_naturalbench.jsonl",
+        "source_controller": "fixed_alpha0p5"
+      },
+      "qualified": true,
+      "qualification": {
+        "qualified": true,
+        "checks": {
+          "vlmbias_accuracy": true,
+          "naturalbench_g_acc": true,
+          "vlmbias_invalid_rate": true,
+          "naturalbench_invalid_rate": true
+        },
+        "deltas": {
+          "vlmbias_accuracy_drop": 0.0,
+          "naturalbench_g_acc_drop": 0.0,
+          "vlmbias_invalid_rate_increase": 0.0,
+          "naturalbench_invalid_rate_increase": 0.0
+        }
+      },
+      "objective": {
+        "vlmbias_bias_aligned_fraction": 0.11,
+        "vlmbias_accuracy": 0.05,
+        "naturalbench_G_Acc": 0.0,
+        "naturalbench_Acc": 0.45
+      },
+      "metrics": {
+        "vlmbias": {
+          "n": 100,
+          "accuracy": 0.05,
+          "bias_aligned_fraction": 0.11,
+          "bias_aligned_error_rate": 0.11578947368421053,
+          "invalid_rate": 0.28
+        },
+        "naturalbench": {
+          "n_groups": 25,
+          "n_model_calls": 100,
+          "Acc": 0.45,
+          "G_Acc": 0.0,
+          "invalid_rate": 0.25
+        },
+        "telemetry": {
+          "vlmbias": {
+            "mean_image_attention_mass": 0.07650683315051014,
+            "mean_boosted_layer_image_attention_mass": 0.0875589671756893,
+            "mean_boosted_head_image_attention_mass": 0.10349141012582141,
+            "mean_preboost_head_image_attention_mass": null,
+            "mean_effective_alpha": null,
+            "mean_alpha_cap_fraction": null,
+            "confidence_gate_intervention_rate": null,
+            "mean_baseline_confidence": null
+          },
+          "naturalbench": {
+            "mean_image_attention_mass": 0.04931325252191595,
+            "mean_boosted_layer_image_attention_mass": 0.051908037044774445,
+            "mean_boosted_head_image_attention_mass": 0.057248183359373726,
+            "mean_preboost_head_image_attention_mass": null,
+            "mean_effective_alpha": null,
+            "mean_alpha_cap_fraction": null,
+            "confidence_gate_intervention_rate": null,
+            "mean_baseline_confidence": null
+          }
+        }
+      }
+    },
+    {
+      "name": "layer_matched_low50",
+      "spec": {
+        "name": "layer_matched_low50",
+        "controller": "fixed",
+        "alpha": 0.5,
+        "target_mass": 0.0,
+        "max_alpha": 5.0,
+        "confidence_threshold": null,
+        "head_selection": "layer_matched_low",
+        "head_count": 50,
+        "head_seed": 0,
+        "seed": 0,
+        "do_sample": false,
+        "temperature": null,
+        "split": "dev",
+        "vlmbias_dataset": "segments/gaze_heads_qwen3_8b/experiments/attention_methods_v1/dev_vlmbias.jsonl",
+        "naturalbench_dataset": "segments/gaze_heads_qwen3_8b/experiments/attention_methods_v1/dev_naturalbench.jsonl",
+        "source_controller": "fixed_alpha0p5"
+      },
+      "qualified": true,
+      "qualification": {
+        "qualified": true,
+        "checks": {
+          "vlmbias_accuracy": true,
+          "naturalbench_g_acc": true,
+          "vlmbias_invalid_rate": true,
+          "naturalbench_invalid_rate": true
+        },
+        "deltas": {
+          "vlmbias_accuracy_drop": 0.0,
+          "naturalbench_g_acc_drop": -0.04,
+          "vlmbias_invalid_rate_increase": -0.020000000000000018,
+          "naturalbench_invalid_rate_increase": -0.010000000000000009
+        }
+      },
+      "objective": {
+        "vlmbias_bias_aligned_fraction": 0.11,
+        "vlmbias_accuracy": 0.05,
+        "naturalbench_G_Acc": 0.04,
+        "naturalbench_Acc": 0.46
+      },
+      "metrics": {
+        "vlmbias": {
+          "n": 100,
+          "accuracy": 0.05,
+          "bias_aligned_fraction": 0.11,
+          "bias_aligned_error_rate": 0.11578947368421053,
+          "invalid_rate": 0.26
+        },
+        "naturalbench": {
+          "n_groups": 25,
+          "n_model_calls": 100,
+          "Acc": 0.46,
+          "G_Acc": 0.04,
+          "invalid_rate": 0.24
+        },
+        "telemetry": {
+          "vlmbias": {
+            "mean_image_attention_mass": 0.07513563585979746,
+            "mean_boosted_layer_image_attention_mass": 0.08482805803811606,
+            "mean_boosted_head_image_attention_mass": 0.03415774859713419,
+            "mean_preboost_head_image_attention_mass": null,
+            "mean_effective_alpha": null,
+            "mean_alpha_cap_fraction": null,
+            "confidence_gate_intervention_rate": null,
+            "mean_baseline_confidence": null
+          },
+          "naturalbench": {
+            "mean_image_attention_mass": 0.04944312389181168,
+            "mean_boosted_layer_image_attention_mass": 0.05214230754467494,
+            "mean_boosted_head_image_attention_mass": 0.01585454693486099,
+            "mean_preboost_head_image_attention_mass": null,
+            "mean_effective_alpha": null,
+            "mean_alpha_cap_fraction": null,
+            "confidence_gate_intervention_rate": null,
+            "mean_baseline_confidence": null
+          }
+        }
+      }
+    },
+    {
+      "name": "paper_random50_seed55",
+      "spec": {
+        "name": "paper_random50_seed55",
+        "controller": "fixed",
+        "alpha": 0.5,
+        "target_mass": 0.0,
+        "max_alpha": 5.0,
+        "confidence_threshold": null,
+        "head_selection": "paper_random",
+        "head_count": 50,
+        "head_seed": 55,
+        "seed": 0,
+        "do_sample": false,
+        "temperature": null,
+        "split": "dev",
+        "vlmbias_dataset": "segments/gaze_heads_qwen3_8b/experiments/attention_methods_v1/dev_vlmbias.jsonl",
+        "naturalbench_dataset": "segments/gaze_heads_qwen3_8b/experiments/attention_methods_v1/dev_naturalbench.jsonl",
+        "source_controller": "fixed_alpha0p5"
+      },
+      "qualified": true,
+      "qualification": {
+        "qualified": true,
+        "checks": {
+          "vlmbias_accuracy": true,
+          "naturalbench_g_acc": true,
+          "vlmbias_invalid_rate": true,
+          "naturalbench_invalid_rate": true
+        },
+        "deltas": {
+          "vlmbias_accuracy_drop": 0.0,
+          "naturalbench_g_acc_drop": -0.04,
+          "vlmbias_invalid_rate_increase": 0.009999999999999953,
+          "naturalbench_invalid_rate_increase": -0.01999999999999999
+        }
+      },
+      "objective": {
+        "vlmbias_bias_aligned_fraction": 0.11,
+        "vlmbias_accuracy": 0.05,
+        "naturalbench_G_Acc": 0.04,
+        "naturalbench_Acc": 0.47
+      },
+      "metrics": {
+        "vlmbias": {
+          "n": 100,
+          "accuracy": 0.05,
+          "bias_aligned_fraction": 0.11,
+          "bias_aligned_error_rate": 0.11578947368421053,
+          "invalid_rate": 0.29
+        },
+        "naturalbench": {
+          "n_groups": 25,
+          "n_model_calls": 100,
+          "Acc": 0.47,
+          "G_Acc": 0.04,
+          "invalid_rate": 0.23
+        },
+        "telemetry": {
+          "vlmbias": {
+            "mean_image_attention_mass": 0.07649716272565649,
+            "mean_boosted_layer_image_attention_mass": 0.08622364431594509,
+            "mean_boosted_head_image_attention_mass": 0.118637504560778,
+            "mean_preboost_head_image_attention_mass": null,
+            "mean_effective_alpha": null,
+            "mean_alpha_cap_fraction": null,
+            "confidence_gate_intervention_rate": null,
+            "mean_baseline_confidence": null
+          },
+          "naturalbench": {
+            "mean_image_attention_mass": 0.0503118178023767,
+            "mean_boosted_layer_image_attention_mass": 0.051976685835203776,
+            "mean_boosted_head_image_attention_mass": 0.0762204586726375,
+            "mean_preboost_head_image_attention_mass": null,
+            "mean_effective_alpha": null,
+            "mean_alpha_cap_fraction": null,
+            "confidence_gate_intervention_rate": null,
+            "mean_baseline_confidence": null
+          }
+        }
+      }
+    }
+  ],
+  "errors": [],
+  "warnings": []
+}

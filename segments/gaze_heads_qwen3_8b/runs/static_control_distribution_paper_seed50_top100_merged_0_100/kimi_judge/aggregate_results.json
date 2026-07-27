@@ -1,0 +1,67 @@
+{
+  "valid": true,
+  "judge": "kimi-vl",
+  "judge_model": "moonshotai/Kimi-VL-A3B-Instruct",
+  "judge_revision": "cc6452511d00c99f3b3bed213e96ab7802c415c8",
+  "generations": "segments/gaze_heads_qwen3_8b/runs/static_control_distribution_paper_seed50_top100_merged_0_100/generations.jsonl",
+  "resume": true,
+  "n_rows": 600,
+  "expected_rows": 600,
+  "n_new_rows": 600,
+  "n_skipped_existing_rows": 0,
+  "duplicate_count": 0,
+  "parse_failures": 0,
+  "parse_failure_rate": 0.0,
+  "errors": [],
+  "warnings": [],
+  "aggregate": {
+    "non_gaze_paper_100": {
+      "overall": {
+        "accuracy": 0.5416666666666666,
+        "ci_low": 0.5,
+        "ci_high": 0.5816666666666667,
+        "n": 600
+      },
+      "per_panel": {
+        "1": {
+          "accuracy": 0.66,
+          "ci_low": 0.57,
+          "ci_high": 0.75,
+          "n": 100
+        },
+        "2": {
+          "accuracy": 0.54,
+          "ci_low": 0.44,
+          "ci_high": 0.64,
+          "n": 100
+        },
+        "3": {
+          "accuracy": 0.49,
+          "ci_low": 0.39,
+          "ci_high": 0.59,
+          "n": 100
+        },
+        "4": {
+          "accuracy": 0.61,
+          "ci_low": 0.51,
+          "ci_high": 0.71,
+          "n": 100
+        },
+        "5": {
+          "accuracy": 0.54,
+          "ci_low": 0.44,
+          "ci_high": 0.64,
+          "n": 100
+        },
+        "6": {
+          "accuracy": 0.41,
+          "ci_low": 0.31,
+          "ci_high": 0.51,
+          "n": 100
+        }
+      },
+      "junk_count": 69,
+      "baseline_match_count": 0
+    }
+  }
+}

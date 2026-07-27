@@ -1,0 +1,26 @@
+{
+  "stage": "static",
+  "paper_replication": true,
+  "n_comics": 500,
+  "n_rows": 6000,
+  "conditions": [
+    "gaze_top100",
+    "non_gaze_paper_100"
+  ],
+  "existing_gaze_run": "segments/gaze_heads_qwen3_8b/runs/static_narration_seed44_top100_merged_0_500",
+  "control_shard_runs": [
+    "segments/gaze_heads_qwen3_8b/runs/static_paper_control_seed44_top100_0_50",
+    "segments/gaze_heads_qwen3_8b/runs/static_paper_control_seed44_top100_50_50",
+    "segments/gaze_heads_qwen3_8b/runs/static_paper_control_seed44_top100_100_50",
+    "segments/gaze_heads_qwen3_8b/runs/static_paper_control_seed44_top100_150_50",
+    "segments/gaze_heads_qwen3_8b/runs/static_paper_control_seed44_top100_200_50",
+    "segments/gaze_heads_qwen3_8b/runs/static_paper_control_seed44_top100_250_50",
+    "segments/gaze_heads_qwen3_8b/runs/static_paper_control_seed44_top100_300_50",
+    "segments/gaze_heads_qwen3_8b/runs/static_paper_control_seed44_top100_350_50",
+    "segments/gaze_heads_qwen3_8b/runs/static_paper_control_seed44_top100_400_50",
+    "segments/gaze_heads_qwen3_8b/runs/static_paper_control_seed44_top100_450_50"
+  ],
+  "generations": "segments/gaze_heads_qwen3_8b/runs/static_paper_replication_seed44_top100_merged_0_500/generations.jsonl",
+  "control_generations": "segments/gaze_heads_qwen3_8b/runs/static_paper_replication_seed44_top100_merged_0_500/control_generations.jsonl",
+  "generations_sha256": "fdd3251b100eabdf3b973b54f77de055af46058b9b65b35d2ec92e57784cdff1"
+}

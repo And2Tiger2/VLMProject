@@ -1,0 +1,115 @@
+{
+  "valid": true,
+  "judge": "kimi-vl",
+  "judge_model": "moonshotai/Kimi-VL-A3B-Instruct",
+  "judge_revision": "cc6452511d00c99f3b3bed213e96ab7802c415c8",
+  "generations": "segments/gaze_heads_qwen3_8b/runs/static_paper_replication_seed42_top100_merged_0_500/generations.jsonl",
+  "resume": true,
+  "n_rows": 6000,
+  "expected_rows": 6000,
+  "n_new_rows": 6000,
+  "n_skipped_existing_rows": 0,
+  "duplicate_count": 0,
+  "parse_failures": 0,
+  "parse_failure_rate": 0.0,
+  "errors": [],
+  "warnings": [],
+  "aggregate": {
+    "gaze_top100": {
+      "overall": {
+        "accuracy": 0.7063333333333334,
+        "ci_low": 0.6896666666666667,
+        "ci_high": 0.7226666666666667,
+        "n": 3000
+      },
+      "per_panel": {
+        "1": {
+          "accuracy": 0.808,
+          "ci_low": 0.774,
+          "ci_high": 0.842,
+          "n": 500
+        },
+        "2": {
+          "accuracy": 0.774,
+          "ci_low": 0.736,
+          "ci_high": 0.81,
+          "n": 500
+        },
+        "3": {
+          "accuracy": 0.804,
+          "ci_low": 0.768,
+          "ci_high": 0.838,
+          "n": 500
+        },
+        "4": {
+          "accuracy": 0.702,
+          "ci_low": 0.662,
+          "ci_high": 0.742,
+          "n": 500
+        },
+        "5": {
+          "accuracy": 0.642,
+          "ci_low": 0.6,
+          "ci_high": 0.684,
+          "n": 500
+        },
+        "6": {
+          "accuracy": 0.508,
+          "ci_low": 0.464,
+          "ci_high": 0.552,
+          "n": 500
+        }
+      },
+      "junk_count": 414,
+      "baseline_match_count": 1
+    },
+    "non_gaze_paper_100": {
+      "overall": {
+        "accuracy": 0.20266666666666666,
+        "ci_low": 0.18866666666666668,
+        "ci_high": 0.21700833333333322,
+        "n": 3000
+      },
+      "per_panel": {
+        "1": {
+          "accuracy": 0.616,
+          "ci_low": 0.574,
+          "ci_high": 0.658,
+          "n": 500
+        },
+        "2": {
+          "accuracy": 0.238,
+          "ci_low": 0.2,
+          "ci_high": 0.276,
+          "n": 500
+        },
+        "3": {
+          "accuracy": 0.17,
+          "ci_low": 0.138,
+          "ci_high": 0.204,
+          "n": 500
+        },
+        "4": {
+          "accuracy": 0.104,
+          "ci_low": 0.078,
+          "ci_high": 0.132,
+          "n": 500
+        },
+        "5": {
+          "accuracy": 0.068,
+          "ci_low": 0.048,
+          "ci_high": 0.09,
+          "n": 500
+        },
+        "6": {
+          "accuracy": 0.02,
+          "ci_low": 0.008,
+          "ci_high": 0.034,
+          "n": 500
+        }
+      },
+      "junk_count": 371,
+      "baseline_match_count": 3
+    }
+  }
+}

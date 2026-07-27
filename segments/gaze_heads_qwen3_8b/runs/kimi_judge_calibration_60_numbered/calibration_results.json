@@ -1,0 +1,22 @@
+{
+  "valid": true,
+  "stage": "kimi_caption_calibration",
+  "n_rows": 60,
+  "overall_accuracy": 0.9666666666666667,
+  "per_panel_accuracy": {
+    "1": 1.0,
+    "2": 1.0,
+    "3": 1.0,
+    "4": 0.9,
+    "5": 1.0,
+    "6": 0.9
+  },
+  "parse_failure_rate": 0.0,
+  "thresholds": {
+    "min_accuracy": 0.7,
+    "min_panel_accuracy": 0.4
+  },
+  "aggregate": "segments/gaze_heads_qwen3_8b/runs/kimi_judge_calibration_60_numbered/kimi_judge/aggregate_results.json",
+  "errors": [],
+  "warnings": []
+}

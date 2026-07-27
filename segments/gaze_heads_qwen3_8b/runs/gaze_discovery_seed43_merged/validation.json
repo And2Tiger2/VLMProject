@@ -1,0 +1,7 @@
+{
+  "valid": true,
+  "stage": "discovery",
+  "valid_samples": 500,
+  "max_head_routing_accuracy": 1.0,
+  "errors": []
+}

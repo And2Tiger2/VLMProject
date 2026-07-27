@@ -1,0 +1,3612 @@
+{
+  "valid": true,
+  "stage": "robustness",
+  "manifest": "segments/gaze_heads_qwen3_8b/experiments/attention_methods_v1/robustness_manifest.json",
+  "qualification": {
+    "max_vlmbias_accuracy_drop": 0.02,
+    "max_naturalbench_g_acc_drop": 0.05,
+    "max_invalid_rate_increase": 0.02
+  },
+  "n_conditions_expected": 12,
+  "n_conditions_found": 12,
+  "conditions": [
+    {
+      "valid": true,
+      "stage": "robustness",
+      "condition": {
+        "name": "baseline_seed0",
+        "controller": "fixed",
+        "alpha": 0.0,
+        "target_mass": 0.0,
+        "max_alpha": 5.0,
+        "confidence_threshold": null,
+        "head_selection": "gaze_global",
+        "head_count": 0,
+        "head_seed": 0,
+        "seed": 0,
+        "do_sample": true,
+        "temperature": 0.7,
+        "split": "all",
+        "vlmbias_dataset": "segments/gaze_heads_qwen3_8b/experiments/attention_methods_v1/all_vlmbias.jsonl",
+        "naturalbench_dataset": "segments/gaze_heads_qwen3_8b/experiments/attention_methods_v1/all_naturalbench.jsonl"
+      },
+      "provenance": {
+        "git_commit": "dc692233354a2e061aec0bd9bf6c91b4985e2d5f",
+        "job_id": "3567379",
+        "array_job_id": "3567006",
+        "array_task_id": "0",
+        "node": "neu307"
+      },
+      "selected_heads": [],
+      "vlmbias": {
+        "n": 400,
+        "accuracy": 0.0725,
+        "error_rate": 0.9275,
+        "bias_aligned_error_rate": 0.10512129380053908,
+        "bias_aligned_fraction": 0.0975,
+        "by_topic": {
+          "Animals": {
+            "n": 58,
+            "accuracy": 0.0,
+            "bias_aligned_error_rate": 0.0
+          },
+          "Chess Pieces": {
+            "n": 57,
+            "accuracy": 0.0,
+            "bias_aligned_error_rate": 0.0
+          },
+          "Flags": {
+            "n": 57,
+            "accuracy": 0.03508771929824561,
+            "bias_aligned_error_rate": 0.03636363636363636
+          },
+          "Game Boards": {
+            "n": 57,
+            "accuracy": 0.17543859649122806,
+            "bias_aligned_error_rate": 0.40425531914893614
+          },
+          "Logos": {
+            "n": 57,
+            "accuracy": 0.0,
+            "bias_aligned_error_rate": 0.0
+          },
+          "Optical Illusion": {
+            "n": 57,
+            "accuracy": 0.2982456140350877,
+            "bias_aligned_error_rate": 0.45
+          },
+          "Patterned Grid": {
+            "n": 57,
+            "accuracy": 0.0,
+            "bias_aligned_error_rate": 0.0
+          }
+        },
+        "n_unique": 400,
+        "duplicate_count": 0,
+        "invalid_rate": 0.2875
+      },
+      "naturalbench": {
+        "n_groups": 100,
+        "n_model_calls": 400,
+        "Acc": 0.46,
+        "Q_Acc": 0.15,
+        "I_Acc": 0.185,
+        "G_Acc": 0.02,
+        "by_question_type": {
+          "multiple_choice": {
+            "n_model_calls": 200,
+            "Acc": 0.35
+          },
+          "yes_no": {
+            "n_model_calls": 200,
+            "Acc": 0.57
+          }
+        },
+        "by_source": {
+          "DOCCI": {
+            "n_model_calls": 208,
+            "Acc": 0.5384615384615384
+          },
+          "Flickr": {
+            "n_model_calls": 192,
+            "Acc": 0.375
+          }
+        },
+        "n_unique_calls": 400,
+        "duplicate_count": 0,
+        "invalid_rate": 0.19
+      },
+      "telemetry": {
+        "vlmbias": {
+          "mean_image_attention_mass": 0.08394436664026746,
+          "mean_boosted_layer_image_attention_mass": null,
+          "mean_boosted_head_image_attention_mass": null,
+          "mean_preboost_head_image_attention_mass": null,
+          "mean_effective_alpha": null,
+          "mean_alpha_cap_fraction": null,
+          "confidence_gate_intervention_rate": null,
+          "mean_baseline_confidence": null
+        },
+        "naturalbench": {
+          "mean_image_attention_mass": 0.04994158755993811,
+          "mean_boosted_layer_image_attention_mass": null,
+          "mean_boosted_head_image_attention_mass": null,
+          "mean_preboost_head_image_attention_mass": null,
+          "mean_effective_alpha": null,
+          "mean_alpha_cap_fraction": null,
+          "confidence_gate_intervention_rate": null,
+          "mean_baseline_confidence": null
+        }
+      },
+      "artifacts": {
+        "config": "segments/gaze_heads_qwen3_8b/runs/attention_methods_v1/robustness/baseline_seed0/experiment_config.json",
+        "vlmbias": "segments/gaze_heads_qwen3_8b/runs/attention_methods_v1/robustness/baseline_seed0/vlmbias.jsonl",
+        "naturalbench": "segments/gaze_heads_qwen3_8b/runs/attention_methods_v1/robustness/baseline_seed0/naturalbench.jsonl"
+      },
+      "errors": []
+    },
+    {
+      "valid": true,
+      "stage": "robustness",
+      "condition": {
+        "name": "confirm_fixed_fixed_alpha0p5_global_top50_seed0",
+        "controller": "fixed",
+        "alpha": 0.5,
+        "target_mass": 0.0,
+        "max_alpha": 5.0,
+        "confidence_threshold": null,
+        "head_selection": "gaze_global",
+        "head_count": 50,
+        "head_seed": 0,
+        "seed": 0,
+        "do_sample": true,
+        "temperature": 0.7,
+        "split": "all",
+        "vlmbias_dataset": "segments/gaze_heads_qwen3_8b/experiments/attention_methods_v1/all_vlmbias.jsonl",
+        "naturalbench_dataset": "segments/gaze_heads_qwen3_8b/experiments/attention_methods_v1/all_naturalbench.jsonl",
+        "source_controller": "fixed_alpha0p5",
+        "source_head": "global_top50"
+      },
+      "provenance": {
+        "git_commit": "dc692233354a2e061aec0bd9bf6c91b4985e2d5f",
+        "job_id": "3567380",
+        "array_job_id": "3567006",
+        "array_task_id": "1",
+        "node": "neu307"
+      },
+      "selected_heads": [
+        [
+          24,
+          29
+        ],
+        [
+          26,
+          26
+        ],
+        [
+          25,
+          30
+        ],
+        [
+          26,
+          31
+        ],
+        [
+          24,
+          31
+        ],
+        [
+          25,
+          10
+        ],
+        [
+          0,
+          27
+        ],
+        [
+          7,
+          6
+        ],
+        [
+          32,
+          0
+        ],
+        [
+          34,
+          0
+        ],
+        [
+          2,
+          17
+        ],
+        [
+          24,
+          13
+        ],
+        [
+          24,
+          8
+        ],
+        [
+          32,
+          3
+        ],
+        [
+          33,
+          14
+        ],
+        [
+          0,
+          5
+        ],
+        [
+          32,
+          11
+        ],
+        [
+          29,
+          25
+        ],
+        [
+          33,
+          12
+        ],
+        [
+          29,
+          24
+        ],
+        [
+          18,
+          23
+        ],
+        [
+          0,
+          8
+        ],
+        [
+          32,
+          5
+        ],
+        [
+          34,
+          2
+        ],
+        [
+          32,
+          8
+        ],
+        [
+          34,
+          1
+        ],
+        [
+          33,
+          23
+        ],
+        [
+          19,
+          27
+        ],
+        [
+          27,
+          18
+        ],
+        [
+          33,
+          17
+        ],
+        [
+          33,
+          15
+        ],
+        [
+          30,
+          9
+        ],
+        [
+          24,
+          19
+        ],
+        [
+          33,
+          13
+        ],
+        [
+          30,
+          8
+        ],
+        [
+          33,
+          19
+        ],
+        [
+          16,
+          14
+        ],
+        [
+          0,
+          29
+        ],
+        [
+          25,
+          9
+        ],
+        [
+          24,
+          5
+        ],
+        [
+          34,
+          3
+        ],
+        [
+          31,
+          4
+        ],
+        [
+          31,
+          20
+        ],
+        [
+          33,
+          18
+        ],
+        [
+          31,
+          6
+        ],
+        [
+          32,
+          7
+        ],
+        [
+          34,
+          7
+        ],
+        [
+          31,
+          13
+        ],
+        [
+          2,
+          1
+        ],
+        [
+          28,
+          2
+        ]
+      ],
+      "vlmbias": {
+        "n": 400,
+        "accuracy": 0.075,
+        "error_rate": 0.925,
+        "bias_aligned_error_rate": 0.11351351351351352,
+        "bias_aligned_fraction": 0.105,
+        "by_topic": {
+          "Animals": {
+            "n": 58,
+            "accuracy": 0.0,
+            "bias_aligned_error_rate": 0.0
+          },
+          "Chess Pieces": {
+            "n": 57,
+            "accuracy": 0.0,
+            "bias_aligned_error_rate": 0.0
+          },
+          "Flags": {
+            "n": 57,
+            "accuracy": 0.03508771929824561,
+            "bias_aligned_error_rate": 0.05454545454545454
+          },
+          "Game Boards": {
+            "n": 57,
+            "accuracy": 0.19298245614035087,
+            "bias_aligned_error_rate": 0.391304347826087
+          },
+          "Logos": {
+            "n": 57,
+            "accuracy": 0.0,
+            "bias_aligned_error_rate": 0.0
+          },
+          "Optical Illusion": {
+            "n": 57,
+            "accuracy": 0.2982456140350877,
+            "bias_aligned_error_rate": 0.525
+          },
+          "Patterned Grid": {
+            "n": 57,
+            "accuracy": 0.0,
+            "bias_aligned_error_rate": 0.0
+          }
+        },
+        "n_unique": 400,
+        "duplicate_count": 0,
+        "invalid_rate": 0.26
+      },
+      "naturalbench": {
+        "n_groups": 100,
+        "n_model_calls": 400,
+        "Acc": 0.4825,
+        "Q_Acc": 0.15,
+        "I_Acc": 0.205,
+        "G_Acc": 0.02,
+        "by_question_type": {
+          "multiple_choice": {
+            "n_model_calls": 200,
+            "Acc": 0.395
+          },
+          "yes_no": {
+            "n_model_calls": 200,
+            "Acc": 0.57
+          }
+        },
+        "by_source": {
+          "DOCCI": {
+            "n_model_calls": 208,
+            "Acc": 0.5576923076923077
+          },
+          "Flickr": {
+            "n_model_calls": 192,
+            "Acc": 0.4010416666666667
+          }
+        },
+        "n_unique_calls": 400,
+        "duplicate_count": 0,
+        "invalid_rate": 0.175
+      },
+      "telemetry": {
+        "vlmbias": {
+          "mean_image_attention_mass": 0.08644375618362436,
+          "mean_boosted_layer_image_attention_mass": 0.10293936094710476,
+          "mean_boosted_head_image_attention_mass": 0.27061219030732175,
+          "mean_preboost_head_image_attention_mass": null,
+          "mean_effective_alpha": null,
+          "mean_alpha_cap_fraction": null,
+          "confidence_gate_intervention_rate": null,
+          "mean_baseline_confidence": null
+        },
+        "naturalbench": {
+          "mean_image_attention_mass": 0.05158977414653809,
+          "mean_boosted_layer_image_attention_mass": 0.05701326869690663,
+          "mean_boosted_head_image_attention_mass": 0.1996804175132888,
+          "mean_preboost_head_image_attention_mass": null,
+          "mean_effective_alpha": null,
+          "mean_alpha_cap_fraction": null,
+          "confidence_gate_intervention_rate": null,
+          "mean_baseline_confidence": null
+        }
+      },
+      "artifacts": {
+        "config": "segments/gaze_heads_qwen3_8b/runs/attention_methods_v1/robustness/confirm_fixed_fixed_alpha0p5_global_top50_seed0/experiment_config.json",
+        "vlmbias": "segments/gaze_heads_qwen3_8b/runs/attention_methods_v1/robustness/confirm_fixed_fixed_alpha0p5_global_top50_seed0/vlmbias.jsonl",
+        "naturalbench": "segments/gaze_heads_qwen3_8b/runs/attention_methods_v1/robustness/confirm_fixed_fixed_alpha0p5_global_top50_seed0/naturalbench.jsonl"
+      },
+      "errors": []
+    },
+    {
+      "valid": true,
+      "stage": "robustness",
+      "condition": {
+        "name": "confirm_target_mass_target_mass0p5_global_top50_seed0",
+        "controller": "target_mass",
+        "alpha": 0.0,
+        "target_mass": 0.5,
+        "max_alpha": 5.0,
+        "confidence_threshold": null,
+        "head_selection": "gaze_global",
+        "head_count": 50,
+        "head_seed": 0,
+        "seed": 0,
+        "do_sample": true,
+        "temperature": 0.7,
+        "split": "all",
+        "vlmbias_dataset": "segments/gaze_heads_qwen3_8b/experiments/attention_methods_v1/all_vlmbias.jsonl",
+        "naturalbench_dataset": "segments/gaze_heads_qwen3_8b/experiments/attention_methods_v1/all_naturalbench.jsonl",
+        "source_controller": "target_mass0p5",
+        "source_head": "global_top50"
+      },
+      "provenance": {
+        "git_commit": "dc692233354a2e061aec0bd9bf6c91b4985e2d5f",
+        "job_id": "3567391",
+        "array_job_id": "3567006",
+        "array_task_id": "2",
+        "node": "neu305"
+      },
+      "selected_heads": [
+        [
+          24,
+          29
+        ],
+        [
+          26,
+          26
+        ],
+        [
+          25,
+          30
+        ],
+        [
+          26,
+          31
+        ],
+        [
+          24,
+          31
+        ],
+        [
+          25,
+          10
+        ],
+        [
+          0,
+          27
+        ],
+        [
+          7,
+          6
+        ],
+        [
+          32,
+          0
+        ],
+        [
+          34,
+          0
+        ],
+        [
+          2,
+          17
+        ],
+        [
+          24,
+          13
+        ],
+        [
+          24,
+          8
+        ],
+        [
+          32,
+          3
+        ],
+        [
+          33,
+          14
+        ],
+        [
+          0,
+          5
+        ],
+        [
+          32,
+          11
+        ],
+        [
+          29,
+          25
+        ],
+        [
+          33,
+          12
+        ],
+        [
+          29,
+          24
+        ],
+        [
+          18,
+          23
+        ],
+        [
+          0,
+          8
+        ],
+        [
+          32,
+          5
+        ],
+        [
+          34,
+          2
+        ],
+        [
+          32,
+          8
+        ],
+        [
+          34,
+          1
+        ],
+        [
+          33,
+          23
+        ],
+        [
+          19,
+          27
+        ],
+        [
+          27,
+          18
+        ],
+        [
+          33,
+          17
+        ],
+        [
+          33,
+          15
+        ],
+        [
+          30,
+          9
+        ],
+        [
+          24,
+          19
+        ],
+        [
+          33,
+          13
+        ],
+        [
+          30,
+          8
+        ],
+        [
+          33,
+          19
+        ],
+        [
+          16,
+          14
+        ],
+        [
+          0,
+          29
+        ],
+        [
+          25,
+          9
+        ],
+        [
+          24,
+          5
+        ],
+        [
+          34,
+          3
+        ],
+        [
+          31,
+          4
+        ],
+        [
+          31,
+          20
+        ],
+        [
+          33,
+          18
+        ],
+        [
+          31,
+          6
+        ],
+        [
+          32,
+          7
+        ],
+        [
+          34,
+          7
+        ],
+        [
+          31,
+          13
+        ],
+        [
+          2,
+          1
+        ],
+        [
+          28,
+          2
+        ]
+      ],
+      "vlmbias": {
+        "n": 400,
+        "accuracy": 0.065,
+        "error_rate": 0.935,
+        "bias_aligned_error_rate": 0.11497326203208556,
+        "bias_aligned_fraction": 0.1075,
+        "by_topic": {
+          "Animals": {
+            "n": 58,
+            "accuracy": 0.0,
+            "bias_aligned_error_rate": 0.0
+          },
+          "Chess Pieces": {
+            "n": 57,
+            "accuracy": 0.0,
+            "bias_aligned_error_rate": 0.0
+          },
+          "Flags": {
+            "n": 57,
+            "accuracy": 0.03508771929824561,
+            "bias_aligned_error_rate": 0.05454545454545454
+          },
+          "Game Boards": {
+            "n": 57,
+            "accuracy": 0.17543859649122806,
+            "bias_aligned_error_rate": 0.3829787234042553
+          },
+          "Logos": {
+            "n": 57,
+            "accuracy": 0.0,
+            "bias_aligned_error_rate": 0.0
+          },
+          "Optical Illusion": {
+            "n": 57,
+            "accuracy": 0.24561403508771928,
+            "bias_aligned_error_rate": 0.5116279069767442
+          },
+          "Patterned Grid": {
+            "n": 57,
+            "accuracy": 0.0,
+            "bias_aligned_error_rate": 0.0
+          }
+        },
+        "n_unique": 400,
+        "duplicate_count": 0,
+        "invalid_rate": 0.245
+      },
+      "naturalbench": {
+        "n_groups": 100,
+        "n_model_calls": 400,
+        "Acc": 0.465,
+        "Q_Acc": 0.145,
+        "I_Acc": 0.185,
+        "G_Acc": 0.01,
+        "by_question_type": {
+          "multiple_choice": {
+            "n_model_calls": 200,
+            "Acc": 0.36
+          },
+          "yes_no": {
+            "n_model_calls": 200,
+            "Acc": 0.57
+          }
+        },
+        "by_source": {
+          "DOCCI": {
+            "n_model_calls": 208,
+            "Acc": 0.5096153846153846
+          },
+          "Flickr": {
+            "n_model_calls": 192,
+            "Acc": 0.4166666666666667
+          }
+        },
+        "n_unique_calls": 400,
+        "duplicate_count": 0,
+        "invalid_rate": 0.195
+      },
+      "telemetry": {
+        "vlmbias": {
+          "mean_image_attention_mass": 0.0968512754205655,
+          "mean_boosted_layer_image_attention_mass": 0.1272648023090935,
+          "mean_boosted_head_image_attention_mass": 0.519741938158678,
+          "mean_preboost_head_image_attention_mass": 0.3559393191866214,
+          "mean_effective_alpha": 1.5256241201924814,
+          "mean_alpha_cap_fraction": 0.04491747799719172,
+          "confidence_gate_intervention_rate": null,
+          "mean_baseline_confidence": null
+        },
+        "naturalbench": {
+          "mean_image_attention_mass": 0.06531696515777623,
+          "mean_boosted_layer_image_attention_mass": 0.08649849260371982,
+          "mean_boosted_head_image_attention_mass": 0.5043105647577812,
+          "mean_preboost_head_image_attention_mass": 0.31441429961017076,
+          "mean_effective_alpha": 1.825941773424537,
+          "mean_alpha_cap_fraction": 0.06314410561420761,
+          "confidence_gate_intervention_rate": null,
+          "mean_baseline_confidence": null
+        }
+      },
+      "artifacts": {
+        "config": "segments/gaze_heads_qwen3_8b/runs/attention_methods_v1/robustness/confirm_target_mass_target_mass0p5_global_top50_seed0/experiment_config.json",
+        "vlmbias": "segments/gaze_heads_qwen3_8b/runs/attention_methods_v1/robustness/confirm_target_mass_target_mass0p5_global_top50_seed0/vlmbias.jsonl",
+        "naturalbench": "segments/gaze_heads_qwen3_8b/runs/attention_methods_v1/robustness/confirm_target_mass_target_mass0p5_global_top50_seed0/naturalbench.jsonl"
+      },
+      "errors": []
+    },
+    {
+      "valid": true,
+      "stage": "robustness",
+      "condition": {
+        "name": "confirm_confidence_gate_confidence_gate0p3_global_top50_seed0",
+        "controller": "confidence_gate",
+        "alpha": 2.0,
+        "target_mass": 0.0,
+        "max_alpha": 5.0,
+        "confidence_threshold": 0.3,
+        "head_selection": "gaze_global",
+        "head_count": 50,
+        "head_seed": 0,
+        "seed": 0,
+        "do_sample": true,
+        "temperature": 0.7,
+        "split": "all",
+        "vlmbias_dataset": "segments/gaze_heads_qwen3_8b/experiments/attention_methods_v1/all_vlmbias.jsonl",
+        "naturalbench_dataset": "segments/gaze_heads_qwen3_8b/experiments/attention_methods_v1/all_naturalbench.jsonl",
+        "source_controller": "confidence_gate0p3",
+        "source_head": "global_top50"
+      },
+      "provenance": {
+        "git_commit": "dc692233354a2e061aec0bd9bf6c91b4985e2d5f",
+        "job_id": "3567398",
+        "array_job_id": "3567006",
+        "array_task_id": "3",
+        "node": "neu307"
+      },
+      "selected_heads": [
+        [
+          24,
+          29
+        ],
+        [
+          26,
+          26
+        ],
+        [
+          25,
+          30
+        ],
+        [
+          26,
+          31
+        ],
+        [
+          24,
+          31
+        ],
+        [
+          25,
+          10
+        ],
+        [
+          0,
+          27
+        ],
+        [
+          7,
+          6
+        ],
+        [
+          32,
+          0
+        ],
+        [
+          34,
+          0
+        ],
+        [
+          2,
+          17
+        ],
+        [
+          24,
+          13
+        ],
+        [
+          24,
+          8
+        ],
+        [
+          32,
+          3
+        ],
+        [
+          33,
+          14
+        ],
+        [
+          0,
+          5
+        ],
+        [
+          32,
+          11
+        ],
+        [
+          29,
+          25
+        ],
+        [
+          33,
+          12
+        ],
+        [
+          29,
+          24
+        ],
+        [
+          18,
+          23
+        ],
+        [
+          0,
+          8
+        ],
+        [
+          32,
+          5
+        ],
+        [
+          34,
+          2
+        ],
+        [
+          32,
+          8
+        ],
+        [
+          34,
+          1
+        ],
+        [
+          33,
+          23
+        ],
+        [
+          19,
+          27
+        ],
+        [
+          27,
+          18
+        ],
+        [
+          33,
+          17
+        ],
+        [
+          33,
+          15
+        ],
+        [
+          30,
+          9
+        ],
+        [
+          24,
+          19
+        ],
+        [
+          33,
+          13
+        ],
+        [
+          30,
+          8
+        ],
+        [
+          33,
+          19
+        ],
+        [
+          16,
+          14
+        ],
+        [
+          0,
+          29
+        ],
+        [
+          25,
+          9
+        ],
+        [
+          24,
+          5
+        ],
+        [
+          34,
+          3
+        ],
+        [
+          31,
+          4
+        ],
+        [
+          31,
+          20
+        ],
+        [
+          33,
+          18
+        ],
+        [
+          31,
+          6
+        ],
+        [
+          32,
+          7
+        ],
+        [
+          34,
+          7
+        ],
+        [
+          31,
+          13
+        ],
+        [
+          2,
+          1
+        ],
+        [
+          28,
+          2
+        ]
+      ],
+      "vlmbias": {
+        "n": 400,
+        "accuracy": 0.0725,
+        "error_rate": 0.9275,
+        "bias_aligned_error_rate": 0.1105121293800539,
+        "bias_aligned_fraction": 0.1025,
+        "by_topic": {
+          "Animals": {
+            "n": 58,
+            "accuracy": 0.0,
+            "bias_aligned_error_rate": 0.0
+          },
+          "Chess Pieces": {
+            "n": 57,
+            "accuracy": 0.0,
+            "bias_aligned_error_rate": 0.0
+          },
+          "Flags": {
+            "n": 57,
+            "accuracy": 0.03508771929824561,
+            "bias_aligned_error_rate": 0.03636363636363636
+          },
+          "Game Boards": {
+            "n": 57,
+            "accuracy": 0.17543859649122806,
+            "bias_aligned_error_rate": 0.40425531914893614
+          },
+          "Logos": {
+            "n": 57,
+            "accuracy": 0.0,
+            "bias_aligned_error_rate": 0.0
+          },
+          "Optical Illusion": {
+            "n": 57,
+            "accuracy": 0.2982456140350877,
+            "bias_aligned_error_rate": 0.5
+          },
+          "Patterned Grid": {
+            "n": 57,
+            "accuracy": 0.0,
+            "bias_aligned_error_rate": 0.0
+          }
+        },
+        "n_unique": 400,
+        "duplicate_count": 0,
+        "invalid_rate": 0.2675
+      },
+      "naturalbench": {
+        "n_groups": 100,
+        "n_model_calls": 400,
+        "Acc": 0.4625,
+        "Q_Acc": 0.15,
+        "I_Acc": 0.185,
+        "G_Acc": 0.02,
+        "by_question_type": {
+          "multiple_choice": {
+            "n_model_calls": 200,
+            "Acc": 0.355
+          },
+          "yes_no": {
+            "n_model_calls": 200,
+            "Acc": 0.57
+          }
+        },
+        "by_source": {
+          "DOCCI": {
+            "n_model_calls": 208,
+            "Acc": 0.5384615384615384
+          },
+          "Flickr": {
+            "n_model_calls": 192,
+            "Acc": 0.3802083333333333
+          }
+        },
+        "n_unique_calls": 400,
+        "duplicate_count": 0,
+        "invalid_rate": 0.185
+      },
+      "telemetry": {
+        "vlmbias": {
+          "mean_image_attention_mass": 0.08417246476045036,
+          "mean_boosted_layer_image_attention_mass": 0.09748696483379765,
+          "mean_boosted_head_image_attention_mass": 0.21746945716432306,
+          "mean_preboost_head_image_attention_mass": null,
+          "mean_effective_alpha": null,
+          "mean_alpha_cap_fraction": null,
+          "confidence_gate_intervention_rate": 0.0325,
+          "mean_baseline_confidence": 0.8116319803592408
+        },
+        "naturalbench": {
+          "mean_image_attention_mass": 0.05009808523832126,
+          "mean_boosted_layer_image_attention_mass": 0.053322711428844226,
+          "mean_boosted_head_image_attention_mass": 0.15372913629931967,
+          "mean_preboost_head_image_attention_mass": null,
+          "mean_effective_alpha": null,
+          "mean_alpha_cap_fraction": null,
+          "confidence_gate_intervention_rate": 0.015,
+          "mean_baseline_confidence": 0.8322379987907897
+        }
+      },
+      "artifacts": {
+        "config": "segments/gaze_heads_qwen3_8b/runs/attention_methods_v1/robustness/confirm_confidence_gate_confidence_gate0p3_global_top50_seed0/experiment_config.json",
+        "vlmbias": "segments/gaze_heads_qwen3_8b/runs/attention_methods_v1/robustness/confirm_confidence_gate_confidence_gate0p3_global_top50_seed0/vlmbias.jsonl",
+        "naturalbench": "segments/gaze_heads_qwen3_8b/runs/attention_methods_v1/robustness/confirm_confidence_gate_confidence_gate0p3_global_top50_seed0/naturalbench.jsonl"
+      },
+      "errors": []
+    },
+    {
+      "valid": true,
+      "stage": "robustness",
+      "condition": {
+        "name": "baseline_seed1",
+        "controller": "fixed",
+        "alpha": 0.0,
+        "target_mass": 0.0,
+        "max_alpha": 5.0,
+        "confidence_threshold": null,
+        "head_selection": "gaze_global",
+        "head_count": 0,
+        "head_seed": 0,
+        "seed": 1,
+        "do_sample": true,
+        "temperature": 0.7,
+        "split": "all",
+        "vlmbias_dataset": "segments/gaze_heads_qwen3_8b/experiments/attention_methods_v1/all_vlmbias.jsonl",
+        "naturalbench_dataset": "segments/gaze_heads_qwen3_8b/experiments/attention_methods_v1/all_naturalbench.jsonl"
+      },
+      "provenance": {
+        "git_commit": "dc692233354a2e061aec0bd9bf6c91b4985e2d5f",
+        "job_id": "3567417",
+        "array_job_id": "3567006",
+        "array_task_id": "4",
+        "node": "neu307"
+      },
+      "selected_heads": [],
+      "vlmbias": {
+        "n": 400,
+        "accuracy": 0.0725,
+        "error_rate": 0.9275,
+        "bias_aligned_error_rate": 0.12129380053908356,
+        "bias_aligned_fraction": 0.1125,
+        "by_topic": {
+          "Animals": {
+            "n": 58,
+            "accuracy": 0.0,
+            "bias_aligned_error_rate": 0.0
+          },
+          "Chess Pieces": {
+            "n": 57,
+            "accuracy": 0.0,
+            "bias_aligned_error_rate": 0.0
+          },
+          "Flags": {
+            "n": 57,
+            "accuracy": 0.017543859649122806,
+            "bias_aligned_error_rate": 0.05357142857142857
+          },
+          "Game Boards": {
+            "n": 57,
+            "accuracy": 0.17543859649122806,
+            "bias_aligned_error_rate": 0.425531914893617
+          },
+          "Logos": {
+            "n": 57,
+            "accuracy": 0.0,
+            "bias_aligned_error_rate": 0.0
+          },
+          "Optical Illusion": {
+            "n": 57,
+            "accuracy": 0.3157894736842105,
+            "bias_aligned_error_rate": 0.5641025641025641
+          },
+          "Patterned Grid": {
+            "n": 57,
+            "accuracy": 0.0,
+            "bias_aligned_error_rate": 0.0
+          }
+        },
+        "n_unique": 400,
+        "duplicate_count": 0,
+        "invalid_rate": 0.2675
+      },
+      "naturalbench": {
+        "n_groups": 100,
+        "n_model_calls": 400,
+        "Acc": 0.44,
+        "Q_Acc": 0.14,
+        "I_Acc": 0.16,
+        "G_Acc": 0.01,
+        "by_question_type": {
+          "multiple_choice": {
+            "n_model_calls": 200,
+            "Acc": 0.315
+          },
+          "yes_no": {
+            "n_model_calls": 200,
+            "Acc": 0.565
+          }
+        },
+        "by_source": {
+          "DOCCI": {
+            "n_model_calls": 208,
+            "Acc": 0.4951923076923077
+          },
+          "Flickr": {
+            "n_model_calls": 192,
+            "Acc": 0.3802083333333333
+          }
+        },
+        "n_unique_calls": 400,
+        "duplicate_count": 0,
+        "invalid_rate": 0.1775
+      },
+      "telemetry": {
+        "vlmbias": {
+          "mean_image_attention_mass": 0.0841131671692635,
+          "mean_boosted_layer_image_attention_mass": null,
+          "mean_boosted_head_image_attention_mass": null,
+          "mean_preboost_head_image_attention_mass": null,
+          "mean_effective_alpha": null,
+          "mean_alpha_cap_fraction": null,
+          "confidence_gate_intervention_rate": null,
+          "mean_baseline_confidence": null
+        },
+        "naturalbench": {
+          "mean_image_attention_mass": 0.049933397966351885,
+          "mean_boosted_layer_image_attention_mass": null,
+          "mean_boosted_head_image_attention_mass": null,
+          "mean_preboost_head_image_attention_mass": null,
+          "mean_effective_alpha": null,
+          "mean_alpha_cap_fraction": null,
+          "confidence_gate_intervention_rate": null,
+          "mean_baseline_confidence": null
+        }
+      },
+      "artifacts": {
+        "config": "segments/gaze_heads_qwen3_8b/runs/attention_methods_v1/robustness/baseline_seed1/experiment_config.json",
+        "vlmbias": "segments/gaze_heads_qwen3_8b/runs/attention_methods_v1/robustness/baseline_seed1/vlmbias.jsonl",
+        "naturalbench": "segments/gaze_heads_qwen3_8b/runs/attention_methods_v1/robustness/baseline_seed1/naturalbench.jsonl"
+      },
+      "errors": []
+    },
+    {
+      "valid": true,
+      "stage": "robustness",
+      "condition": {
+        "name": "confirm_fixed_fixed_alpha0p5_global_top50_seed1",
+        "controller": "fixed",
+        "alpha": 0.5,
+        "target_mass": 0.0,
+        "max_alpha": 5.0,
+        "confidence_threshold": null,
+        "head_selection": "gaze_global",
+        "head_count": 50,
+        "head_seed": 0,
+        "seed": 1,
+        "do_sample": true,
+        "temperature": 0.7,
+        "split": "all",
+        "vlmbias_dataset": "segments/gaze_heads_qwen3_8b/experiments/attention_methods_v1/all_vlmbias.jsonl",
+        "naturalbench_dataset": "segments/gaze_heads_qwen3_8b/experiments/attention_methods_v1/all_naturalbench.jsonl",
+        "source_controller": "fixed_alpha0p5",
+        "source_head": "global_top50"
+      },
+      "provenance": {
+        "git_commit": "dc692233354a2e061aec0bd9bf6c91b4985e2d5f",
+        "job_id": "3567419",
+        "array_job_id": "3567006",
+        "array_task_id": "5",
+        "node": "neu305"
+      },
+      "selected_heads": [
+        [
+          24,
+          29
+        ],
+        [
+          26,
+          26
+        ],
+        [
+          25,
+          30
+        ],
+        [
+          26,
+          31
+        ],
+        [
+          24,
+          31
+        ],
+        [
+          25,
+          10
+        ],
+        [
+          0,
+          27
+        ],
+        [
+          7,
+          6
+        ],
+        [
+          32,
+          0
+        ],
+        [
+          34,
+          0
+        ],
+        [
+          2,
+          17
+        ],
+        [
+          24,
+          13
+        ],
+        [
+          24,
+          8
+        ],
+        [
+          32,
+          3
+        ],
+        [
+          33,
+          14
+        ],
+        [
+          0,
+          5
+        ],
+        [
+          32,
+          11
+        ],
+        [
+          29,
+          25
+        ],
+        [
+          33,
+          12
+        ],
+        [
+          29,
+          24
+        ],
+        [
+          18,
+          23
+        ],
+        [
+          0,
+          8
+        ],
+        [
+          32,
+          5
+        ],
+        [
+          34,
+          2
+        ],
+        [
+          32,
+          8
+        ],
+        [
+          34,
+          1
+        ],
+        [
+          33,
+          23
+        ],
+        [
+          19,
+          27
+        ],
+        [
+          27,
+          18
+        ],
+        [
+          33,
+          17
+        ],
+        [
+          33,
+          15
+        ],
+        [
+          30,
+          9
+        ],
+        [
+          24,
+          19
+        ],
+        [
+          33,
+          13
+        ],
+        [
+          30,
+          8
+        ],
+        [
+          33,
+          19
+        ],
+        [
+          16,
+          14
+        ],
+        [
+          0,
+          29
+        ],
+        [
+          25,
+          9
+        ],
+        [
+          24,
+          5
+        ],
+        [
+          34,
+          3
+        ],
+        [
+          31,
+          4
+        ],
+        [
+          31,
+          20
+        ],
+        [
+          33,
+          18
+        ],
+        [
+          31,
+          6
+        ],
+        [
+          32,
+          7
+        ],
+        [
+          34,
+          7
+        ],
+        [
+          31,
+          13
+        ],
+        [
+          2,
+          1
+        ],
+        [
+          28,
+          2
+        ]
+      ],
+      "vlmbias": {
+        "n": 400,
+        "accuracy": 0.0775,
+        "error_rate": 0.9225,
+        "bias_aligned_error_rate": 0.13008130081300814,
+        "bias_aligned_fraction": 0.12,
+        "by_topic": {
+          "Animals": {
+            "n": 58,
+            "accuracy": 0.0,
+            "bias_aligned_error_rate": 0.0
+          },
+          "Chess Pieces": {
+            "n": 57,
+            "accuracy": 0.0,
+            "bias_aligned_error_rate": 0.0
+          },
+          "Flags": {
+            "n": 57,
+            "accuracy": 0.017543859649122806,
+            "bias_aligned_error_rate": 0.05357142857142857
+          },
+          "Game Boards": {
+            "n": 57,
+            "accuracy": 0.21052631578947367,
+            "bias_aligned_error_rate": 0.4444444444444444
+          },
+          "Logos": {
+            "n": 57,
+            "accuracy": 0.0,
+            "bias_aligned_error_rate": 0.0
+          },
+          "Optical Illusion": {
+            "n": 57,
+            "accuracy": 0.3157894736842105,
+            "bias_aligned_error_rate": 0.6410256410256411
+          },
+          "Patterned Grid": {
+            "n": 57,
+            "accuracy": 0.0,
+            "bias_aligned_error_rate": 0.0
+          }
+        },
+        "n_unique": 400,
+        "duplicate_count": 0,
+        "invalid_rate": 0.2425
+      },
+      "naturalbench": {
+        "n_groups": 100,
+        "n_model_calls": 400,
+        "Acc": 0.4375,
+        "Q_Acc": 0.135,
+        "I_Acc": 0.17,
+        "G_Acc": 0.02,
+        "by_question_type": {
+          "multiple_choice": {
+            "n_model_calls": 200,
+            "Acc": 0.305
+          },
+          "yes_no": {
+            "n_model_calls": 200,
+            "Acc": 0.57
+          }
+        },
+        "by_source": {
+          "DOCCI": {
+            "n_model_calls": 208,
+            "Acc": 0.4807692307692308
+          },
+          "Flickr": {
+            "n_model_calls": 192,
+            "Acc": 0.390625
+          }
+        },
+        "n_unique_calls": 400,
+        "duplicate_count": 0,
+        "invalid_rate": 0.1775
+      },
+      "telemetry": {
+        "vlmbias": {
+          "mean_image_attention_mass": 0.0864849356250809,
+          "mean_boosted_layer_image_attention_mass": 0.10291905037728281,
+          "mean_boosted_head_image_attention_mass": 0.2701689049800649,
+          "mean_preboost_head_image_attention_mass": null,
+          "mean_effective_alpha": null,
+          "mean_alpha_cap_fraction": null,
+          "confidence_gate_intervention_rate": null,
+          "mean_baseline_confidence": null
+        },
+        "naturalbench": {
+          "mean_image_attention_mass": 0.051584122127592474,
+          "mean_boosted_layer_image_attention_mass": 0.056984091993562844,
+          "mean_boosted_head_image_attention_mass": 0.19955783266146146,
+          "mean_preboost_head_image_attention_mass": null,
+          "mean_effective_alpha": null,
+          "mean_alpha_cap_fraction": null,
+          "confidence_gate_intervention_rate": null,
+          "mean_baseline_confidence": null
+        }
+      },
+      "artifacts": {
+        "config": "segments/gaze_heads_qwen3_8b/runs/attention_methods_v1/robustness/confirm_fixed_fixed_alpha0p5_global_top50_seed1/experiment_config.json",
+        "vlmbias": "segments/gaze_heads_qwen3_8b/runs/attention_methods_v1/robustness/confirm_fixed_fixed_alpha0p5_global_top50_seed1/vlmbias.jsonl",
+        "naturalbench": "segments/gaze_heads_qwen3_8b/runs/attention_methods_v1/robustness/confirm_fixed_fixed_alpha0p5_global_top50_seed1/naturalbench.jsonl"
+      },
+      "errors": []
+    },
+    {
+      "valid": true,
+      "stage": "robustness",
+      "condition": {
+        "name": "confirm_target_mass_target_mass0p5_global_top50_seed1",
+        "controller": "target_mass",
+        "alpha": 0.0,
+        "target_mass": 0.5,
+        "max_alpha": 5.0,
+        "confidence_threshold": null,
+        "head_selection": "gaze_global",
+        "head_count": 50,
+        "head_seed": 0,
+        "seed": 1,
+        "do_sample": true,
+        "temperature": 0.7,
+        "split": "all",
+        "vlmbias_dataset": "segments/gaze_heads_qwen3_8b/experiments/attention_methods_v1/all_vlmbias.jsonl",
+        "naturalbench_dataset": "segments/gaze_heads_qwen3_8b/experiments/attention_methods_v1/all_naturalbench.jsonl",
+        "source_controller": "target_mass0p5",
+        "source_head": "global_top50"
+      },
+      "provenance": {
+        "git_commit": "dc692233354a2e061aec0bd9bf6c91b4985e2d5f",
+        "job_id": "3567437",
+        "array_job_id": "3567006",
+        "array_task_id": "6",
+        "node": "neu307"
+      },
+      "selected_heads": [
+        [
+          24,
+          29
+        ],
+        [
+          26,
+          26
+        ],
+        [
+          25,
+          30
+        ],
+        [
+          26,
+          31
+        ],
+        [
+          24,
+          31
+        ],
+        [
+          25,
+          10
+        ],
+        [
+          0,
+          27
+        ],
+        [
+          7,
+          6
+        ],
+        [
+          32,
+          0
+        ],
+        [
+          34,
+          0
+        ],
+        [
+          2,
+          17
+        ],
+        [
+          24,
+          13
+        ],
+        [
+          24,
+          8
+        ],
+        [
+          32,
+          3
+        ],
+        [
+          33,
+          14
+        ],
+        [
+          0,
+          5
+        ],
+        [
+          32,
+          11
+        ],
+        [
+          29,
+          25
+        ],
+        [
+          33,
+          12
+        ],
+        [
+          29,
+          24
+        ],
+        [
+          18,
+          23
+        ],
+        [
+          0,
+          8
+        ],
+        [
+          32,
+          5
+        ],
+        [
+          34,
+          2
+        ],
+        [
+          32,
+          8
+        ],
+        [
+          34,
+          1
+        ],
+        [
+          33,
+          23
+        ],
+        [
+          19,
+          27
+        ],
+        [
+          27,
+          18
+        ],
+        [
+          33,
+          17
+        ],
+        [
+          33,
+          15
+        ],
+        [
+          30,
+          9
+        ],
+        [
+          24,
+          19
+        ],
+        [
+          33,
+          13
+        ],
+        [
+          30,
+          8
+        ],
+        [
+          33,
+          19
+        ],
+        [
+          16,
+          14
+        ],
+        [
+          0,
+          29
+        ],
+        [
+          25,
+          9
+        ],
+        [
+          24,
+          5
+        ],
+        [
+          34,
+          3
+        ],
+        [
+          31,
+          4
+        ],
+        [
+          31,
+          20
+        ],
+        [
+          33,
+          18
+        ],
+        [
+          31,
+          6
+        ],
+        [
+          32,
+          7
+        ],
+        [
+          34,
+          7
+        ],
+        [
+          31,
+          13
+        ],
+        [
+          2,
+          1
+        ],
+        [
+          28,
+          2
+        ]
+      ],
+      "vlmbias": {
+        "n": 400,
+        "accuracy": 0.0625,
+        "error_rate": 0.9375,
+        "bias_aligned_error_rate": 0.13333333333333333,
+        "bias_aligned_fraction": 0.125,
+        "by_topic": {
+          "Animals": {
+            "n": 58,
+            "accuracy": 0.0,
+            "bias_aligned_error_rate": 0.0
+          },
+          "Chess Pieces": {
+            "n": 57,
+            "accuracy": 0.0,
+            "bias_aligned_error_rate": 0.0
+          },
+          "Flags": {
+            "n": 57,
+            "accuracy": 0.03508771929824561,
+            "bias_aligned_error_rate": 0.05454545454545454
+          },
+          "Game Boards": {
+            "n": 57,
+            "accuracy": 0.15789473684210525,
+            "bias_aligned_error_rate": 0.4166666666666667
+          },
+          "Logos": {
+            "n": 57,
+            "accuracy": 0.0,
+            "bias_aligned_error_rate": 0.0
+          },
+          "Optical Illusion": {
+            "n": 57,
+            "accuracy": 0.24561403508771928,
+            "bias_aligned_error_rate": 0.627906976744186
+          },
+          "Patterned Grid": {
+            "n": 57,
+            "accuracy": 0.0,
+            "bias_aligned_error_rate": 0.0
+          }
+        },
+        "n_unique": 400,
+        "duplicate_count": 0,
+        "invalid_rate": 0.23
+      },
+      "naturalbench": {
+        "n_groups": 100,
+        "n_model_calls": 400,
+        "Acc": 0.45,
+        "Q_Acc": 0.155,
+        "I_Acc": 0.2,
+        "G_Acc": 0.04,
+        "by_question_type": {
+          "multiple_choice": {
+            "n_model_calls": 200,
+            "Acc": 0.325
+          },
+          "yes_no": {
+            "n_model_calls": 200,
+            "Acc": 0.575
+          }
+        },
+        "by_source": {
+          "DOCCI": {
+            "n_model_calls": 208,
+            "Acc": 0.5144230769230769
+          },
+          "Flickr": {
+            "n_model_calls": 192,
+            "Acc": 0.3802083333333333
+          }
+        },
+        "n_unique_calls": 400,
+        "duplicate_count": 0,
+        "invalid_rate": 0.1975
+      },
+      "telemetry": {
+        "vlmbias": {
+          "mean_image_attention_mass": 0.09733132903010659,
+          "mean_boosted_layer_image_attention_mass": 0.12773938923235703,
+          "mean_boosted_head_image_attention_mass": 0.5197205355293423,
+          "mean_preboost_head_image_attention_mass": 0.3554730485293544,
+          "mean_effective_alpha": 1.5255220035335988,
+          "mean_alpha_cap_fraction": 0.044833459109075095,
+          "confidence_gate_intervention_rate": null,
+          "mean_baseline_confidence": null
+        },
+        "naturalbench": {
+          "mean_image_attention_mass": 0.06528532029927764,
+          "mean_boosted_layer_image_attention_mass": 0.08648087244900857,
+          "mean_boosted_head_image_attention_mass": 0.5042928810647743,
+          "mean_preboost_head_image_attention_mass": 0.31459618848983906,
+          "mean_effective_alpha": 1.822920557419112,
+          "mean_alpha_cap_fraction": 0.06309582096473516,
+          "confidence_gate_intervention_rate": null,
+          "mean_baseline_confidence": null
+        }
+      },
+      "artifacts": {
+        "config": "segments/gaze_heads_qwen3_8b/runs/attention_methods_v1/robustness/confirm_target_mass_target_mass0p5_global_top50_seed1/experiment_config.json",
+        "vlmbias": "segments/gaze_heads_qwen3_8b/runs/attention_methods_v1/robustness/confirm_target_mass_target_mass0p5_global_top50_seed1/vlmbias.jsonl",
+        "naturalbench": "segments/gaze_heads_qwen3_8b/runs/attention_methods_v1/robustness/confirm_target_mass_target_mass0p5_global_top50_seed1/naturalbench.jsonl"
+      },
+      "errors": []
+    },
+    {
+      "valid": true,
+      "stage": "robustness",
+      "condition": {
+        "name": "confirm_confidence_gate_confidence_gate0p3_global_top50_seed1",
+        "controller": "confidence_gate",
+        "alpha": 2.0,
+        "target_mass": 0.0,
+        "max_alpha": 5.0,
+        "confidence_threshold": 0.3,
+        "head_selection": "gaze_global",
+        "head_count": 50,
+        "head_seed": 0,
+        "seed": 1,
+        "do_sample": true,
+        "temperature": 0.7,
+        "split": "all",
+        "vlmbias_dataset": "segments/gaze_heads_qwen3_8b/experiments/attention_methods_v1/all_vlmbias.jsonl",
+        "naturalbench_dataset": "segments/gaze_heads_qwen3_8b/experiments/attention_methods_v1/all_naturalbench.jsonl",
+        "source_controller": "confidence_gate0p3",
+        "source_head": "global_top50"
+      },
+      "provenance": {
+        "git_commit": "dc692233354a2e061aec0bd9bf6c91b4985e2d5f",
+        "job_id": "3567443",
+        "array_job_id": "3567006",
+        "array_task_id": "7",
+        "node": "neu305"
+      },
+      "selected_heads": [
+        [
+          24,
+          29
+        ],
+        [
+          26,
+          26
+        ],
+        [
+          25,
+          30
+        ],
+        [
+          26,
+          31
+        ],
+        [
+          24,
+          31
+        ],
+        [
+          25,
+          10
+        ],
+        [
+          0,
+          27
+        ],
+        [
+          7,
+          6
+        ],
+        [
+          32,
+          0
+        ],
+        [
+          34,
+          0
+        ],
+        [
+          2,
+          17
+        ],
+        [
+          24,
+          13
+        ],
+        [
+          24,
+          8
+        ],
+        [
+          32,
+          3
+        ],
+        [
+          33,
+          14
+        ],
+        [
+          0,
+          5
+        ],
+        [
+          32,
+          11
+        ],
+        [
+          29,
+          25
+        ],
+        [
+          33,
+          12
+        ],
+        [
+          29,
+          24
+        ],
+        [
+          18,
+          23
+        ],
+        [
+          0,
+          8
+        ],
+        [
+          32,
+          5
+        ],
+        [
+          34,
+          2
+        ],
+        [
+          32,
+          8
+        ],
+        [
+          34,
+          1
+        ],
+        [
+          33,
+          23
+        ],
+        [
+          19,
+          27
+        ],
+        [
+          27,
+          18
+        ],
+        [
+          33,
+          17
+        ],
+        [
+          33,
+          15
+        ],
+        [
+          30,
+          9
+        ],
+        [
+          24,
+          19
+        ],
+        [
+          33,
+          13
+        ],
+        [
+          30,
+          8
+        ],
+        [
+          33,
+          19
+        ],
+        [
+          16,
+          14
+        ],
+        [
+          0,
+          29
+        ],
+        [
+          25,
+          9
+        ],
+        [
+          24,
+          5
+        ],
+        [
+          34,
+          3
+        ],
+        [
+          31,
+          4
+        ],
+        [
+          31,
+          20
+        ],
+        [
+          33,
+          18
+        ],
+        [
+          31,
+          6
+        ],
+        [
+          32,
+          7
+        ],
+        [
+          34,
+          7
+        ],
+        [
+          31,
+          13
+        ],
+        [
+          2,
+          1
+        ],
+        [
+          28,
+          2
+        ]
+      ],
+      "vlmbias": {
+        "n": 400,
+        "accuracy": 0.075,
+        "error_rate": 0.925,
+        "bias_aligned_error_rate": 0.12162162162162163,
+        "bias_aligned_fraction": 0.1125,
+        "by_topic": {
+          "Animals": {
+            "n": 58,
+            "accuracy": 0.0,
+            "bias_aligned_error_rate": 0.0
+          },
+          "Chess Pieces": {
+            "n": 57,
+            "accuracy": 0.0,
+            "bias_aligned_error_rate": 0.0
+          },
+          "Flags": {
+            "n": 57,
+            "accuracy": 0.03508771929824561,
+            "bias_aligned_error_rate": 0.05454545454545454
+          },
+          "Game Boards": {
+            "n": 57,
+            "accuracy": 0.17543859649122806,
+            "bias_aligned_error_rate": 0.425531914893617
+          },
+          "Logos": {
+            "n": 57,
+            "accuracy": 0.0,
+            "bias_aligned_error_rate": 0.0
+          },
+          "Optical Illusion": {
+            "n": 57,
+            "accuracy": 0.3157894736842105,
+            "bias_aligned_error_rate": 0.5641025641025641
+          },
+          "Patterned Grid": {
+            "n": 57,
+            "accuracy": 0.0,
+            "bias_aligned_error_rate": 0.0
+          }
+        },
+        "n_unique": 400,
+        "duplicate_count": 0,
+        "invalid_rate": 0.24
+      },
+      "naturalbench": {
+        "n_groups": 100,
+        "n_model_calls": 400,
+        "Acc": 0.445,
+        "Q_Acc": 0.14,
+        "I_Acc": 0.16,
+        "G_Acc": 0.01,
+        "by_question_type": {
+          "multiple_choice": {
+            "n_model_calls": 200,
+            "Acc": 0.32
+          },
+          "yes_no": {
+            "n_model_calls": 200,
+            "Acc": 0.57
+          }
+        },
+        "by_source": {
+          "DOCCI": {
+            "n_model_calls": 208,
+            "Acc": 0.5
+          },
+          "Flickr": {
+            "n_model_calls": 192,
+            "Acc": 0.3854166666666667
+          }
+        },
+        "n_unique_calls": 400,
+        "duplicate_count": 0,
+        "invalid_rate": 0.165
+      },
+      "telemetry": {
+        "vlmbias": {
+          "mean_image_attention_mass": 0.08410952535217324,
+          "mean_boosted_layer_image_attention_mass": 0.0973848510346417,
+          "mean_boosted_head_image_attention_mass": 0.21703011233950045,
+          "mean_preboost_head_image_attention_mass": null,
+          "mean_effective_alpha": null,
+          "mean_alpha_cap_fraction": null,
+          "confidence_gate_intervention_rate": 0.0375,
+          "mean_baseline_confidence": 0.8133712299094459
+        },
+        "naturalbench": {
+          "mean_image_attention_mass": 0.05007362039132945,
+          "mean_boosted_layer_image_attention_mass": 0.05334437648508944,
+          "mean_boosted_head_image_attention_mass": 0.1538039057145515,
+          "mean_preboost_head_image_attention_mass": null,
+          "mean_effective_alpha": null,
+          "mean_alpha_cap_fraction": null,
+          "confidence_gate_intervention_rate": 0.0175,
+          "mean_baseline_confidence": 0.8395097049076053
+        }
+      },
+      "artifacts": {
+        "config": "segments/gaze_heads_qwen3_8b/runs/attention_methods_v1/robustness/confirm_confidence_gate_confidence_gate0p3_global_top50_seed1/experiment_config.json",
+        "vlmbias": "segments/gaze_heads_qwen3_8b/runs/attention_methods_v1/robustness/confirm_confidence_gate_confidence_gate0p3_global_top50_seed1/vlmbias.jsonl",
+        "naturalbench": "segments/gaze_heads_qwen3_8b/runs/attention_methods_v1/robustness/confirm_confidence_gate_confidence_gate0p3_global_top50_seed1/naturalbench.jsonl"
+      },
+      "errors": []
+    },
+    {
+      "valid": true,
+      "stage": "robustness",
+      "condition": {
+        "name": "baseline_seed2",
+        "controller": "fixed",
+        "alpha": 0.0,
+        "target_mass": 0.0,
+        "max_alpha": 5.0,
+        "confidence_threshold": null,
+        "head_selection": "gaze_global",
+        "head_count": 0,
+        "head_seed": 0,
+        "seed": 2,
+        "do_sample": true,
+        "temperature": 0.7,
+        "split": "all",
+        "vlmbias_dataset": "segments/gaze_heads_qwen3_8b/experiments/attention_methods_v1/all_vlmbias.jsonl",
+        "naturalbench_dataset": "segments/gaze_heads_qwen3_8b/experiments/attention_methods_v1/all_naturalbench.jsonl"
+      },
+      "provenance": {
+        "git_commit": "dc692233354a2e061aec0bd9bf6c91b4985e2d5f",
+        "job_id": "3567466",
+        "array_job_id": "3567006",
+        "array_task_id": "8",
+        "node": "neu307"
+      },
+      "selected_heads": [],
+      "vlmbias": {
+        "n": 400,
+        "accuracy": 0.0825,
+        "error_rate": 0.9175,
+        "bias_aligned_error_rate": 0.10626702997275204,
+        "bias_aligned_fraction": 0.0975,
+        "by_topic": {
+          "Animals": {
+            "n": 58,
+            "accuracy": 0.0,
+            "bias_aligned_error_rate": 0.0
+          },
+          "Chess Pieces": {
+            "n": 57,
+            "accuracy": 0.0,
+            "bias_aligned_error_rate": 0.0
+          },
+          "Flags": {
+            "n": 57,
+            "accuracy": 0.05263157894736842,
+            "bias_aligned_error_rate": 0.05555555555555555
+          },
+          "Game Boards": {
+            "n": 57,
+            "accuracy": 0.17543859649122806,
+            "bias_aligned_error_rate": 0.44680851063829785
+          },
+          "Logos": {
+            "n": 57,
+            "accuracy": 0.0,
+            "bias_aligned_error_rate": 0.0
+          },
+          "Optical Illusion": {
+            "n": 57,
+            "accuracy": 0.3508771929824561,
+            "bias_aligned_error_rate": 0.40540540540540543
+          },
+          "Patterned Grid": {
+            "n": 57,
+            "accuracy": 0.0,
+            "bias_aligned_error_rate": 0.0
+          }
+        },
+        "n_unique": 400,
+        "duplicate_count": 0,
+        "invalid_rate": 0.26
+      },
+      "naturalbench": {
+        "n_groups": 100,
+        "n_model_calls": 400,
+        "Acc": 0.46,
+        "Q_Acc": 0.145,
+        "I_Acc": 0.16,
+        "G_Acc": 0.01,
+        "by_question_type": {
+          "multiple_choice": {
+            "n_model_calls": 200,
+            "Acc": 0.38
+          },
+          "yes_no": {
+            "n_model_calls": 200,
+            "Acc": 0.54
+          }
+        },
+        "by_source": {
+          "DOCCI": {
+            "n_model_calls": 208,
+            "Acc": 0.5288461538461539
+          },
+          "Flickr": {
+            "n_model_calls": 192,
+            "Acc": 0.3854166666666667
+          }
+        },
+        "n_unique_calls": 400,
+        "duplicate_count": 0,
+        "invalid_rate": 0.19
+      },
+      "telemetry": {
+        "vlmbias": {
+          "mean_image_attention_mass": 0.0840263854556725,
+          "mean_boosted_layer_image_attention_mass": null,
+          "mean_boosted_head_image_attention_mass": null,
+          "mean_preboost_head_image_attention_mass": null,
+          "mean_effective_alpha": null,
+          "mean_alpha_cap_fraction": null,
+          "confidence_gate_intervention_rate": null,
+          "mean_baseline_confidence": null
+        },
+        "naturalbench": {
+          "mean_image_attention_mass": 0.049891605928041156,
+          "mean_boosted_layer_image_attention_mass": null,
+          "mean_boosted_head_image_attention_mass": null,
+          "mean_preboost_head_image_attention_mass": null,
+          "mean_effective_alpha": null,
+          "mean_alpha_cap_fraction": null,
+          "confidence_gate_intervention_rate": null,
+          "mean_baseline_confidence": null
+        }
+      },
+      "artifacts": {
+        "config": "segments/gaze_heads_qwen3_8b/runs/attention_methods_v1/robustness/baseline_seed2/experiment_config.json",
+        "vlmbias": "segments/gaze_heads_qwen3_8b/runs/attention_methods_v1/robustness/baseline_seed2/vlmbias.jsonl",
+        "naturalbench": "segments/gaze_heads_qwen3_8b/runs/attention_methods_v1/robustness/baseline_seed2/naturalbench.jsonl"
+      },
+      "errors": []
+    },
+    {
+      "valid": true,
+      "stage": "robustness",
+      "condition": {
+        "name": "confirm_fixed_fixed_alpha0p5_global_top50_seed2",
+        "controller": "fixed",
+        "alpha": 0.5,
+        "target_mass": 0.0,
+        "max_alpha": 5.0,
+        "confidence_threshold": null,
+        "head_selection": "gaze_global",
+        "head_count": 50,
+        "head_seed": 0,
+        "seed": 2,
+        "do_sample": true,
+        "temperature": 0.7,
+        "split": "all",
+        "vlmbias_dataset": "segments/gaze_heads_qwen3_8b/experiments/attention_methods_v1/all_vlmbias.jsonl",
+        "naturalbench_dataset": "segments/gaze_heads_qwen3_8b/experiments/attention_methods_v1/all_naturalbench.jsonl",
+        "source_controller": "fixed_alpha0p5",
+        "source_head": "global_top50"
+      },
+      "provenance": {
+        "git_commit": "dc692233354a2e061aec0bd9bf6c91b4985e2d5f",
+        "job_id": "3567467",
+        "array_job_id": "3567006",
+        "array_task_id": "9",
+        "node": "neu305"
+      },
+      "selected_heads": [
+        [
+          24,
+          29
+        ],
+        [
+          26,
+          26
+        ],
+        [
+          25,
+          30
+        ],
+        [
+          26,
+          31
+        ],
+        [
+          24,
+          31
+        ],
+        [
+          25,
+          10
+        ],
+        [
+          0,
+          27
+        ],
+        [
+          7,
+          6
+        ],
+        [
+          32,
+          0
+        ],
+        [
+          34,
+          0
+        ],
+        [
+          2,
+          17
+        ],
+        [
+          24,
+          13
+        ],
+        [
+          24,
+          8
+        ],
+        [
+          32,
+          3
+        ],
+        [
+          33,
+          14
+        ],
+        [
+          0,
+          5
+        ],
+        [
+          32,
+          11
+        ],
+        [
+          29,
+          25
+        ],
+        [
+          33,
+          12
+        ],
+        [
+          29,
+          24
+        ],
+        [
+          18,
+          23
+        ],
+        [
+          0,
+          8
+        ],
+        [
+          32,
+          5
+        ],
+        [
+          34,
+          2
+        ],
+        [
+          32,
+          8
+        ],
+        [
+          34,
+          1
+        ],
+        [
+          33,
+          23
+        ],
+        [
+          19,
+          27
+        ],
+        [
+          27,
+          18
+        ],
+        [
+          33,
+          17
+        ],
+        [
+          33,
+          15
+        ],
+        [
+          30,
+          9
+        ],
+        [
+          24,
+          19
+        ],
+        [
+          33,
+          13
+        ],
+        [
+          30,
+          8
+        ],
+        [
+          33,
+          19
+        ],
+        [
+          16,
+          14
+        ],
+        [
+          0,
+          29
+        ],
+        [
+          25,
+          9
+        ],
+        [
+          24,
+          5
+        ],
+        [
+          34,
+          3
+        ],
+        [
+          31,
+          4
+        ],
+        [
+          31,
+          20
+        ],
+        [
+          33,
+          18
+        ],
+        [
+          31,
+          6
+        ],
+        [
+          32,
+          7
+        ],
+        [
+          34,
+          7
+        ],
+        [
+          31,
+          13
+        ],
+        [
+          2,
+          1
+        ],
+        [
+          28,
+          2
+        ]
+      ],
+      "vlmbias": {
+        "n": 400,
+        "accuracy": 0.095,
+        "error_rate": 0.905,
+        "bias_aligned_error_rate": 0.10773480662983426,
+        "bias_aligned_fraction": 0.0975,
+        "by_topic": {
+          "Animals": {
+            "n": 58,
+            "accuracy": 0.0,
+            "bias_aligned_error_rate": 0.0
+          },
+          "Chess Pieces": {
+            "n": 57,
+            "accuracy": 0.0,
+            "bias_aligned_error_rate": 0.0
+          },
+          "Flags": {
+            "n": 57,
+            "accuracy": 0.05263157894736842,
+            "bias_aligned_error_rate": 0.05555555555555555
+          },
+          "Game Boards": {
+            "n": 57,
+            "accuracy": 0.19298245614035087,
+            "bias_aligned_error_rate": 0.45652173913043476
+          },
+          "Logos": {
+            "n": 57,
+            "accuracy": 0.0,
+            "bias_aligned_error_rate": 0.0
+          },
+          "Optical Illusion": {
+            "n": 57,
+            "accuracy": 0.42105263157894735,
+            "bias_aligned_error_rate": 0.45454545454545453
+          },
+          "Patterned Grid": {
+            "n": 57,
+            "accuracy": 0.0,
+            "bias_aligned_error_rate": 0.0
+          }
+        },
+        "n_unique": 400,
+        "duplicate_count": 0,
+        "invalid_rate": 0.25
+      },
+      "naturalbench": {
+        "n_groups": 100,
+        "n_model_calls": 400,
+        "Acc": 0.46,
+        "Q_Acc": 0.155,
+        "I_Acc": 0.155,
+        "G_Acc": 0.01,
+        "by_question_type": {
+          "multiple_choice": {
+            "n_model_calls": 200,
+            "Acc": 0.38
+          },
+          "yes_no": {
+            "n_model_calls": 200,
+            "Acc": 0.54
+          }
+        },
+        "by_source": {
+          "DOCCI": {
+            "n_model_calls": 208,
+            "Acc": 0.5192307692307693
+          },
+          "Flickr": {
+            "n_model_calls": 192,
+            "Acc": 0.3958333333333333
+          }
+        },
+        "n_unique_calls": 400,
+        "duplicate_count": 0,
+        "invalid_rate": 0.1825
+      },
+      "telemetry": {
+        "vlmbias": {
+          "mean_image_attention_mass": 0.08646882329041104,
+          "mean_boosted_layer_image_attention_mass": 0.10301746517275448,
+          "mean_boosted_head_image_attention_mass": 0.27025831848850806,
+          "mean_preboost_head_image_attention_mass": null,
+          "mean_effective_alpha": null,
+          "mean_alpha_cap_fraction": null,
+          "confidence_gate_intervention_rate": null,
+          "mean_baseline_confidence": null
+        },
+        "naturalbench": {
+          "mean_image_attention_mass": 0.051584239720304376,
+          "mean_boosted_layer_image_attention_mass": 0.056995188993488564,
+          "mean_boosted_head_image_attention_mass": 0.19979372127674402,
+          "mean_preboost_head_image_attention_mass": null,
+          "mean_effective_alpha": null,
+          "mean_alpha_cap_fraction": null,
+          "confidence_gate_intervention_rate": null,
+          "mean_baseline_confidence": null
+        }
+      },
+      "artifacts": {
+        "config": "segments/gaze_heads_qwen3_8b/runs/attention_methods_v1/robustness/confirm_fixed_fixed_alpha0p5_global_top50_seed2/experiment_config.json",
+        "vlmbias": "segments/gaze_heads_qwen3_8b/runs/attention_methods_v1/robustness/confirm_fixed_fixed_alpha0p5_global_top50_seed2/vlmbias.jsonl",
+        "naturalbench": "segments/gaze_heads_qwen3_8b/runs/attention_methods_v1/robustness/confirm_fixed_fixed_alpha0p5_global_top50_seed2/naturalbench.jsonl"
+      },
+      "errors": []
+    },
+    {
+      "valid": true,
+      "stage": "robustness",
+      "condition": {
+        "name": "confirm_target_mass_target_mass0p5_global_top50_seed2",
+        "controller": "target_mass",
+        "alpha": 0.0,
+        "target_mass": 0.5,
+        "max_alpha": 5.0,
+        "confidence_threshold": null,
+        "head_selection": "gaze_global",
+        "head_count": 50,
+        "head_seed": 0,
+        "seed": 2,
+        "do_sample": true,
+        "temperature": 0.7,
+        "split": "all",
+        "vlmbias_dataset": "segments/gaze_heads_qwen3_8b/experiments/attention_methods_v1/all_vlmbias.jsonl",
+        "naturalbench_dataset": "segments/gaze_heads_qwen3_8b/experiments/attention_methods_v1/all_naturalbench.jsonl",
+        "source_controller": "target_mass0p5",
+        "source_head": "global_top50"
+      },
+      "provenance": {
+        "git_commit": "dc692233354a2e061aec0bd9bf6c91b4985e2d5f",
+        "job_id": "3567481",
+        "array_job_id": "3567006",
+        "array_task_id": "10",
+        "node": "neu307"
+      },
+      "selected_heads": [
+        [
+          24,
+          29
+        ],
+        [
+          26,
+          26
+        ],
+        [
+          25,
+          30
+        ],
+        [
+          26,
+          31
+        ],
+        [
+          24,
+          31
+        ],
+        [
+          25,
+          10
+        ],
+        [
+          0,
+          27
+        ],
+        [
+          7,
+          6
+        ],
+        [
+          32,
+          0
+        ],
+        [
+          34,
+          0
+        ],
+        [
+          2,
+          17
+        ],
+        [
+          24,
+          13
+        ],
+        [
+          24,
+          8
+        ],
+        [
+          32,
+          3
+        ],
+        [
+          33,
+          14
+        ],
+        [
+          0,
+          5
+        ],
+        [
+          32,
+          11
+        ],
+        [
+          29,
+          25
+        ],
+        [
+          33,
+          12
+        ],
+        [
+          29,
+          24
+        ],
+        [
+          18,
+          23
+        ],
+        [
+          0,
+          8
+        ],
+        [
+          32,
+          5
+        ],
+        [
+          34,
+          2
+        ],
+        [
+          32,
+          8
+        ],
+        [
+          34,
+          1
+        ],
+        [
+          33,
+          23
+        ],
+        [
+          19,
+          27
+        ],
+        [
+          27,
+          18
+        ],
+        [
+          33,
+          17
+        ],
+        [
+          33,
+          15
+        ],
+        [
+          30,
+          9
+        ],
+        [
+          24,
+          19
+        ],
+        [
+          33,
+          13
+        ],
+        [
+          30,
+          8
+        ],
+        [
+          33,
+          19
+        ],
+        [
+          16,
+          14
+        ],
+        [
+          0,
+          29
+        ],
+        [
+          25,
+          9
+        ],
+        [
+          24,
+          5
+        ],
+        [
+          34,
+          3
+        ],
+        [
+          31,
+          4
+        ],
+        [
+          31,
+          20
+        ],
+        [
+          33,
+          18
+        ],
+        [
+          31,
+          6
+        ],
+        [
+          32,
+          7
+        ],
+        [
+          34,
+          7
+        ],
+        [
+          31,
+          13
+        ],
+        [
+          2,
+          1
+        ],
+        [
+          28,
+          2
+        ]
+      ],
+      "vlmbias": {
+        "n": 400,
+        "accuracy": 0.08,
+        "error_rate": 0.92,
+        "bias_aligned_error_rate": 0.11684782608695653,
+        "bias_aligned_fraction": 0.1075,
+        "by_topic": {
+          "Animals": {
+            "n": 58,
+            "accuracy": 0.0,
+            "bias_aligned_error_rate": 0.0
+          },
+          "Chess Pieces": {
+            "n": 57,
+            "accuracy": 0.0,
+            "bias_aligned_error_rate": 0.0
+          },
+          "Flags": {
+            "n": 57,
+            "accuracy": 0.05263157894736842,
+            "bias_aligned_error_rate": 0.05555555555555555
+          },
+          "Game Boards": {
+            "n": 57,
+            "accuracy": 0.15789473684210525,
+            "bias_aligned_error_rate": 0.4375
+          },
+          "Logos": {
+            "n": 57,
+            "accuracy": 0.0,
+            "bias_aligned_error_rate": 0.0
+          },
+          "Optical Illusion": {
+            "n": 57,
+            "accuracy": 0.3508771929824561,
+            "bias_aligned_error_rate": 0.5135135135135135
+          },
+          "Patterned Grid": {
+            "n": 57,
+            "accuracy": 0.0,
+            "bias_aligned_error_rate": 0.0
+          }
+        },
+        "n_unique": 400,
+        "duplicate_count": 0,
+        "invalid_rate": 0.2325
+      },
+      "naturalbench": {
+        "n_groups": 100,
+        "n_model_calls": 400,
+        "Acc": 0.4625,
+        "Q_Acc": 0.165,
+        "I_Acc": 0.175,
+        "G_Acc": 0.04,
+        "by_question_type": {
+          "multiple_choice": {
+            "n_model_calls": 200,
+            "Acc": 0.36
+          },
+          "yes_no": {
+            "n_model_calls": 200,
+            "Acc": 0.565
+          }
+        },
+        "by_source": {
+          "DOCCI": {
+            "n_model_calls": 208,
+            "Acc": 0.5144230769230769
+          },
+          "Flickr": {
+            "n_model_calls": 192,
+            "Acc": 0.40625
+          }
+        },
+        "n_unique_calls": 400,
+        "duplicate_count": 0,
+        "invalid_rate": 0.195
+      },
+      "telemetry": {
+        "vlmbias": {
+          "mean_image_attention_mass": 0.09712702475840237,
+          "mean_boosted_layer_image_attention_mass": 0.12757354442481328,
+          "mean_boosted_head_image_attention_mass": 0.5196715870812874,
+          "mean_preboost_head_image_attention_mass": 0.3553023352311161,
+          "mean_effective_alpha": 1.5271234593037477,
+          "mean_alpha_cap_fraction": 0.04549160587731638,
+          "confidence_gate_intervention_rate": null,
+          "mean_baseline_confidence": null
+        },
+        "naturalbench": {
+          "mean_image_attention_mass": 0.06522766032582795,
+          "mean_boosted_layer_image_attention_mass": 0.0864148804180178,
+          "mean_boosted_head_image_attention_mass": 0.5042728154580383,
+          "mean_preboost_head_image_attention_mass": 0.31415435797458413,
+          "mean_effective_alpha": 1.8226916939036135,
+          "mean_alpha_cap_fraction": 0.062363312984810314,
+          "confidence_gate_intervention_rate": null,
+          "mean_baseline_confidence": null
+        }
+      },
+      "artifacts": {
+        "config": "segments/gaze_heads_qwen3_8b/runs/attention_methods_v1/robustness/confirm_target_mass_target_mass0p5_global_top50_seed2/experiment_config.json",
+        "vlmbias": "segments/gaze_heads_qwen3_8b/runs/attention_methods_v1/robustness/confirm_target_mass_target_mass0p5_global_top50_seed2/vlmbias.jsonl",
+        "naturalbench": "segments/gaze_heads_qwen3_8b/runs/attention_methods_v1/robustness/confirm_target_mass_target_mass0p5_global_top50_seed2/naturalbench.jsonl"
+      },
+      "errors": []
+    },
+    {
+      "valid": true,
+      "stage": "robustness",
+      "condition": {
+        "name": "confirm_confidence_gate_confidence_gate0p3_global_top50_seed2",
+        "controller": "confidence_gate",
+        "alpha": 2.0,
+        "target_mass": 0.0,
+        "max_alpha": 5.0,
+        "confidence_threshold": 0.3,
+        "head_selection": "gaze_global",
+        "head_count": 50,
+        "head_seed": 0,
+        "seed": 2,
+        "do_sample": true,
+        "temperature": 0.7,
+        "split": "all",
+        "vlmbias_dataset": "segments/gaze_heads_qwen3_8b/experiments/attention_methods_v1/all_vlmbias.jsonl",
+        "naturalbench_dataset": "segments/gaze_heads_qwen3_8b/experiments/attention_methods_v1/all_naturalbench.jsonl",
+        "source_controller": "confidence_gate0p3",
+        "source_head": "global_top50"
+      },
+      "provenance": {
+        "git_commit": "dc692233354a2e061aec0bd9bf6c91b4985e2d5f",
+        "job_id": "3567006",
+        "array_job_id": "3567006",
+        "array_task_id": "11",
+        "node": "neu305"
+      },
+      "selected_heads": [
+        [
+          24,
+          29
+        ],
+        [
+          26,
+          26
+        ],
+        [
+          25,
+          30
+        ],
+        [
+          26,
+          31
+        ],
+        [
+          24,
+          31
+        ],
+        [
+          25,
+          10
+        ],
+        [
+          0,
+          27
+        ],
+        [
+          7,
+          6
+        ],
+        [
+          32,
+          0
+        ],
+        [
+          34,
+          0
+        ],
+        [
+          2,
+          17
+        ],
+        [
+          24,
+          13
+        ],
+        [
+          24,
+          8
+        ],
+        [
+          32,
+          3
+        ],
+        [
+          33,
+          14
+        ],
+        [
+          0,
+          5
+        ],
+        [
+          32,
+          11
+        ],
+        [
+          29,
+          25
+        ],
+        [
+          33,
+          12
+        ],
+        [
+          29,
+          24
+        ],
+        [
+          18,
+          23
+        ],
+        [
+          0,
+          8
+        ],
+        [
+          32,
+          5
+        ],
+        [
+          34,
+          2
+        ],
+        [
+          32,
+          8
+        ],
+        [
+          34,
+          1
+        ],
+        [
+          33,
+          23
+        ],
+        [
+          19,
+          27
+        ],
+        [
+          27,
+          18
+        ],
+        [
+          33,
+          17
+        ],
+        [
+          33,
+          15
+        ],
+        [
+          30,
+          9
+        ],
+        [
+          24,
+          19
+        ],
+        [
+          33,
+          13
+        ],
+        [
+          30,
+          8
+        ],
+        [
+          33,
+          19
+        ],
+        [
+          16,
+          14
+        ],
+        [
+          0,
+          29
+        ],
+        [
+          25,
+          9
+        ],
+        [
+          24,
+          5
+        ],
+        [
+          34,
+          3
+        ],
+        [
+          31,
+          4
+        ],
+        [
+          31,
+          20
+        ],
+        [
+          33,
+          18
+        ],
+        [
+          31,
+          6
+        ],
+        [
+          32,
+          7
+        ],
+        [
+          34,
+          7
+        ],
+        [
+          31,
+          13
+        ],
+        [
+          2,
+          1
+        ],
+        [
+          28,
+          2
+        ]
+      ],
+      "vlmbias": {
+        "n": 400,
+        "accuracy": 0.085,
+        "error_rate": 0.915,
+        "bias_aligned_error_rate": 0.1092896174863388,
+        "bias_aligned_fraction": 0.1,
+        "by_topic": {
+          "Animals": {
+            "n": 58,
+            "accuracy": 0.0,
+            "bias_aligned_error_rate": 0.0
+          },
+          "Chess Pieces": {
+            "n": 57,
+            "accuracy": 0.0,
+            "bias_aligned_error_rate": 0.0
+          },
+          "Flags": {
+            "n": 57,
+            "accuracy": 0.05263157894736842,
+            "bias_aligned_error_rate": 0.05555555555555555
+          },
+          "Game Boards": {
+            "n": 57,
+            "accuracy": 0.17543859649122806,
+            "bias_aligned_error_rate": 0.44680851063829785
+          },
+          "Logos": {
+            "n": 57,
+            "accuracy": 0.0,
+            "bias_aligned_error_rate": 0.0
+          },
+          "Optical Illusion": {
+            "n": 57,
+            "accuracy": 0.3684210526315789,
+            "bias_aligned_error_rate": 0.4444444444444444
+          },
+          "Patterned Grid": {
+            "n": 57,
+            "accuracy": 0.0,
+            "bias_aligned_error_rate": 0.0
+          }
+        },
+        "n_unique": 400,
+        "duplicate_count": 0,
+        "invalid_rate": 0.2375
+      },
+      "naturalbench": {
+        "n_groups": 100,
+        "n_model_calls": 400,
+        "Acc": 0.47,
+        "Q_Acc": 0.15,
+        "I_Acc": 0.165,
+        "G_Acc": 0.01,
+        "by_question_type": {
+          "multiple_choice": {
+            "n_model_calls": 200,
+            "Acc": 0.395
+          },
+          "yes_no": {
+            "n_model_calls": 200,
+            "Acc": 0.545
+          }
+        },
+        "by_source": {
+          "DOCCI": {
+            "n_model_calls": 208,
+            "Acc": 0.5384615384615384
+          },
+          "Flickr": {
+            "n_model_calls": 192,
+            "Acc": 0.3958333333333333
+          }
+        },
+        "n_unique_calls": 400,
+        "duplicate_count": 0,
+        "invalid_rate": 0.1775
+      },
+      "telemetry": {
+        "vlmbias": {
+          "mean_image_attention_mass": 0.08417446833642966,
+          "mean_boosted_layer_image_attention_mass": 0.09749809645669816,
+          "mean_boosted_head_image_attention_mass": 0.2162559981483002,
+          "mean_preboost_head_image_attention_mass": null,
+          "mean_effective_alpha": null,
+          "mean_alpha_cap_fraction": null,
+          "confidence_gate_intervention_rate": 0.0325,
+          "mean_baseline_confidence": 0.8272145701035847
+        },
+        "naturalbench": {
+          "mean_image_attention_mass": 0.050057324680712084,
+          "mean_boosted_layer_image_attention_mass": 0.053321899796137585,
+          "mean_boosted_head_image_attention_mass": 0.15413376000887594,
+          "mean_preboost_head_image_attention_mass": null,
+          "mean_effective_alpha": null,
+          "mean_alpha_cap_fraction": null,
+          "confidence_gate_intervention_rate": 0.0175,
+          "mean_baseline_confidence": 0.8368009869338402
+        }
+      },
+      "artifacts": {
+        "config": "segments/gaze_heads_qwen3_8b/runs/attention_methods_v1/robustness/confirm_confidence_gate_confidence_gate0p3_global_top50_seed2/experiment_config.json",
+        "vlmbias": "segments/gaze_heads_qwen3_8b/runs/attention_methods_v1/robustness/confirm_confidence_gate_confidence_gate0p3_global_top50_seed2/vlmbias.jsonl",
+        "naturalbench": "segments/gaze_heads_qwen3_8b/runs/attention_methods_v1/robustness/confirm_confidence_gate_confidence_gate0p3_global_top50_seed2/naturalbench.jsonl"
+      },
+      "errors": []
+    }
+  ],
+  "errors": [],
+  "warnings": [],
+  "robustness": {
+    "interpretation": "Multi-seed all-data robustness is secondary because it reuses the development data. Held-out deterministic confirmation remains primary.",
+    "groups": {
+      "baseline": {
+        "n_seeds": 3,
+        "seeds": [
+          0,
+          1,
+          2
+        ],
+        "vlmbias_accuracy": {
+          "mean": 0.07583333333333334,
+          "std": 0.005773502691896263,
+          "min": 0.0725,
+          "max": 0.0825,
+          "n": 3
+        },
+        "vlmbias_bias_aligned_fraction": {
+          "mean": 0.10250000000000001,
+          "std": 0.008660254037844387,
+          "min": 0.0975,
+          "max": 0.1125,
+          "n": 3
+        },
+        "naturalbench_Acc": {
+          "mean": 0.45333333333333337,
+          "std": 0.011547005383792526,
+          "min": 0.44,
+          "max": 0.46,
+          "n": 3
+        },
+        "naturalbench_G_Acc": {
+          "mean": 0.013333333333333334,
+          "std": 0.005773502691896258,
+          "min": 0.01,
+          "max": 0.02,
+          "n": 3
+        }
+      },
+      "confirm_confidence_gate_confidence_gate0p3_global_top50": {
+        "n_seeds": 3,
+        "seeds": [
+          0,
+          1,
+          2
+        ],
+        "vlmbias_accuracy": {
+          "mean": 0.0775,
+          "std": 0.006614378277661482,
+          "min": 0.0725,
+          "max": 0.085,
+          "n": 3
+        },
+        "vlmbias_bias_aligned_fraction": {
+          "mean": 0.105,
+          "std": 0.006614378277661477,
+          "min": 0.1,
+          "max": 0.1125,
+          "n": 3
+        },
+        "naturalbench_Acc": {
+          "mean": 0.45916666666666667,
+          "std": 0.012829003598617198,
+          "min": 0.445,
+          "max": 0.47,
+          "n": 3
+        },
+        "naturalbench_G_Acc": {
+          "mean": 0.013333333333333334,
+          "std": 0.005773502691896258,
+          "min": 0.01,
+          "max": 0.02,
+          "n": 3
+        }
+      },
+      "confirm_fixed_fixed_alpha0p5_global_top50": {
+        "n_seeds": 3,
+        "seeds": [
+          0,
+          1,
+          2
+        ],
+        "vlmbias_accuracy": {
+          "mean": 0.0825,
+          "std": 0.010897247358851685,
+          "min": 0.075,
+          "max": 0.095,
+          "n": 3
+        },
+        "vlmbias_bias_aligned_fraction": {
+          "mean": 0.1075,
+          "std": 0.011456439237389596,
+          "min": 0.0975,
+          "max": 0.12,
+          "n": 3
+        },
+        "naturalbench_Acc": {
+          "mean": 0.46,
+          "std": 0.022499999999999992,
+          "min": 0.4375,
+          "max": 0.4825,
+          "n": 3
+        },
+        "naturalbench_G_Acc": {
+          "mean": 0.016666666666666666,
+          "std": 0.005773502691896258,
+          "min": 0.01,
+          "max": 0.02,
+          "n": 3
+        }
+      },
+      "confirm_target_mass_target_mass0p5_global_top50": {
+        "n_seeds": 3,
+        "seeds": [
+          0,
+          1,
+          2
+        ],
+        "vlmbias_accuracy": {
+          "mean": 0.06916666666666667,
+          "std": 0.009464847243000457,
+          "min": 0.0625,
+          "max": 0.08,
+          "n": 3
+        },
+        "vlmbias_bias_aligned_fraction": {
+          "mean": 0.11333333333333333,
+          "std": 0.010103629710818452,
+          "min": 0.1075,
+          "max": 0.125,
+          "n": 3
+        },
+        "naturalbench_Acc": {
+          "mean": 0.45916666666666667,
+          "std": 0.008036375634160802,
+          "min": 0.45,
+          "max": 0.465,
+          "n": 3
+        },
+        "naturalbench_G_Acc": {
+          "mean": 0.03,
+          "std": 0.017320508075688773,
+          "min": 0.01,
+          "max": 0.04,
+          "n": 3
+        }
+      }
+    }
+  }
+}
