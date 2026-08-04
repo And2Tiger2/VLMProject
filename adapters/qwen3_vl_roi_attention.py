@@ -15,9 +15,23 @@ class Qwen3VLROIAttentionAdapter(Qwen3VLGazeAttentionAdapter):
     """Qwen3 gaze-head boosting restricted to a per-example spatial ROI."""
 
     roi_token_min_coverage: float = 0.05
+    roi_attention_bias: float | None = None
+    context_attention_bias: float = 0.0
     _pending_roi_mask: Image.Image | None = field(default=None, init=False)
     _attention_region: str = field(default="full_image", init=False)
     _roi_token_metadata: dict[str, Any] = field(default_factory=dict, init=False)
+
+    @property
+    def eval_config(self) -> dict[str, Any]:
+        config = super().eval_config
+        config.update(
+            {
+                "roi_token_min_coverage": self.roi_token_min_coverage,
+                "roi_attention_bias": self.roi_attention_bias,
+                "context_attention_bias": self.context_attention_bias,
+            }
+        )
+        return config
 
     def set_attention_region(
         self, mask: Image.Image | None, *, region: str = "roi"
@@ -72,9 +86,29 @@ class Qwen3VLROIAttentionAdapter(Qwen3VLGazeAttentionAdapter):
         target[all_image_mask] = self._torch.as_tensor(
             local_mask, dtype=self._torch.bool, device=target.device
         )
+        context = all_image_mask & ~target
+        token_bias = None
+        if self.roi_attention_bias is not None:
+            token_bias = self._torch.zeros_like(target, dtype=self._torch.float32)
+            token_bias[target] = float(self.roi_attention_bias)
+            token_bias[context] = float(self.context_attention_bias)
         for layer in _language_layers(self._model):
             layer.self_attn._vlm_gaze_image_token_mask = target
-        self._roi_token_metadata.update({"region": self._attention_region, **metadata})
+            if token_bias is not None:
+                layer.self_attn._vlm_gaze_image_context_token_mask = context
+                layer.self_attn._vlm_gaze_image_token_bias = token_bias
+        self._roi_token_metadata.update(
+            {
+                "region": self._attention_region,
+                "roi_attention_bias": self.roi_attention_bias,
+                "context_attention_bias": self.context_attention_bias,
+                "n_context_tokens": int(all_image_mask.sum().item())
+                - int(metadata["n_target_tokens"]),
+                "context_token_fraction": 1.0
+                - float(metadata["target_token_fraction"]),
+                **metadata,
+            }
+        )
 
     def _after_generate(self) -> None:
         super()._after_generate()

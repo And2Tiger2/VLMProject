@@ -35,6 +35,8 @@ ATTENTION_KEYS = (
     "mean_image_attention_mass",
     "mean_boosted_layer_image_attention_mass",
     "mean_boosted_head_image_attention_mass",
+    "mean_context_attention_mass",
+    "mean_boosted_head_context_attention_mass",
     "mean_preboost_head_image_attention_mass",
     "mean_effective_alpha",
     "mean_alpha_cap_fraction",
@@ -196,7 +198,9 @@ def _apply_condition(adapter: Any, condition: dict[str, Any]) -> None:
     adapter._configure_attention_modules()
 
 
-def _generate(adapter: Any, example: EvalExample, condition: dict[str, Any]) -> tuple[str, dict]:
+def _generate(
+    adapter: Any, example: EvalExample, condition: dict[str, Any]
+) -> tuple[str, dict]:
     if condition["controller"] != "confidence_gate":
         response = adapter.generate(example)
         return response, dict(adapter.last_generation_metadata or {})
@@ -206,10 +210,8 @@ def _generate(adapter: Any, example: EvalExample, condition: dict[str, Any]) -> 
     adapter._configure_attention_modules()
     baseline_response = adapter.generate(example)
     baseline_metadata = dict(adapter.last_generation_metadata or {})
-    confidence = (
-        (baseline_metadata.get("token_confidence") or {}).get(
-            "geometric_mean_probability"
-        )
+    confidence = (baseline_metadata.get("token_confidence") or {}).get(
+        "geometric_mean_probability"
     )
     threshold = float(condition["confidence_threshold"])
     intervene = confidence is None or float(confidence) < threshold
@@ -330,7 +332,9 @@ def _vlmbias_summary(rows: list[dict[str, Any]]) -> dict[str, Any]:
         not bool(str(row.get("parsed_answer", "")).strip()) for row in rows
     )
     for topic, metrics in result.get("by_topic", {}).items():
-        topic_rows = [row for row in rows if str(row.get("topic") or "unknown") == topic]
+        topic_rows = [
+            row for row in rows if str(row.get("topic") or "unknown") == topic
+        ]
         metrics["invalid_rate"] = mean(
             not bool(str(row.get("parsed_answer", "")).strip()) for row in topic_rows
         )
@@ -360,9 +364,7 @@ def _naturalbench_summary(rows: list[dict[str, Any]]) -> dict[str, Any]:
         for row in rows
     ]
     result = summarize_naturalbench(predictions)
-    unique = {
-        (str(row.get("group_id")), str(row.get("call_id"))) for row in rows
-    }
+    unique = {(str(row.get("group_id")), str(row.get("call_id"))) for row in rows}
     result["n_unique_calls"] = len(unique)
     result["duplicate_count"] = len(rows) - len(unique)
     result["invalid_rate"] = mean(
@@ -400,12 +402,19 @@ def _telemetry(rows: list[dict[str, Any]]) -> dict[str, Any]:
         for row in rows
     ]
     gates = [
-        (((row.get("metadata") or {}).get("generation") or {}).get("confidence_gate") or {})
+        (
+            ((row.get("metadata") or {}).get("generation") or {}).get("confidence_gate")
+            or {}
+        )
         for row in rows
     ]
     output = {
         key: _mean_clean(
-            [float(attention[key]) for attention in attentions if attention.get(key) is not None]
+            [
+                float(attention[key])
+                for attention in attentions
+                if attention.get(key) is not None
+            ]
         )
         for key in ATTENTION_KEYS
     }

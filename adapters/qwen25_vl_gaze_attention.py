@@ -6,7 +6,11 @@ import math
 from pathlib import Path
 from typing import Any
 
-from adapters.qwen25_vl import Qwen25VLAdapter, _resolve_device_map, _resolve_torch_dtype
+from adapters.qwen25_vl import (
+    Qwen25VLAdapter,
+    _resolve_device_map,
+    _resolve_torch_dtype,
+)
 
 
 ATTENTION_IMPL_NAME = "vlm_gaze_head_image_bias"
@@ -25,9 +29,13 @@ class Qwen25VLGazeAttentionAdapter(Qwen25VLAdapter):
     head_selection_seed: int = 0
     decode_only: bool = False
     last_generation_metadata: dict[str, Any] | None = None
-    _attention_records: list[dict[str, float | int]] = field(default_factory=list, init=False)
+    _attention_records: list[dict[str, float | int]] = field(
+        default_factory=list, init=False
+    )
     _boosted_heads: list[tuple[int, int]] = field(default_factory=list, init=False)
-    _boosted_heads_by_layer: dict[int, list[int]] = field(default_factory=dict, init=False)
+    _boosted_heads_by_layer: dict[int, list[int]] = field(
+        default_factory=dict, init=False
+    )
     _token_confidence_metadata: dict[str, float | int | None] = field(
         default_factory=dict, init=False
     )
@@ -38,7 +46,9 @@ class Qwen25VLGazeAttentionAdapter(Qwen25VLAdapter):
             from qwen_vl_utils import process_vision_info
             from transformers import AutoProcessor, Qwen2_5_VLForConditionalGeneration
         except ImportError as exc:
-            raise RuntimeError("Install optional Qwen dependencies with `uv sync --extra qwen`.") from exc
+            raise RuntimeError(
+                "Install optional Qwen dependencies with `uv sync --extra qwen`."
+            ) from exc
 
         _register_attention_impl()
         self._torch = torch
@@ -69,7 +79,10 @@ class Qwen25VLGazeAttentionAdapter(Qwen25VLAdapter):
                 "head_selection": self.head_selection,
                 "head_selection_seed": self.head_selection_seed,
                 "decode_only": self.decode_only,
-                "boosted_heads": [{"layer": layer, "head": head} for layer, head in self._boosted_heads],
+                "boosted_heads": [
+                    {"layer": layer, "head": head}
+                    for layer, head in self._boosted_heads
+                ],
                 "attention_impl": ATTENTION_IMPL_NAME,
             }
         )
@@ -106,11 +119,13 @@ class Qwen25VLGazeAttentionAdapter(Qwen25VLAdapter):
             attn._vlm_gaze_image_target_attention_mass = float(
                 self.target_attention_mass
             )
-            attn._vlm_gaze_image_max_attention_alpha = float(
-                self.max_attention_alpha
+            attn._vlm_gaze_image_max_attention_alpha = float(self.max_attention_alpha)
+            attn._vlm_gaze_image_head_indices = self._boosted_heads_by_layer.get(
+                layer_idx, []
             )
-            attn._vlm_gaze_image_head_indices = self._boosted_heads_by_layer.get(layer_idx, [])
             attn._vlm_gaze_image_token_mask = None
+            attn._vlm_gaze_image_context_token_mask = None
+            attn._vlm_gaze_image_token_bias = None
             attn._vlm_gaze_image_decode_only = bool(self.decode_only)
             attn._vlm_gaze_image_attention_records = self._attention_records
 
@@ -126,10 +141,14 @@ class Qwen25VLGazeAttentionAdapter(Qwen25VLAdapter):
 
         for layer in _language_layers(self._model):
             layer.self_attn._vlm_gaze_image_token_mask = image_mask
+            layer.self_attn._vlm_gaze_image_context_token_mask = None
+            layer.self_attn._vlm_gaze_image_token_bias = None
 
     def _after_generate(self) -> None:
         self.last_generation_metadata = {
-            "attention": _summarize_attention_records(self._attention_records, self._boosted_heads_by_layer),
+            "attention": _summarize_attention_records(
+                self._attention_records, self._boosted_heads_by_layer
+            ),
             "attention_alpha": self.attention_alpha,
             "attention_controller": self.attention_controller,
             "target_attention_mass": self.target_attention_mass,
@@ -170,9 +189,9 @@ class Qwen25VLGazeAttentionAdapter(Qwen25VLAdapter):
                 }
             )
             return
-        mean_log = sum(math.log(max(value, 1e-12)) for value in chosen_probabilities) / len(
-            chosen_probabilities
-        )
+        mean_log = sum(
+            math.log(max(value, 1e-12)) for value in chosen_probabilities
+        ) / len(chosen_probabilities)
         self._token_confidence_metadata.update(
             {
                 "n_tokens": len(chosen_probabilities),
@@ -235,7 +254,9 @@ def _register_attention_impl() -> None:
     from transformers.models.qwen2_5_vl import modeling_qwen2_5_vl as qwen_modeling
 
     if ATTENTION_IMPL_NAME not in qwen_modeling.ALL_ATTENTION_FUNCTIONS:
-        qwen_modeling.ALL_ATTENTION_FUNCTIONS.register(ATTENTION_IMPL_NAME, _gaze_image_bias_attention_forward)
+        qwen_modeling.ALL_ATTENTION_FUNCTIONS.register(
+            ATTENTION_IMPL_NAME, _gaze_image_bias_attention_forward
+        )
 
 
 def _gaze_image_bias_attention_forward(
@@ -262,23 +283,28 @@ def _gaze_image_bias_attention_forward(
         getattr(module, "_vlm_gaze_image_token_mask", None),
         key_states.shape[-2],
     )
+    context_mask = _token_mask_for_key_length(
+        getattr(module, "_vlm_gaze_image_context_token_mask", None),
+        key_states.shape[-2],
+    )
+    token_bias = _token_bias_for_key_length(
+        getattr(module, "_vlm_gaze_image_token_bias", None),
+        key_states.shape[-2],
+    )
     query_slice = slice(-1, None) if query.shape[-2] > 1 else slice(None)
     alpha = float(getattr(module, "_vlm_gaze_image_attention_alpha", 0.0))
-    controller = str(
-        getattr(module, "_vlm_gaze_image_attention_controller", "fixed")
-    )
-    head_indices = [int(head_idx) for head_idx in getattr(module, "_vlm_gaze_image_head_indices", [])]
+    controller = str(getattr(module, "_vlm_gaze_image_attention_controller", "fixed"))
+    head_indices = [
+        int(head_idx)
+        for head_idx in getattr(module, "_vlm_gaze_image_head_indices", [])
+    ]
     decode_only = bool(getattr(module, "_vlm_gaze_image_decode_only", False))
-    target_mass = float(
-        getattr(module, "_vlm_gaze_image_target_attention_mass", 0.0)
-    )
-    max_alpha = float(
-        getattr(module, "_vlm_gaze_image_max_attention_alpha", 5.0)
-    )
+    target_mass = float(getattr(module, "_vlm_gaze_image_target_attention_mass", 0.0))
+    max_alpha = float(getattr(module, "_vlm_gaze_image_max_attention_alpha", 5.0))
     should_bias = (
         image_mask is not None
         and head_indices
-        and (alpha != 0.0 or controller == "target_mass")
+        and (token_bias is not None or alpha != 0.0 or controller == "target_mass")
         and not (decode_only and query.shape[-2] > 1)
     )
     target_diagnostics: dict[str, float] = {}
@@ -287,7 +313,12 @@ def _gaze_image_bias_attention_forward(
         # reference steering mask which broadcasts over the query dimension.
         # ``query_slice`` remains last-query-only below for compact telemetry.
         bias_query_slice = slice(None)
-        if controller == "fixed":
+        if token_bias is not None:
+            for head_idx in head_indices:
+                attn_weights[:, head_idx, bias_query_slice, :] += token_bias.to(
+                    attn_weights.dtype
+                )
+        elif controller == "fixed":
             for head_idx in head_indices:
                 attn_weights[:, head_idx, bias_query_slice, image_mask] += alpha
         elif controller == "target_mass":
@@ -315,8 +346,12 @@ def _gaze_image_bias_attention_forward(
         else:
             raise ValueError(f"Unknown attention controller: {controller}")
 
-    attn_weights = nn.functional.softmax(attn_weights, dim=-1, dtype=torch.float32).to(query.dtype)
-    attn_weights = nn.functional.dropout(attn_weights, p=dropout, training=module.training)
+    attn_weights = nn.functional.softmax(attn_weights, dim=-1, dtype=torch.float32).to(
+        query.dtype
+    )
+    attn_weights = nn.functional.dropout(
+        attn_weights, p=dropout, training=module.training
+    )
 
     records = getattr(module, "_vlm_gaze_image_attention_records", None)
     if records is not None and image_mask is not None:
@@ -325,13 +360,32 @@ def _gaze_image_bias_attention_forward(
             "query_len": int(query.shape[-2]),
             "key_len": int(key_states.shape[-2]),
         }
-        image_mass = attn_weights[..., query_slice, image_mask].sum(dim=-1).float().mean()
+        image_mass = (
+            attn_weights[..., query_slice, image_mask].sum(dim=-1).float().mean()
+        )
         record["image_attention_mass"] = float(image_mass.detach().cpu())
         if head_indices:
             selected = attn_weights[:, head_indices, query_slice, :]
             selected_mass = selected[..., image_mask].sum(dim=-1).float().mean()
-            record["boosted_head_image_attention_mass"] = float(selected_mass.detach().cpu())
+            record["boosted_head_image_attention_mass"] = float(
+                selected_mass.detach().cpu()
+            )
             record["boosted_heads"] = len(head_indices)
+        if context_mask is not None:
+            context_mass = (
+                attn_weights[..., query_slice, context_mask].sum(dim=-1).float().mean()
+            )
+            record["context_attention_mass"] = float(context_mass.detach().cpu())
+            if head_indices:
+                selected_context_mass = (
+                    attn_weights[:, head_indices, query_slice, :][..., context_mask]
+                    .sum(dim=-1)
+                    .float()
+                    .mean()
+                )
+                record["boosted_head_context_attention_mass"] = float(
+                    selected_context_mass.detach().cpu()
+                )
         record.update(target_diagnostics)
         records.append(record)
 
@@ -382,7 +436,9 @@ def _load_gaze_heads(ranking_path: Path, top_k: int) -> list[tuple[int, int]]:
         try:
             heads.append((int(row["layer"]), int(row["head"])))
         except (KeyError, TypeError, ValueError) as exc:
-            raise ValueError(f"Malformed gaze head row in {ranking_path}: {row!r}") from exc
+            raise ValueError(
+                f"Malformed gaze head row in {ranking_path}: {row!r}"
+            ) from exc
     return heads
 
 
@@ -399,13 +455,9 @@ def select_image_boost_heads(
     if n_select <= 0:
         return []
     ranking_rows = json.loads(ranking_path.read_text(encoding="utf-8"))
-    ranking = [
-        (int(row["layer"]), int(row["head"])) for row in ranking_rows
-    ]
+    ranking = [(int(row["layer"]), int(row["head"])) for row in ranking_rows]
     valid = [
-        head
-        for head in ranking
-        if 0 <= head[0] < n_layers and 0 <= head[1] < n_heads
+        head for head in ranking if 0 <= head[0] < n_layers and 0 <= head[1] < n_heads
     ]
     if selection == "gaze_global":
         selected = valid[:n_select]
@@ -445,14 +497,10 @@ def select_image_boost_heads(
                 if (layer, head) not in excluded
             ]
             if selection == "layer_matched_low":
-                candidates.sort(
-                    key=lambda item: float(scores[item[0], item[1]])
-                )
+                candidates.sort(key=lambda item: float(scores[item[0], item[1]]))
             else:
                 generator = torch.Generator().manual_seed(seed * 10_000 + layer)
-                order = torch.randperm(
-                    len(candidates), generator=generator
-                ).tolist()
+                order = torch.randperm(len(candidates), generator=generator).tolist()
                 candidates = [candidates[index] for index in order]
             selected.extend(candidates[:count])
     elif selection == "paper_random":
@@ -495,8 +543,26 @@ def _token_mask_for_key_length(token_mask: Any | None, key_len: int) -> Any | No
 
     import torch
 
-    padding = torch.zeros(key_len - token_mask.numel(), dtype=torch.bool, device=token_mask.device)
+    padding = torch.zeros(
+        key_len - token_mask.numel(), dtype=torch.bool, device=token_mask.device
+    )
     return torch.cat([token_mask, padding], dim=0)
+
+
+def _token_bias_for_key_length(token_bias: Any | None, key_len: int) -> Any | None:
+    if token_bias is None or not bool(token_bias.ne(0).any()):
+        return None
+    if token_bias.numel() == key_len:
+        return token_bias
+    if token_bias.numel() > key_len:
+        return token_bias[:key_len]
+
+    import torch
+
+    padding = torch.zeros(
+        key_len - token_bias.numel(), dtype=token_bias.dtype, device=token_bias.device
+    )
+    return torch.cat([token_bias, padding], dim=0)
 
 
 def _repeat_kv(hidden_states: Any, n_rep: int) -> Any:
@@ -511,15 +577,25 @@ def _repeat_kv(hidden_states: Any, n_rep: int) -> Any:
 
 
 def _language_layers(model: Any) -> Any:
-    if hasattr(model.model, "language_model") and hasattr(model.model.language_model, "layers"):
+    if hasattr(model.model, "language_model") and hasattr(
+        model.model.language_model, "layers"
+    ):
         return model.model.language_model.layers
     if hasattr(model.model, "layers"):
         return model.model.layers
-    raise AttributeError("Could not find Qwen language layers on model.model.language_model.layers or model.model.layers.")
+    raise AttributeError(
+        "Could not find Qwen language layers on model.model.language_model.layers or model.model.layers."
+    )
 
 
-def _summarize_attention_records(records: list[dict[str, float | int]], boosted_heads_by_layer: dict[int, list[int]]) -> dict[str, Any]:
-    all_masses = [float(record["image_attention_mass"]) for record in records if "image_attention_mass" in record]
+def _summarize_attention_records(
+    records: list[dict[str, float | int]], boosted_heads_by_layer: dict[int, list[int]]
+) -> dict[str, Any]:
+    all_masses = [
+        float(record["image_attention_mass"])
+        for record in records
+        if "image_attention_mass" in record
+    ]
     boosted_masses = [
         float(record["boosted_head_image_attention_mass"])
         for record in records
@@ -528,7 +604,18 @@ def _summarize_attention_records(records: list[dict[str, float | int]], boosted_
     boosted_layer_masses = [
         float(record["image_attention_mass"])
         for record in records
-        if int(record["layer_idx"]) in boosted_heads_by_layer and "image_attention_mass" in record
+        if int(record["layer_idx"]) in boosted_heads_by_layer
+        and "image_attention_mass" in record
+    ]
+    context_masses = [
+        float(record["context_attention_mass"])
+        for record in records
+        if "context_attention_mass" in record
+    ]
+    boosted_context_masses = [
+        float(record["boosted_head_context_attention_mass"])
+        for record in records
+        if "boosted_head_context_attention_mass" in record
     ]
     effective_alphas = [
         float(record["mean_effective_alpha"])
@@ -550,6 +637,8 @@ def _summarize_attention_records(records: list[dict[str, float | int]], boosted_
         "mean_image_attention_mass": _mean(all_masses),
         "mean_boosted_layer_image_attention_mass": _mean(boosted_layer_masses),
         "mean_boosted_head_image_attention_mass": _mean(boosted_masses),
+        "mean_context_attention_mass": _mean(context_masses),
+        "mean_boosted_head_context_attention_mass": _mean(boosted_context_masses),
         "mean_preboost_head_image_attention_mass": _mean(preboost_masses),
         "mean_effective_alpha": _mean(effective_alphas),
         "mean_alpha_cap_fraction": _mean(cap_fractions),

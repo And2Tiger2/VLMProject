@@ -162,7 +162,11 @@ def _run_examples(
                 mask_variant = str(condition.get("mask_variant") or "tight")
                 mask_paths = metadata.get("roi_mask_paths") or {}
                 mask_path = Path(
-                    str(mask_paths.get(mask_variant) or metadata.get("roi_mask_path") or "")
+                    str(
+                        mask_paths.get(mask_variant)
+                        or metadata.get("roi_mask_path")
+                        or ""
+                    )
                 )
                 if not mask_path.is_file():
                     raise FileNotFoundError(
@@ -212,6 +216,16 @@ def _token_mask_telemetry(rows: list[dict[str, Any]]) -> dict[str, Any]:
         for row in records
         if row.get("n_image_tokens") is not None
     ]
+    context_counts = [
+        float(row["n_context_tokens"])
+        for row in records
+        if row.get("n_context_tokens") is not None
+    ]
+    context_fractions = [
+        float(row["context_token_fraction"])
+        for row in records
+        if row.get("context_token_fraction") is not None
+    ]
     return {
         "n_examples": len(records),
         "n_nonempty_target_masks": sum(
@@ -222,6 +236,10 @@ def _token_mask_telemetry(rows: list[dict[str, Any]]) -> dict[str, Any]:
         "mean_target_token_fraction": mean(fractions) if fractions else None,
         "minimum_target_tokens": min(counts) if counts else None,
         "maximum_target_tokens": max(counts) if counts else None,
+        "mean_context_tokens": mean(context_counts) if context_counts else None,
+        "mean_context_token_fraction": (
+            mean(context_fractions) if context_fractions else None
+        ),
     }
 
 
