@@ -5,7 +5,7 @@ import argparse
 import json
 import os
 import subprocess
-from dataclasses import asdict, replace
+from dataclasses import replace
 from pathlib import Path
 from statistics import mean
 from typing import Any
@@ -329,6 +329,11 @@ def _vlmbias_summary(rows: list[dict[str, Any]]) -> dict[str, Any]:
     result["invalid_rate"] = mean(
         not bool(str(row.get("parsed_answer", "")).strip()) for row in rows
     )
+    for topic, metrics in result.get("by_topic", {}).items():
+        topic_rows = [row for row in rows if str(row.get("topic") or "unknown") == topic]
+        metrics["invalid_rate"] = mean(
+            not bool(str(row.get("parsed_answer", "")).strip()) for row in topic_rows
+        )
     return result
 
 

@@ -187,6 +187,7 @@ def _metrics(row: dict[str, Any]) -> dict[str, Any]:
     result = row["vlmbias"]
     return {
         "n": result["n"],
+        "n_bias_aligned_errors": result.get("n_bias_aligned_errors"),
         "accuracy": result["accuracy"],
         "bias_aligned_fraction": result["bias_aligned_fraction"],
         "bias_aligned_error_rate": result["bias_aligned_error_rate"],
@@ -200,6 +201,7 @@ def _metrics(row: dict[str, Any]) -> dict[str, Any]:
         "mean_boosted_head_target_attention_mass": row["attention_telemetry"][
             "mean_boosted_head_image_attention_mass"
         ],
+        "by_topic": result.get("by_topic", {}),
     }
 
 
@@ -236,16 +238,17 @@ def _markdown(report: dict[str, Any]) -> str:
         f"- Conditions: {report['n_conditions_found']}/{report['n_conditions_expected']}",
         f"- Errors: {len(report['errors'])}",
         "",
-        "| Condition | Region | Heads | Alpha | Accuracy | Bias-aligned | Invalid | Target token frac. | Target attention |",
-        "|---|---|---:|---:|---:|---:|---:|---:|---:|",
+        "| Condition | Region | Mask | Heads | Alpha | Accuracy | Bias-aligned | Invalid | Target token frac. | Target attention |",
+        "|---|---|---|---:|---:|---:|---:|---:|---:|---:|",
     ]
     for row in report["conditions"]:
         metrics = _metrics(row)
         condition = row["condition"]
         lines.append(
-            "| {name} | {region} | {heads} | {alpha:g} | {accuracy:.4f} | {bias:.4f} | {invalid:.4f} | {tokens:.4f} | {attention:.4f} |".format(
+            "| {name} | {region} | {mask} | {heads} | {alpha:g} | {accuracy:.4f} | {bias:.4f} | {invalid:.4f} | {tokens:.4f} | {attention:.4f} |".format(
                 name=condition["name"],
                 region=condition["region"],
+                mask=condition.get("mask_variant", "default"),
                 heads=condition["head_count"],
                 alpha=condition["alpha"],
                 accuracy=metrics["accuracy"],
@@ -255,6 +258,29 @@ def _markdown(report: dict[str, Any]) -> str:
                 attention=metrics["mean_target_attention_mass"],
             )
         )
+    if any(row["vlmbias"].get("by_topic") for row in report["conditions"]):
+        lines.extend(
+            [
+                "",
+                "## Metrics by topic",
+                "",
+                "| Condition | Topic | N | Accuracy | Bias-aligned count | Bias-aligned fraction | Invalid |",
+                "|---|---|---:|---:|---:|---:|---:|",
+            ]
+        )
+        for row in report["conditions"]:
+            for topic, topic_metrics in row["vlmbias"].get("by_topic", {}).items():
+                lines.append(
+                    "| {condition} | {topic} | {n} | {accuracy:.4f} | {bias_count} | {bias_fraction:.4f} | {invalid:.4f} |".format(
+                        condition=row["condition"]["name"],
+                        topic=topic,
+                        n=topic_metrics["n"],
+                        accuracy=topic_metrics["accuracy"],
+                        bias_count=topic_metrics.get("n_bias_aligned_errors", 0),
+                        bias_fraction=topic_metrics.get("bias_aligned_fraction", 0.0),
+                        invalid=topic_metrics.get("invalid_rate", 0.0),
+                    )
+                )
     if report.get("selection"):
         lines.extend(
             [

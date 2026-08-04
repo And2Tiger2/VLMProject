@@ -159,10 +159,14 @@ def _run_examples(
             region = str(condition["region"])
             pixel_mask = None
             if region in {"roi", "shifted_roi"}:
-                mask_path = Path(str(metadata.get("roi_mask_path") or ""))
+                mask_variant = str(condition.get("mask_variant") or "tight")
+                mask_paths = metadata.get("roi_mask_paths") or {}
+                mask_path = Path(
+                    str(mask_paths.get(mask_variant) or metadata.get("roi_mask_path") or "")
+                )
                 if not mask_path.is_file():
                     raise FileNotFoundError(
-                        f"missing ROI mask for {example.id}: {mask_path}"
+                        f"missing {mask_variant} ROI mask for {example.id}: {mask_path}"
                     )
                 pixel_mask = Image.open(mask_path).convert("L")
                 if region == "shifted_roi":

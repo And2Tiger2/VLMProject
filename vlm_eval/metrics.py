@@ -39,6 +39,7 @@ def summarize(predictions: Iterable[Prediction]) -> dict:
 
     summary = {
         "n": total,
+        "n_bias_aligned_errors": bias_errors,
         "accuracy": correct / total if total else 0.0,
         "error_rate": errors / total if total else 0.0,
         "bias_aligned_error_rate": bias_errors / errors if errors else 0.0,
@@ -51,7 +52,11 @@ def summarize(predictions: Iterable[Prediction]) -> dict:
     summary["by_topic"] = {
         topic: {
             "n": len(topic_preds),
+            "n_bias_aligned_errors": sum(p.is_bias_aligned_error for p in topic_preds),
             "accuracy": sum(p.is_correct for p in topic_preds) / len(topic_preds),
+            "bias_aligned_fraction": (
+                sum(p.is_bias_aligned_error for p in topic_preds) / len(topic_preds)
+            ),
             "bias_aligned_error_rate": (
                 sum(p.is_bias_aligned_error for p in topic_preds)
                 / max(1, sum(not p.is_correct for p in topic_preds))
@@ -64,4 +69,3 @@ def summarize(predictions: Iterable[Prediction]) -> dict:
 
 def prediction_to_dict(prediction: Prediction) -> dict:
     return asdict(prediction)
-
