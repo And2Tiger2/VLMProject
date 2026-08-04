@@ -38,3 +38,11 @@ def make_image_attention_adapter(*, model_id: str, **kwargs: Any):
     from adapters.qwen25_vl_gaze_attention import Qwen25VLGazeAttentionAdapter
 
     return Qwen25VLGazeAttentionAdapter(model_id=model_id, **kwargs)
+
+
+def make_roi_attention_adapter(*, model_id: str, **kwargs: Any):
+    if not is_qwen3_vl(model_id):
+        raise ValueError("ROI attention experiments currently require Qwen3-VL")
+    from adapters.qwen3_vl_roi_attention import Qwen3VLROIAttentionAdapter
+
+    return Qwen3VLROIAttentionAdapter(model_id=model_id, **kwargs)
