@@ -46,6 +46,28 @@ def candidate_sequence_log_likelihood(
 
     import torch
 
+    kwargs, answer_token_ids, prompt_length = append_answer_tokens(
+        model_inputs, answer_token_ids
+    )
+    outputs = model(**kwargs, use_cache=False, return_dict=True)
+    return score_answer_from_logits(
+        outputs.logits, answer_token_ids, prompt_length=prompt_length
+    )
+
+
+def append_answer_tokens(
+    model_inputs: dict[str, Any], answer_token_ids: Any
+) -> tuple[dict[str, Any], Any, int]:
+    """Extend every Qwen token-aligned input for multimodal teacher forcing.
+
+    Qwen3-VL's processor returns ``mm_token_type_ids`` alongside ``input_ids``:
+    0=text, 1=image, and 2=video. Appended assistant answers are text, so their
+    modality IDs must be zero. Extending only the attention mask makes M-RoPE
+    indexing fail before the first candidate can be scored.
+    """
+
+    import torch
+
     input_ids = model_inputs["input_ids"]
     if answer_token_ids.ndim == 1:
         answer_token_ids = answer_token_ids.unsqueeze(0)
@@ -55,18 +77,27 @@ def candidate_sequence_log_likelihood(
         raise ValueError("candidate answer batch does not match model input batch")
     answer_token_ids = answer_token_ids.to(input_ids.device)
     prompt_length = input_ids.shape[1]
+    answer_length = answer_token_ids.shape[1]
     combined = torch.cat([input_ids, answer_token_ids], dim=1)
     kwargs = dict(model_inputs)
     kwargs["input_ids"] = combined
     if "attention_mask" in kwargs:
         extension = kwargs["attention_mask"].new_ones(
-            kwargs["attention_mask"].shape[0], answer_token_ids.shape[1]
+            kwargs["attention_mask"].shape[0], answer_length
         )
         kwargs["attention_mask"] = torch.cat([kwargs["attention_mask"], extension], dim=1)
+    for key in ("mm_token_type_ids", "token_type_ids"):
+        if key not in kwargs:
+            continue
+        token_types = kwargs[key]
+        if token_types.ndim != 2 or token_types.shape != input_ids.shape:
+            raise ValueError(
+                f"{key} must align exactly with input_ids before answer extension: "
+                f"{tuple(token_types.shape)} != {tuple(input_ids.shape)}"
+            )
+        text_extension = token_types.new_zeros(token_types.shape[0], answer_length)
+        kwargs[key] = torch.cat([token_types, text_extension], dim=1)
     # Position IDs/cache positions are model-derived for the longer sequence.
     kwargs.pop("position_ids", None)
     kwargs.pop("cache_position", None)
-    outputs = model(**kwargs, use_cache=False, return_dict=True)
-    return score_answer_from_logits(
-        outputs.logits, answer_token_ids, prompt_length=prompt_length
-    )
+    return kwargs, answer_token_ids, prompt_length

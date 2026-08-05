@@ -134,6 +134,16 @@ jobs to remain unrun through Slurm's `afterok` dependencies. The complete job
 receipt is written to
 `segments/mechanistic_heads_qwen3_8b/runs/overnight_submission.json`.
 
+If preparation completed but instrumentation failed, use the validated cached
+data without repeating the multi-hour download/generation stage:
+
+```bash
+bash scripts/run_neuronic_mechanistic_heads.sh overnight-all-resume
+```
+
+This refuses to submit unless every required generated pair file and a valid
+MMMC audit already exist.
+
 ## Full-run commands
 
 Full runs are opt-in and intentionally separate. Do not submit them until the

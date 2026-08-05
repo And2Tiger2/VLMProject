@@ -13,7 +13,10 @@ from vlm_eval.mechanistic_heads.controls import (
     layer_matched_control_draws,
     multivariate_matched_control_draws,
 )
-from vlm_eval.mechanistic_heads.likelihood import score_answer_from_logits
+from vlm_eval.mechanistic_heads.likelihood import (
+    append_answer_tokens,
+    score_answer_from_logits,
+)
 from vlm_eval.mechanistic_heads.patching import (
     batched_single_head_patches,
     patch_projected_head,
@@ -91,6 +94,24 @@ def test_sequence_log_probability_matches_manual_teacher_forcing() -> None:
         + torch.log_softmax(logits[0, 2], dim=-1)[0]
     )
     assert score.total_log_probability.item() == pytest.approx(expected.item())
+
+
+def test_answer_extension_keeps_qwen_multimodal_token_types_aligned() -> None:
+    inputs = {
+        "input_ids": torch.tensor([[10, 99, 99, 20]]),
+        "attention_mask": torch.ones(1, 4, dtype=torch.long),
+        "mm_token_type_ids": torch.tensor([[0, 1, 1, 0]]),
+        "position_ids": torch.zeros(3, 1, 4, dtype=torch.long),
+    }
+    kwargs, answers, prompt_length = append_answer_tokens(
+        inputs, torch.tensor([[7, 8]])
+    )
+    assert prompt_length == 4
+    assert answers.tolist() == [[7, 8]]
+    assert kwargs["input_ids"].shape == (1, 6)
+    assert kwargs["attention_mask"].shape == (1, 6)
+    assert kwargs["mm_token_type_ids"].tolist() == [[0, 1, 1, 0, 0, 0]]
+    assert "position_ids" not in kwargs
 
 
 def test_token_spans_are_asserted_and_complete() -> None:

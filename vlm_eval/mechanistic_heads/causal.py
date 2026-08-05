@@ -8,7 +8,10 @@ from typing import Any, Iterator
 from PIL import Image
 
 from vlm_eval.mechanistic_heads.capture import Qwen3CaptureHooks, get_language_layers
-from vlm_eval.mechanistic_heads.likelihood import candidate_sequence_log_likelihood
+from vlm_eval.mechanistic_heads.likelihood import (
+    append_answer_tokens,
+    candidate_sequence_log_likelihood,
+)
 
 
 @dataclass(frozen=True)
@@ -63,11 +66,7 @@ def capture_teacher_forced(
     image = image_path.convert("RGB") if hasattr(image_path, "convert") else Image.open(image_path).convert("RGB")
     inputs = runtime.prepare(image, prompt, prompt_mode="raw")
     answer_ids = runtime.answer_token_ids(answer)
-    prompt_length = int(inputs.input_ids.shape[1])
-    combined = runtime.torch.cat([inputs.input_ids, answer_ids], dim=1)
-    kwargs = dict(inputs); kwargs["input_ids"] = combined; kwargs.pop("position_ids", None); kwargs.pop("cache_position", None)
-    if "attention_mask" in kwargs:
-        kwargs["attention_mask"] = runtime.torch.cat([kwargs["attention_mask"], kwargs["attention_mask"].new_ones((1, answer_ids.shape[1]))], dim=1)
+    kwargs, answer_ids, prompt_length = append_answer_tokens(inputs, answer_ids)
     image_token_id = int(runtime.model.config.image_token_id)
     image_positions = inputs.input_ids[0].eq(image_token_id).nonzero().flatten().tolist()
     with runtime.torch.no_grad(), Qwen3CaptureHooks(runtime.model, layers=layers, to_cpu=False) as store:

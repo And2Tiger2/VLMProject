@@ -247,6 +247,11 @@ def main() -> None:
     parser.add_argument("--repo", type=Path, default=Path(REPO_DEFAULT))
     parser.add_argument("--profile", choices=("smoke", "all"), default="smoke")
     parser.add_argument("--confirm-full", action="store_true")
+    parser.add_argument(
+        "--reuse-prepared",
+        action="store_true",
+        help="Reuse an already valid completed preparation stage.",
+    )
     parser.add_argument("--dry-run", action="store_true")
     args = parser.parse_args()
     if args.profile == "all" and not args.confirm_full:
@@ -256,9 +261,17 @@ def main() -> None:
         parents=True, exist_ok=True
     )
     submitter = Submitter(repo=args.repo, dry_run=args.dry_run)
-    prepare = submitter.submit("prepare_data", PREP_SCRIPT, exports={}, dependencies=[])
+    prepare_dependencies: list[str] = []
+    if args.reuse_prepared:
+        require_valid_prepared_data(args.repo)
+    else:
+        prepare = submitter.submit("prepare_data", PREP_SCRIPT, exports={}, dependencies=[])
+        prepare_dependencies = [prepare]
     instrumentation = submitter.gpu(
-        "instrumentation", "instrumentation", "smoke", dependencies=[prepare]
+        "instrumentation",
+        "instrumentation",
+        "smoke",
+        dependencies=prepare_dependencies,
     )
     smokes = submit_smokes(submitter, instrumentation=instrumentation)
     finals: list[str] = smokes
@@ -267,6 +280,7 @@ def main() -> None:
 
     receipt = {
         "profile": args.profile,
+        "reuse_prepared": args.reuse_prepared,
         "dry_run": args.dry_run,
         "submitted_at_utc": datetime.now(timezone.utc).isoformat(),
         "jobs": submitter.jobs,
@@ -284,6 +298,27 @@ def main() -> None:
     receipt_path.parent.mkdir(parents=True, exist_ok=True)
     receipt_path.write_text(json.dumps(receipt, indent=2), encoding="utf-8")
     print(json.dumps(receipt, indent=2))
+
+
+def require_valid_prepared_data(repo: Path) -> None:
+    required = (
+        "segments/mechanistic_heads_qwen3_8b/data/generated/counting/mechanistic_pairs.jsonl",
+        "segments/mechanistic_heads_qwen3_8b/data/generated/point_search/search_pairs.jsonl",
+        "segments/mechanistic_heads_qwen3_8b/data/generated/point_search/verification_pairs.jsonl",
+        "segments/mechanistic_heads_qwen3_8b/data/generated/point_search/distractor_pairs.jsonl",
+        "segments/mechanistic_heads_qwen3_8b/data/generated/vlmbias_contrasts/vlmbias_signed_contrasts.jsonl",
+        "segments/mechanistic_heads_qwen3_8b/data/mmmc/prepared/object_pairs.jsonl",
+    )
+    missing = [value for value in required if not repo.joinpath(value).is_file()]
+    audit_path = repo / "segments/mechanistic_heads_qwen3_8b/data/mmmc/prepared/audit.json"
+    if not audit_path.is_file():
+        missing.append(str(audit_path.relative_to(repo)))
+    elif not json.loads(audit_path.read_text(encoding="utf-8")).get("valid"):
+        raise RuntimeError(f"MMMC preparation audit is not valid: {audit_path}")
+    if missing:
+        raise FileNotFoundError(
+            "cannot reuse preparation; missing required artifacts: " + ", ".join(missing)
+        )
 
 
 if __name__ == "__main__":

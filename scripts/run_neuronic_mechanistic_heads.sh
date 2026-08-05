@@ -15,6 +15,10 @@ case "$ACTION" in
     uv run python scripts/submit_neuronic_mechanistic_overnight.py \
       --repo "$REPO" --profile all --confirm-full
     ;;
+  overnight-all-resume)
+    uv run python scripts/submit_neuronic_mechanistic_overnight.py \
+      --repo "$REPO" --profile all --confirm-full --reuse-prepared
+    ;;
   prepare-synthetic)
     uv run python scripts/generate_counting_data.py \
       --config segments/mechanistic_heads_qwen3_8b/configs/counting_data.json \
@@ -74,6 +78,6 @@ case "$ACTION" in
     fi
     ;;
   help|*)
-    echo "usage: $0 {overnight-smoke|overnight-all|prepare-synthetic|download-mmmc|instrumentation|counting-behavior|counting-vap|counting-heads|general-importance|counting-controls|counting-validation|waldo-behavior|point-centroids|search-heads|verification-heads|distractor-heads|point-ablation|maci-heads|maci-heads-aligned|maci-ablation|maci-confirm|maci-detector|maci-gated|vlmbias-heads|vlmbias-validation|atlas} [smoke|full]"
+    echo "usage: $0 {overnight-smoke|overnight-all|overnight-all-resume|prepare-synthetic|download-mmmc|instrumentation|counting-behavior|counting-vap|counting-heads|general-importance|counting-controls|counting-validation|waldo-behavior|point-centroids|search-heads|verification-heads|distractor-heads|point-ablation|maci-heads|maci-heads-aligned|maci-ablation|maci-confirm|maci-detector|maci-gated|vlmbias-heads|vlmbias-validation|atlas} [smoke|full]"
     ;;
 esac

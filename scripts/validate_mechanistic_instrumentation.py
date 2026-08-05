@@ -10,6 +10,7 @@ from PIL import Image
 from vlm_eval.mechanistic_heads.causal import batched_candidate_margin, batched_projected_head_patch, candidate_margin, capture_prefill, projected_head_patch, repeat_model_inputs
 from vlm_eval.mechanistic_heads.capture import MECHANISTIC_ATTENTION_IMPL, Qwen3CaptureHooks
 from vlm_eval.mechanistic_heads.config import add_standard_run_arguments, load_json_config, prepare_output_directory
+from vlm_eval.mechanistic_heads.likelihood import append_answer_tokens
 from vlm_eval.mechanistic_heads.patching import reconstruct_attention_output
 from vlm_eval.mechanistic_heads.preflight import REQUIRED_CHECKS
 from vlm_eval.mechanistic_heads.qwen3_runtime import Qwen3MechanisticRuntime
@@ -119,14 +120,20 @@ def validate_runtime(runtime, fixture: Path):
     diagnostics["backend_max_abs_logit_delta"] = backend_error
     # Cached versus uncached next-token logits for one tested answer step.
     first_token = runtime.answer_token_ids(" one")[:, :1]
-    combined = torch.cat([inputs.input_ids, first_token], dim=1)
-    full_kwargs = dict(inputs); full_kwargs["input_ids"] = combined
-    if "attention_mask" in full_kwargs:
-        full_kwargs["attention_mask"] = torch.cat([full_kwargs["attention_mask"], full_kwargs["attention_mask"].new_ones((1, 1))], dim=1)
+    full_kwargs, first_token, _ = append_answer_tokens(inputs, first_token)
+    combined = full_kwargs["input_ids"]
     with torch.no_grad():
         full = runtime.model(**full_kwargs, use_cache=False, return_dict=True).logits[:, -1, :]
         prefill = runtime.model(**inputs, use_cache=True, return_dict=True)
-        prepared = runtime.model.prepare_inputs_for_generation(combined, past_key_values=prefill.past_key_values, attention_mask=full_kwargs.get("attention_mask"), pixel_values=inputs.get("pixel_values"), image_grid_thw=inputs.get("image_grid_thw"), use_cache=True)
+        prepared = runtime.model.prepare_inputs_for_generation(
+            combined,
+            past_key_values=prefill.past_key_values,
+            attention_mask=full_kwargs.get("attention_mask"),
+            mm_token_type_ids=full_kwargs.get("mm_token_type_ids"),
+            pixel_values=inputs.get("pixel_values"),
+            image_grid_thw=inputs.get("image_grid_thw"),
+            use_cache=True,
+        )
         cached = runtime.model(**prepared, return_dict=True).logits[:, -1, :]
     cache_error = float((full.float() - cached.float()).abs().max().detach().cpu())
     checks["cached_uncached_equivalence"] = cache_error < 5e-3
