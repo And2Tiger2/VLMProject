@@ -105,11 +105,22 @@ class Qwen3MechanisticRuntime:
         self.max_pixels = max_pixels
         self.min_pixels = min_pixels
         self.processor = AutoProcessor.from_pretrained(model_id)
+        # The mechanistic implementation captures language-head A_h V_h and
+        # post-W_O contributions.  Loading it as the global implementation
+        # also replaces the vision transformer's normal SDPA attention, which
+        # is unnecessary and makes otherwise identical image batches follow a
+        # different numerical path.  Load the repository-normal backend for
+        # every component, then opt only the language stack into capture.
+        loader_attention_backend = (
+            "sdpa"
+            if attention_backend == MECHANISTIC_ATTENTION_IMPL
+            else attention_backend
+        )
         self.model = Qwen3VLForConditionalGeneration.from_pretrained(
             model_id,
             torch_dtype=_resolve_torch_dtype(torch),
             device_map=_resolve_device_map(device_map, torch),
-            attn_implementation=attention_backend,
+            attn_implementation=loader_attention_backend,
         )
         if resolved_adapter is not None:
             try:
@@ -117,6 +128,14 @@ class Qwen3MechanisticRuntime:
             except ImportError as exc:
                 raise RuntimeError("Adapter checkpoints require `uv sync --extra mechanistic`.") from exc
             self.model = PeftModel.from_pretrained(self.model, resolved_adapter)
+        if attention_backend == MECHANISTIC_ATTENTION_IMPL:
+            text_config = getattr(self.model.config, "text_config", None)
+            vision_config = getattr(self.model.config, "vision_config", None)
+            if text_config is None or vision_config is None:
+                raise RuntimeError("Qwen3-VL config is missing text/vision subconfigs")
+            text_config._attn_implementation = MECHANISTIC_ATTENTION_IMPL
+            if vision_config._attn_implementation != loader_attention_backend:
+                raise RuntimeError("Qwen3-VL vision backend was unexpectedly changed")
         self.model.eval()
         self.architecture = inspect_qwen3_architecture(
             self.model, enforce_expected=enforce_expected_architecture

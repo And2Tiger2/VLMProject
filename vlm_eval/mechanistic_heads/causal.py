@@ -172,16 +172,20 @@ def projected_head_patch(
 
     def hook(module: Any, args: tuple[Any, ...], output: Any) -> Any:
         current, *rest = output if isinstance(output, tuple) else (output,)
-        if current.shape[0] != 1:
-            raise RuntimeError("serial projected-head patch expects batch size one")
         if max(positions) >= current.shape[1]:
             raise RuntimeError("patch position exceeds current sequence length")
         patched = current.clone()
         donor = donor_projected[0].index_select(0, donor_index)[:, head_idx, :]
         recipient = recipient_projected[0].index_select(0, recipient_index)[:, head_idx, :]
-        patched[0, recipient_index, :] = current[0, recipient_index, :] + float(scale) * (
-            donor - recipient
-        )
+        delta = float(scale) * (donor - recipient)
+        # A serial head intervention may still score a microbatch. Apply the
+        # same candidate-head patch independently to every row; this lets the
+        # instrumentation compare serial and all-head-batched hooks under the
+        # exact same model batch and vision-encoder numerical path.
+        for batch_idx in range(current.shape[0]):
+            patched[batch_idx, recipient_index, :] = (
+                current[batch_idx, recipient_index, :] + delta
+            )
         return (patched, *rest) if isinstance(output, tuple) else patched
 
     handle = layer.self_attn.register_forward_hook(hook)

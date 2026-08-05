@@ -31,6 +31,7 @@ from vlm_eval.mechanistic_heads.token_spans import locate_subsequence
 from vlm_eval.mechanistic_heads.checkpoint import JsonlCheckpoint
 from vlm_eval.mechanistic_heads.causal import (
     batched_visual_attention_map_patch_many,
+    projected_head_patch,
     projected_head_set_replacement,
     repeat_model_inputs,
 )
@@ -74,6 +75,29 @@ def test_batched_and_serial_single_head_patching_agree() -> None:
         ]
     )
     assert torch.equal(batched, serial)
+
+
+def test_serial_projected_head_hook_supports_identical_microbatch_rows() -> None:
+    attention = torch.nn.Identity()
+    layer = SimpleNamespace(self_attn=attention)
+    model = SimpleNamespace(
+        model=SimpleNamespace(language_model=SimpleNamespace(layers=[layer]))
+    )
+    current = torch.zeros(2, 3, 4)
+    recipient = torch.zeros(1, 3, 2, 4)
+    donor = recipient.clone()
+    donor[:, 2, 1, :] = 3
+    with projected_head_patch(
+        model,
+        layer_idx=0,
+        head_idx=1,
+        donor_projected=donor,
+        recipient_projected=recipient,
+        positions=[2],
+    ):
+        actual = attention(current)
+    assert torch.equal(actual[0], actual[1])
+    assert torch.equal(actual[:, 2, :], torch.full((2, 4), 3.0))
 
 
 def test_sequence_log_probability_matches_manual_teacher_forcing() -> None:
