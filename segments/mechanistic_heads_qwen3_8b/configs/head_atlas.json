@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "model_id": "Qwen/Qwen3-VL-8B-Instruct",
+  "n_layers": 36,
+  "n_heads": 32,
+  "architecture_source": "runtime-validated Qwen3-VL config; renderer dimensions must match scan manifests",
+  "top_k": 50,
+  "gaze_ranking": "segments/gaze_heads_qwen3_8b/runs/gaze_discovery_seed42_merged/gaze_head_ranking.json",
+  "count_scores": "segments/mechanistic_heads_qwen3_8b/runs/counting_head_scan/full/count_head_scores.tsv",
+  "search_scores": "segments/mechanistic_heads_qwen3_8b/runs/search_head_scan/full/search_head_scores.tsv",
+  "verification_scores": "segments/mechanistic_heads_qwen3_8b/runs/verification_head_scan/full/verification_head_scores.tsv",
+  "distractor_scores": "segments/mechanistic_heads_qwen3_8b/runs/distractor_head_scan/full/distractor_head_scores.tsv",
+  "mmmc_scores": "segments/mechanistic_heads_qwen3_8b/runs/maci_head_scan/full/maci_head_scores.tsv",
+  "vlmbias_scores": "segments/mechanistic_heads_qwen3_8b/runs/vlmbias_signed_head_scan/full/vlmbias_signed_head_scores.tsv"
+}

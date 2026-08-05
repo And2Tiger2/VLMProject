@@ -1,0 +1,8 @@
+{
+  "schema_version": 1,
+  "model_id": "Qwen/Qwen3-VL-8B-Instruct",
+  "paired_dataset": "segments/mechanistic_heads_qwen3_8b/data/mmmc/prepared/object_pairs.jsonl",
+  "split": "prototype",
+  "conflict_type": "object",
+  "candidate_metric": "complete_answer_sequence_log_likelihood"
+}

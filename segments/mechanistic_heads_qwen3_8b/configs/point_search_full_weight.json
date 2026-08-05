@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "model_id": "Qwen/Qwen3-VL-8B-Instruct",
+  "dataset": "segments/mechanistic_heads_qwen3_8b/data/generated/point_search/point_search.jsonl",
+  "training_mode": "full_weight",
+  "learning_rate": 0.00001,
+  "lr_scheduler": "cosine",
+  "warmup_steps": 200,
+  "epochs": 1,
+  "batch_size": 1,
+  "gradient_accumulation_steps": 8,
+  "paper_label_allowed": false
+}

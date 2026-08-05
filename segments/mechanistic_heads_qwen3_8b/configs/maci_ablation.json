@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "model_id": "Qwen/Qwen3-VL-8B-Instruct",
+  "paired_dataset": "segments/mechanistic_heads_qwen3_8b/data/mmmc/prepared/object_pairs.jsonl",
+  "head_scores": "segments/mechanistic_heads_qwen3_8b/runs/maci_head_scan/full/maci_head_scores.tsv",
+  "split": "validation",
+  "include_validation_k_sweep": true,
+  "matched_control_distributions": false,
+  "random_control_margin_tolerance": 0.25,
+  "paper_style": {
+    "driving_heads": 30,
+    "resisting_heads": 40,
+    "joint_heads": 30,
+    "random_control_seeds": 5,
+    "ablation": "zero",
+    "decoding": "greedy"
+  }
+}

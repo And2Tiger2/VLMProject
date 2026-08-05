@@ -1,0 +1,87 @@
+#!/usr/bin/env python3
+"""Behavioral calibration for base/direct/point-search checkpoints."""
+from __future__ import annotations
+
+import argparse
+import csv
+import json
+import re
+from pathlib import Path
+
+from PIL import Image
+
+from vlm_eval.mechanistic_heads.config import add_standard_run_arguments, effective_limit, load_json_config, prepare_output_directory
+from vlm_eval.mechanistic_heads.qwen3_runtime import checkpoint_manifest_inputs, runtime_from_config
+from vlm_eval.mechanistic_heads.reproducibility import seed_everything, write_run_manifest
+from vlm_eval.mechanistic_heads.synthetic import length_matched_nonspatial_answer
+
+
+CONDITION_KEYS = {"base": "base", "direct_answer": "direct", "direct_length_matched": "direct_length_matched", "point_answer": "point", "shuffled_point_answer": "shuffled_point"}
+POINT_RE = re.compile(r"\((\d{1,3}),(\d{1,3})\)")
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description="Evaluate point-search behavior and OOD target counts.")
+    add_standard_run_arguments(parser)
+    parser.add_argument("--condition", choices=sorted(CONDITION_KEYS), required=True)
+    parser.add_argument("--checkpoint")
+    parser.add_argument("--device-map", default="cuda")
+    args = parser.parse_args()
+    config = load_json_config(args.config)
+    output = args.output_dir / "behavior.tsv"
+    prepare_output_directory(args.output_dir, resume=args.resume, overwrite=args.overwrite, known_outputs=(output.name,))
+    seed_everything(args.seed)
+    rows = read_jsonl(Path(config["dataset"]))
+    rows = [row for row in rows if row.get("split") != "train"]
+    limit = effective_limit(args)
+    if limit is not None: rows = rows[:limit]
+    runtime = runtime_from_config(config, device_map=args.device_map, checkpoint_override=args.checkpoint)
+    answer_key = CONDITION_KEYS[args.condition]
+    records = []
+    for row in rows:
+        inputs = runtime.prepare(Image.open(row["image_path"]).convert("RGB"), str(row["prompt"]), prompt_mode="raw")
+        with runtime.torch.no_grad():
+            generated = runtime.model.generate(**inputs, do_sample=False, max_new_tokens=int(config.get("max_new_tokens", 256)))
+        text = runtime.processor.batch_decode(generated[:, inputs.input_ids.shape[1]:], skip_special_tokens=True, clean_up_tokenization_spaces=False)[0].strip()
+        expected = str(row["answers"][answer_key])
+        if args.condition == "direct_length_matched":
+            expected = length_matched_nonspatial_answer(runtime.processor.tokenizer, direct_answer=str(row["target_count"]), point_answer=str(row["answers"]["point"]))
+        expected_points = [(int(x), int(y)) for x, y in POINT_RE.findall(expected)]
+        predicted_points = [(int(x), int(y)) for x, y in POINT_RE.findall(text)]
+        expected_count = int(row["target_count"])
+        count_match = re.search(r"(?:answer|count)\s*=\s*(\d+)", text)
+        if count_match is None and re.fullmatch(r"\s*\d+\s*", text): count_match = re.match(r"\s*(\d+)", text)
+        predicted_count = int(count_match.group(1)) if count_match else None
+        rmse = point_rmse(predicted_points, expected_points)
+        records.append({"id": row["id"], "split": row["split"], "condition": args.condition, "target_count": expected_count, "expected": expected, "output": text, "parsed_count": "" if predicted_count is None else predicted_count, "count_correct": int(predicted_count == expected_count), "sequence_exact": int(text == expected), "point_rmse": "" if rmse is None else rmse})
+    write_tsv(output, records)
+    by_split = {}
+    for split in sorted({row["split"] for row in records}):
+        group = [row for row in records if row["split"] == split]
+        rmses = [float(row["point_rmse"]) for row in group if row["point_rmse"] != ""]
+        by_split[split] = {"n": len(group), "count_accuracy": sum(row["count_correct"] for row in group) / len(group), "sequence_exact": sum(row["sequence_exact"] for row in group) / len(group), "point_rmse": sum(rmses) / len(rmses) if rmses else None}
+    summary = {"valid": True, "label": "instrumentation smoke test" if args.smoke else "modified replication", "condition": args.condition, "n": len(records), "by_split": by_split, "architecture": vars(runtime.architecture), "deviation": "deterministic textual coordinates replace paper HTML point boxes"}
+    summary_path = args.output_dir / "summary.json"; summary_path.write_text(json.dumps(summary, indent=2), encoding="utf-8")
+    write_run_manifest(args.output_dir, config={**config, "condition": args.condition, "smoke": args.smoke, "architecture": vars(runtime.architecture)}, seeds={"global": args.seed}, inputs=[args.config, Path(config["dataset"]), *checkpoint_manifest_inputs(config, checkpoint_override=args.checkpoint)], outputs=[output, summary_path], status="complete", repo_root=Path.cwd())
+    print(json.dumps(summary, indent=2))
+
+
+def point_rmse(predicted: list[tuple[int, int]], expected: list[tuple[int, int]]) -> float | None:
+    if not expected or len(predicted) != len(expected): return None
+    remaining = list(predicted); squared = []
+    for ex, ey in expected:
+        best = min(range(len(remaining)), key=lambda idx: (remaining[idx][0]-ex)**2 + (remaining[idx][1]-ey)**2)
+        px, py = remaining.pop(best); squared.append((px-ex)**2 + (py-ey)**2)
+    return (sum(squared) / len(squared)) ** 0.5
+
+
+def read_jsonl(path: Path) -> list[dict]:
+    return [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
+
+
+def write_tsv(path: Path, rows: list[dict]) -> None:
+    with path.open("w", encoding="utf-8", newline="") as handle:
+        writer = csv.DictWriter(handle, fieldnames=list(rows[0]) if rows else ["id"], delimiter="\t"); writer.writeheader(); writer.writerows(rows)
+
+
+if __name__ == "__main__": main()

@@ -1,0 +1,7 @@
+{
+  "schema_version": 1,
+  "study": "counting_circuits_behavior",
+  "model_id": "Qwen/Qwen3-VL-8B-Instruct",
+  "dataset": "segments/mechanistic_heads_qwen3_8b/data/generated/counting/syndot.jsonl",
+  "splits": ["test"]
+}

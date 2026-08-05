@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "behavior_sources": {
+    "base": "segments/mechanistic_heads_qwen3_8b/runs/point_behavior/base/behavior.tsv",
+    "direct_answer": "segments/mechanistic_heads_qwen3_8b/runs/point_behavior/direct_answer/behavior.tsv",
+    "direct_length_matched": "segments/mechanistic_heads_qwen3_8b/runs/point_behavior/direct_length_matched/behavior.tsv",
+    "point_answer": "segments/mechanistic_heads_qwen3_8b/runs/point_behavior/point_answer/behavior.tsv",
+    "shuffled_point_answer": "segments/mechanistic_heads_qwen3_8b/runs/point_behavior/shuffled_point_answer/behavior.tsv"
+  },
+  "centroid_summary": "segments/mechanistic_heads_qwen3_8b/runs/point_attention_centroids/full/centroid_rmse_by_layer.tsv"
+}

@@ -1,0 +1,5 @@
+{
+  "schema_version": 1,
+  "model_id": "Qwen/Qwen3-VL-8B-Instruct",
+  "paired_dataset": "segments/mechanistic_heads_qwen3_8b/data/generated/counting/mechanistic_pairs.jsonl"
+}

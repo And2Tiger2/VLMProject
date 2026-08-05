@@ -1,0 +1,8 @@
+{
+  "schema_version": 1,
+  "model_id": "Qwen/Qwen3-VL-8B-Instruct",
+  "adapter_path": "segments/mechanistic_heads_qwen3_8b/checkpoints/point-answer-lora",
+  "paired_dataset": "segments/mechanistic_heads_qwen3_8b/data/generated/point_search/search_pairs.jsonl",
+  "patch_type": "visual_attention_map",
+  "candidate_metric": "complete_coordinate_sequence_log_likelihood"
+}

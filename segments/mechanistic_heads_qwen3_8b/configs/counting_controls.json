@@ -1,0 +1,9 @@
+{
+  "schema_version": 1,
+  "count_scores": "segments/mechanistic_heads_qwen3_8b/runs/counting_head_scan/full/count_head_scores.tsv",
+  "gaze_ranking": "segments/gaze_heads_qwen3_8b/runs/gaze_discovery_seed42_merged/gaze_head_ranking.json",
+  "n_layers": 36,
+  "n_heads": 32,
+  "control_draws": 20,
+  "general_causal_importance": "segments/mechanistic_heads_qwen3_8b/reports/general_importance/general_head_importance.tsv"
+}

@@ -1,0 +1,8 @@
+{
+  "schema_version": 1,
+  "model_id": "Qwen/Qwen3-VL-8B-Instruct",
+  "paired_dataset": "segments/mechanistic_heads_qwen3_8b/data/generated/counting/constant_complexity_pairs.jsonl",
+  "patch_scope": "final_prompt_token",
+  "candidate_heads_from": "segments/mechanistic_heads_qwen3_8b/runs/counting_head_scan/full/count_head_scores.tsv",
+  "label": "modified replication"
+}

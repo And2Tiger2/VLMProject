@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "study": "maci_mmmc",
+  "dataset_id": "ustc-zhangzm/MMMC",
+  "model_id": "Qwen/Qwen3-VL-8B-Instruct",
+  "conflict_type": "object",
+  "clean_conflict_values": ["", "null", "none", "clean", "no_conflict"],
+  "prototype_examples": 256,
+  "validation_examples": 512,
+  "locked_test_minimum": 500,
+  "candidate_rule": "factual=object-conflict row answer; hallucinated=paired clean row answer"
+}

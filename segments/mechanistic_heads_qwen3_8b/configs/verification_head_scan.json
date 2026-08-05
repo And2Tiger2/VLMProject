@@ -1,0 +1,8 @@
+{
+  "schema_version": 1,
+  "model_id": "Qwen/Qwen3-VL-8B-Instruct",
+  "adapter_path": "segments/mechanistic_heads_qwen3_8b/checkpoints/point-answer-lora",
+  "paired_dataset": "segments/mechanistic_heads_qwen3_8b/data/generated/point_search/verification_pairs.jsonl",
+  "patch_type": "exact_projected_post_W_O",
+  "patch_scope": "final_prompt_token"
+}

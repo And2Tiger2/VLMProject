@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "minimum_families": 2,
+  "sources": [
+    {"name": "count", "path": "segments/mechanistic_heads_qwen3_8b/runs/counting_head_scan/full/count_head_scores.tsv", "column": "symmetric_causal_score"},
+    {"name": "search", "path": "segments/mechanistic_heads_qwen3_8b/runs/search_head_scan/full/search_head_scores.tsv", "column": "search_causal_score"},
+    {"name": "verification", "path": "segments/mechanistic_heads_qwen3_8b/runs/verification_head_scan/full/verification_head_scores.tsv", "column": "verification_causal_score"},
+    {"name": "distractor", "path": "segments/mechanistic_heads_qwen3_8b/runs/distractor_head_scan/full/distractor_head_scores.tsv", "column": "distractor_suppression_score"},
+    {"name": "mmmc", "path": "segments/mechanistic_heads_qwen3_8b/runs/maci_head_scan/full/maci_head_scores.tsv", "column": "mean_signed_intervention_score"},
+    {"name": "vlmbias_semantic", "path": "segments/mechanistic_heads_qwen3_8b/runs/vlmbias_signed_head_scan/full/vlmbias_signed_head_scores.tsv", "column": "mean_signed_score", "contrast": "semantic_prior"}
+  ]
+}

@@ -1,0 +1,209 @@
+#!/usr/bin/env bash
+#SBATCH --job-name=q3-mech
+#SBATCH --output=segments/mechanistic_heads_qwen3_8b/runs/slurm/%x-%j.out
+#SBATCH --error=segments/mechanistic_heads_qwen3_8b/runs/slurm/%x-%j.err
+#SBATCH --time=12:00:00
+#SBATCH --nodes=1
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=6
+#SBATCH --mem=96G
+#SBATCH --gres=gpu:1
+
+set -euo pipefail
+
+REPO="${REPO:-$SLURM_SUBMIT_DIR}"
+CACHE_ROOT="${CACHE_ROOT:-$REPO/.cache/vlmproject}"
+TASK="${TASK:?TASK is required}"
+MODE="${MODE:-smoke}"
+SEED="${SEED:-260318523}"
+
+mkdir -p "$CACHE_ROOT/uv" "$CACHE_ROOT/huggingface" "$CACHE_ROOT/torch" \
+  "$REPO/segments/mechanistic_heads_qwen3_8b/runs/slurm"
+cd "$REPO"
+export PATH="$CACHE_ROOT/bin:$PATH"
+export UV_CACHE_DIR="$CACHE_ROOT/uv"
+export HF_HOME="$CACHE_ROOT/huggingface"
+export HUGGINGFACE_HUB_CACHE="$CACHE_ROOT/huggingface/hub"
+export TORCH_HOME="$CACHE_ROOT/torch"
+export TOKENIZERS_PARALLELISM=false
+export HF_HUB_OFFLINE="${HF_HUB_OFFLINE:-1}"
+
+uv run python scripts/check_neuronic_gpu.py --min-memory-gb "${MIN_GPU_MEMORY_GB:-20}"
+
+smoke_args=()
+if [[ "$MODE" == "smoke" ]]; then
+  smoke_args+=(--smoke)
+elif [[ "$MODE" != "full" ]]; then
+  echo "MODE must be smoke or full" >&2
+  exit 2
+fi
+OUT_SUFFIX="$MODE"
+layer_args=()
+if [[ -n "${SLURM_ARRAY_TASK_ID:-}" ]]; then
+  layer_args+=(--layers "$SLURM_ARRAY_TASK_ID")
+  OUT_SUFFIX="$MODE/layer-$SLURM_ARRAY_TASK_ID"
+fi
+
+case "$TASK" in
+  instrumentation)
+    uv run python scripts/validate_mechanistic_instrumentation.py \
+      --config segments/mechanistic_heads_qwen3_8b/configs/instrumentation_smoke.json \
+      --output-dir segments/mechanistic_heads_qwen3_8b/reports/instrumentation \
+      --seed "$SEED" --device-map cuda --resume "${smoke_args[@]}"
+    ;;
+  counting-behavior)
+    uv run python scripts/run_counting_behavior.py \
+      --config segments/mechanistic_heads_qwen3_8b/configs/counting_behavior.json \
+      --output-dir "segments/mechanistic_heads_qwen3_8b/runs/counting_behavior/$OUT_SUFFIX" \
+      --seed "$SEED" --device-map cuda --resume "${layer_args[@]}" "${smoke_args[@]}"
+    ;;
+  counting-vap)
+    uv run python scripts/run_counting_vap.py \
+      --config segments/mechanistic_heads_qwen3_8b/configs/counting_vap.json \
+      --output-dir "segments/mechanistic_heads_qwen3_8b/runs/counting_vap/$OUT_SUFFIX" \
+      --seed "$SEED" --device-map cuda --resume "${layer_args[@]}" "${smoke_args[@]}"
+    ;;
+  counting-heads)
+    uv run python scripts/run_counting_head_scan.py \
+      --config segments/mechanistic_heads_qwen3_8b/configs/counting_head_scan.json \
+      --output-dir "segments/mechanistic_heads_qwen3_8b/runs/counting_head_scan/$OUT_SUFFIX" \
+      --seed "$SEED" --device-map cuda --resume "${layer_args[@]}" "${smoke_args[@]}"
+    ;;
+  counting-validation)
+    uv run python scripts/run_counting_head_validation.py \
+      --config segments/mechanistic_heads_qwen3_8b/configs/counting_validation.json \
+      --output-dir "segments/mechanistic_heads_qwen3_8b/runs/counting_validation/$OUT_SUFFIX" \
+      --seed "$SEED" --device-map cuda --resume "${smoke_args[@]}"
+    ;;
+  point-train-all)
+    point_conditions=(direct_answer direct_length_matched point_answer shuffled_point_answer)
+    point_slugs=(direct-answer direct-length-matched point-answer shuffled-point-answer)
+    point_index="${SLURM_ARRAY_TASK_ID:?point-train-all requires array index 0-3}"
+    if (( point_index < 0 || point_index >= ${#point_conditions[@]} )); then
+      echo "point training array index must be 0-3" >&2
+      exit 2
+    fi
+    uv run python scripts/train_point_search.py \
+      --config segments/mechanistic_heads_qwen3_8b/configs/point_search_lora.json \
+      --output-dir "segments/mechanistic_heads_qwen3_8b/checkpoints/${point_slugs[$point_index]}-lora" \
+      --condition "${point_conditions[$point_index]}" \
+      --seed "$SEED" --device-map cuda --resume "${smoke_args[@]}"
+    ;;
+  point-behavior-all)
+    behavior_conditions=(base direct_answer direct_length_matched point_answer shuffled_point_answer)
+    behavior_slugs=(base direct-answer direct-length-matched point-answer shuffled-point-answer)
+    behavior_index="${SLURM_ARRAY_TASK_ID:?point-behavior-all requires array index 0-4}"
+    if (( behavior_index < 0 || behavior_index >= ${#behavior_conditions[@]} )); then
+      echo "point behavior array index must be 0-4" >&2
+      exit 2
+    fi
+    checkpoint_args=()
+    if [[ "${behavior_conditions[$behavior_index]}" != "base" ]]; then
+      checkpoint_args+=(--checkpoint "segments/mechanistic_heads_qwen3_8b/checkpoints/${behavior_slugs[$behavior_index]}-lora")
+    fi
+    behavior_root="segments/mechanistic_heads_qwen3_8b/runs/point_behavior"
+    if [[ "$MODE" == "smoke" ]]; then
+      behavior_root="segments/mechanistic_heads_qwen3_8b/runs/point_behavior_smoke"
+    fi
+    uv run python scripts/evaluate_point_search.py \
+      --config segments/mechanistic_heads_qwen3_8b/configs/point_search_behavior.json \
+      --output-dir "$behavior_root/${behavior_conditions[$behavior_index]}" \
+      --condition "${behavior_conditions[$behavior_index]}" \
+      --seed "$SEED" --device-map cuda --resume "${checkpoint_args[@]}" "${smoke_args[@]}"
+    ;;
+  waldo-behavior)
+    uv run python scripts/run_waldo_behavior.py \
+      --config segments/mechanistic_heads_qwen3_8b/configs/waldo_behavior.json \
+      --output-dir "segments/mechanistic_heads_qwen3_8b/runs/waldo_behavior/$OUT_SUFFIX" \
+      --seed "$SEED" --device-map cuda --resume "${smoke_args[@]}"
+    ;;
+  search-heads)
+    uv run python scripts/run_search_head_scan.py \
+      --config segments/mechanistic_heads_qwen3_8b/configs/search_head_scan.json \
+      --output-dir "segments/mechanistic_heads_qwen3_8b/runs/search_head_scan/$OUT_SUFFIX" \
+      --seed "$SEED" --device-map cuda --resume "${layer_args[@]}" "${smoke_args[@]}"
+    ;;
+  point-centroids)
+    uv run python scripts/run_point_attention_centroids.py \
+      --config segments/mechanistic_heads_qwen3_8b/configs/point_attention_centroids.json \
+      --output-dir "segments/mechanistic_heads_qwen3_8b/runs/point_attention_centroids/$OUT_SUFFIX" \
+      --seed "$SEED" --device-map cuda --resume "${layer_args[@]}" "${smoke_args[@]}"
+    ;;
+  verification-heads)
+    uv run python scripts/run_verification_head_scan.py \
+      --config segments/mechanistic_heads_qwen3_8b/configs/verification_head_scan.json \
+      --output-dir "segments/mechanistic_heads_qwen3_8b/runs/verification_head_scan/$OUT_SUFFIX" \
+      --seed "$SEED" --device-map cuda --resume "${layer_args[@]}" "${smoke_args[@]}"
+    ;;
+  distractor-heads)
+    uv run python scripts/run_distractor_head_scan.py \
+      --config segments/mechanistic_heads_qwen3_8b/configs/distractor_head_scan.json \
+      --output-dir "segments/mechanistic_heads_qwen3_8b/runs/distractor_head_scan/$OUT_SUFFIX" \
+      --seed "$SEED" --device-map cuda --resume "${layer_args[@]}" "${smoke_args[@]}"
+    ;;
+  point-ablation)
+    uv run python scripts/run_point_head_ablation.py \
+      --config segments/mechanistic_heads_qwen3_8b/configs/point_head_ablation.json \
+      --output-dir "segments/mechanistic_heads_qwen3_8b/runs/point_head_ablation/$OUT_SUFFIX" \
+      --seed "$SEED" --device-map cuda --resume "${smoke_args[@]}"
+    ;;
+  maci-heads)
+    uv run python scripts/run_maci_head_scan.py \
+      --config segments/mechanistic_heads_qwen3_8b/configs/maci_head_scan.json \
+      --output-dir "segments/mechanistic_heads_qwen3_8b/runs/maci_head_scan/$OUT_SUFFIX" \
+      --cache-dir segments/mechanistic_heads_qwen3_8b/data/mmmc_cache \
+      --seed "$SEED" --device-map cuda --resume "${layer_args[@]}" "${smoke_args[@]}"
+    ;;
+  maci-heads-aligned)
+    uv run python scripts/run_maci_head_scan.py \
+      --config segments/mechanistic_heads_qwen3_8b/configs/maci_head_scan.json \
+      --output-dir "segments/mechanistic_heads_qwen3_8b/runs/maci_head_scan_aligned/$OUT_SUFFIX" \
+      --cache-dir segments/mechanistic_heads_qwen3_8b/data/mmmc_cache \
+      --scope all_aligned_prefill \
+      --seed "$SEED" --device-map cuda --resume "${layer_args[@]}" "${smoke_args[@]}"
+    ;;
+  maci-ablation)
+    uv run python scripts/run_maci_ablation.py \
+      --config segments/mechanistic_heads_qwen3_8b/configs/maci_ablation.json \
+      --output-dir "segments/mechanistic_heads_qwen3_8b/runs/maci_ablation/$OUT_SUFFIX" \
+      --cache-dir segments/mechanistic_heads_qwen3_8b/data/mmmc_cache \
+      --seed "$SEED" --device-map cuda --resume "${smoke_args[@]}"
+    ;;
+  maci-confirm)
+    uv run python scripts/run_maci_ablation.py \
+      --config segments/mechanistic_heads_qwen3_8b/configs/maci_ablation_locked.json \
+      --output-dir "segments/mechanistic_heads_qwen3_8b/runs/maci_ablation_locked/$OUT_SUFFIX" \
+      --cache-dir segments/mechanistic_heads_qwen3_8b/data/mmmc_cache \
+      --seed "$SEED" --device-map cuda --resume "${smoke_args[@]}"
+    ;;
+  maci-detector)
+    uv run python scripts/train_maci_conflict_detector.py \
+      --config segments/mechanistic_heads_qwen3_8b/configs/maci_detector.json \
+      --output-dir "segments/mechanistic_heads_qwen3_8b/runs/maci_detector/$OUT_SUFFIX" \
+      --cache-dir segments/mechanistic_heads_qwen3_8b/data/mmmc_cache \
+      --seed "$SEED" --device-map cuda --resume "${smoke_args[@]}"
+    ;;
+  maci-gated)
+    uv run python scripts/run_maci_gated_intervention.py \
+      --config segments/mechanistic_heads_qwen3_8b/configs/maci_gated_intervention.json \
+      --output-dir "segments/mechanistic_heads_qwen3_8b/runs/maci_gated_intervention/$OUT_SUFFIX" \
+      --cache-dir segments/mechanistic_heads_qwen3_8b/data/mmmc_cache \
+      --seed "$SEED" --device-map cuda --resume "${smoke_args[@]}"
+    ;;
+  vlmbias-heads)
+    uv run python scripts/run_vlmbias_signed_head_scan.py \
+      --config segments/mechanistic_heads_qwen3_8b/configs/vlmbias_signed_head_scan.json \
+      --output-dir "segments/mechanistic_heads_qwen3_8b/runs/vlmbias_signed_head_scan/$OUT_SUFFIX" \
+      --seed "$SEED" --device-map cuda --resume "${layer_args[@]}" "${smoke_args[@]}"
+    ;;
+  vlmbias-validation)
+    uv run python scripts/run_vlmbias_head_validation.py \
+      --config segments/mechanistic_heads_qwen3_8b/configs/vlmbias_head_validation.json \
+      --output-dir "segments/mechanistic_heads_qwen3_8b/runs/vlmbias_head_validation/$OUT_SUFFIX" \
+      --seed "$SEED" --device-map cuda --resume "${smoke_args[@]}"
+    ;;
+  *)
+    echo "unknown TASK=$TASK" >&2
+    exit 2
+    ;;
+esac

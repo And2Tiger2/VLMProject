@@ -1,0 +1,7 @@
+{
+  "schema_version": 1,
+  "model_id": "Qwen/Qwen3-VL-8B-Instruct",
+  "paired_dataset": "segments/mechanistic_heads_qwen3_8b/data/generated/vlmbias_contrasts/vlmbias_signed_contrasts.jsonl",
+  "split": "prototype",
+  "metric": "log_p_bias_minus_log_p_correct"
+}

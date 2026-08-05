@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "model_id": "Qwen/Qwen3-VL-8B-Instruct",
+  "dataset": "segments/mechanistic_heads_qwen3_8b/data/generated/point_search/point_search.jsonl",
+  "training_mode": "lora",
+  "lora_r": 16,
+  "lora_alpha": 32,
+  "lora_dropout": 0.05,
+  "lora_target_modules": ["q_proj", "k_proj", "v_proj", "o_proj"],
+  "learning_rate": 0.0001,
+  "warmup_steps": 50,
+  "epochs": 1,
+  "batch_size": 1,
+  "gradient_accumulation_steps": 8
+}

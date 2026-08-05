@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "model_id": "Qwen/Qwen3-VL-8B-Instruct",
+  "adapter_path": "segments/mechanistic_heads_qwen3_8b/checkpoints/point-answer-lora",
+  "random_draws": 20,
+  "gaze_ranking": "segments/gaze_heads_qwen3_8b/runs/gaze_discovery_seed42_merged/gaze_head_ranking.json",
+  "general_causal_importance": "segments/mechanistic_heads_qwen3_8b/reports/general_importance/general_head_importance.tsv",
+  "instrumentation_report": "segments/mechanistic_heads_qwen3_8b/reports/instrumentation/instrumentation_validation.json",
+  "studies": [
+    {
+      "name": "search",
+      "scores": "segments/mechanistic_heads_qwen3_8b/runs/search_head_scan/full/search_head_scores.tsv",
+      "score_column": "search_causal_score",
+      "paired_dataset": "segments/mechanistic_heads_qwen3_8b/data/generated/point_search/search_pairs.jsonl",
+      "correct_answer_role": "recipient",
+      "split": "locked_test",
+      "k": 30
+    },
+    {
+      "name": "verification",
+      "scores": "segments/mechanistic_heads_qwen3_8b/runs/verification_head_scan/full/verification_head_scores.tsv",
+      "score_column": "verification_causal_score",
+      "paired_dataset": "segments/mechanistic_heads_qwen3_8b/data/generated/point_search/verification_pairs.jsonl",
+      "correct_answer_role": "recipient",
+      "split": "locked_test",
+      "k": 30
+    },
+    {
+      "name": "distractor_suppression",
+      "scores": "segments/mechanistic_heads_qwen3_8b/runs/distractor_head_scan/full/distractor_head_scores.tsv",
+      "score_column": "distractor_suppression_score",
+      "paired_dataset": "segments/mechanistic_heads_qwen3_8b/data/generated/point_search/distractor_pairs.jsonl",
+      "correct_answer_role": "donor",
+      "split": "locked_test",
+      "k": 30
+    }
+  ]
+}

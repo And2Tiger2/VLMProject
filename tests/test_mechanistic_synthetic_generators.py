@@ -1,0 +1,91 @@
+from __future__ import annotations
+
+import hashlib
+
+from vlm_eval.mechanistic_heads.synthetic import (
+    fixed_eight_scene,
+    render_search_scene,
+    render_syndot,
+    render_waldo_like_scene,
+    syndot_positions,
+    length_matched_nonspatial_answer,
+)
+
+
+def _digest(image) -> str:
+    return hashlib.sha256(image.tobytes()).hexdigest()
+
+
+def test_syndot_is_deterministic_and_matches_paper_geometry() -> None:
+    first = syndot_positions(7, "example")
+    second = syndot_positions(7, "example")
+    assert first == second
+    image = render_syndot(10, first)
+    assert image.size == (336, 336)
+    assert _digest(image) == _digest(render_syndot(10, second))
+
+
+def test_constant_complexity_has_fixed_total_and_exact_masks() -> None:
+    four = fixed_eight_scene(seed=2, scene_id="a", red_count=4)
+    five = fixed_eight_scene(seed=2, scene_id="a", red_count=5)
+    assert len(four.objects) == len(five.objects) == 8
+    assert [row["center"] for row in four.objects] == [row["center"] for row in five.objects]
+    assert four.masks["changed_pixel"].getbbox() is not None
+    assert _digest(four.image) != _digest(five.image)
+
+
+def test_point_search_is_deterministic_with_exact_target_count() -> None:
+    first = render_search_scene(
+        seed=4,
+        scene_id="s",
+        target_color="green",
+        target_shape="triangle",
+        target_count=2,
+    )
+    second = render_search_scene(
+        seed=4,
+        scene_id="s",
+        target_color="green",
+        target_shape="triangle",
+        target_count=2,
+    )
+    assert _digest(first.image) == _digest(second.image)
+    assert sum(row["class"] == "target" for row in first.objects) == 2
+    assert len(first.objects) == 50
+    assert first.masks["target"].getbbox() is not None
+
+
+def test_waldo_like_generator_is_original_deterministic_and_masked() -> None:
+    first = render_waldo_like_scene(
+        seed=5, scene_id="w", target_present=True, clutter=8, similarity=3
+    )
+    second = render_waldo_like_scene(
+        seed=5, scene_id="w", target_present=True, clutter=8, similarity=3
+    )
+    assert _digest(first.image) == _digest(second.image)
+    targets = [row for row in first.objects if row["class"] == "target"]
+    assert len(targets) == 1
+    assert set(targets[0]["features"]) == {
+        "striped_torso",
+        "round_glasses",
+        "pointed_hat",
+        "blue_lower",
+    }
+    assert first.masks["target"].getbbox() is not None
+    impostors = [row for row in first.objects if row["class"] == "distractor-incorrect-binding"]
+    assert len(impostors) == 1 and not impostors[0]["binding_correct"]
+
+
+def test_length_matched_direct_answer_is_exact_and_nonspatial() -> None:
+    class Tokenizer:
+        def __call__(self, text, add_special_tokens=False):
+            class Encoded:
+                input_ids = text.split()
+            return Encoded()
+
+    point = "points = one two three four five"
+    answer = length_matched_nonspatial_answer(
+        Tokenizer(), direct_answer="1", point_answer=point
+    )
+    assert len(answer.split()) == len(point.split())
+    assert "(" not in answer and ")" not in answer

@@ -1,0 +1,16 @@
+# External datasets and caches
+data/mmmc/
+data/mmmc_cache/
+data/external/
+
+# Generated datasets can be rebuilt from committed configs/manifests.
+data/generated/
+
+# Large model/activation outputs
+runs/
+activations/
+checkpoints/
+
+# Keep report sources and small smoke fixtures tracked.
+!reports/
+!tests/

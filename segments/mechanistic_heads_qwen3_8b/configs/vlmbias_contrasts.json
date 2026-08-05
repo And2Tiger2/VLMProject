@@ -1,0 +1,7 @@
+{
+  "schema_version": 1,
+  "vlmbias_dataset": "segments/vlm_bias_attention/data/vlmbias_400.jsonl",
+  "accepted_masks": "segments/vlm_bias_attention/data/vlmbias_high_bias_roi_masks_v1/accepted.jsonl",
+  "candidate_root": "segments/vlm_bias_attention/data/vlmbias_high_bias_mask_candidates_v1",
+  "context_removal": "whiten"
+}

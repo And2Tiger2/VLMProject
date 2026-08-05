@@ -1,0 +1,10 @@
+{
+  "schema_version": 1,
+  "model_id": "Qwen/Qwen3-VL-8B-Instruct",
+  "normal_backend": "repository default SDPA",
+  "custom_backend": "vlm_mechanistic_capture",
+  "identity_tolerance": 0.00001,
+  "reconstruction_tolerance": 0.002,
+  "backend_tolerance": 0.005,
+  "cache_tolerance": 0.005
+}

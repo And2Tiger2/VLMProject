@@ -1,0 +1,352 @@
+from __future__ import annotations
+
+from dataclasses import dataclass
+import hashlib
+import math
+from pathlib import Path
+import random
+from typing import Any, Iterable
+
+from PIL import Image, ImageDraw
+
+
+SYNDOT_PROMPT = "What is the number of the black dots in the image? Answer with the number only."
+SEARCH_COLORS = {
+    "red": (220, 45, 45),
+    "green": (45, 165, 80),
+    "blue": (45, 100, 220),
+    "yellow": (235, 200, 45),
+    "purple": (145, 70, 190),
+    "orange": (235, 130, 35),
+}
+SEARCH_SHAPES = ("circle", "square", "triangle", "diamond", "cross", "pentagon")
+
+
+def stable_seed(seed: int, *parts: Any) -> int:
+    payload = ":".join([str(seed), *(str(part) for part in parts)]).encode("utf-8")
+    return int.from_bytes(hashlib.sha256(payload).digest()[:8], "little")
+
+
+def syndot_positions(seed: int, example_id: str, *, maximum: int = 10) -> list[tuple[int, int]]:
+    rng = random.Random(stable_seed(seed, "syndot", example_id))
+    grid = [(14 + 12 * x, 14 + 12 * y) for y in range(28) for x in range(28)]
+    return rng.sample(grid, maximum)
+
+
+def render_syndot(count: int, positions: list[tuple[int, int]]) -> Image.Image:
+    if not 1 <= count <= 10:
+        raise ValueError("SynDot count must be in 1..10")
+    image = Image.new("RGB", (336, 336), "white")
+    draw = ImageDraw.Draw(image)
+    for x, y in positions[:count]:
+        draw.ellipse((x - 4, y - 4, x + 4, y + 4), fill="black")
+    return image
+
+
+def render_syndot_mask(count: int, positions: list[tuple[int, int]]) -> Image.Image:
+    mask = Image.new("L", (336, 336), 0)
+    draw = ImageDraw.Draw(mask)
+    for x, y in positions[:count]:
+        draw.ellipse((x - 4, y - 4, x + 4, y + 4), fill=255)
+    return mask
+
+
+@dataclass(frozen=True)
+class RenderedScene:
+    image: Image.Image
+    masks: dict[str, Image.Image]
+    objects: list[dict[str, Any]]
+
+
+def fixed_eight_scene(
+    *,
+    seed: int,
+    scene_id: str,
+    red_count: int,
+    variant: str = "color",
+    relocate: bool = False,
+) -> RenderedScene:
+    """Render constant-total scenes with an exact one-object category change."""
+
+    if red_count not in {4, 5}:
+        raise ValueError("constant-complexity red_count must be 4 or 5")
+    rng = random.Random(stable_seed(seed, "constant-eight", scene_id))
+    image = Image.new("RGB", (336, 336), "white")
+    positions = rng.sample(
+        [(42 + 42 * x, 42 + 42 * y) for y in range(7) for x in range(7)], 8
+    )
+    if relocate:
+        positions[0] = next(
+            point
+            for point in reversed([(42 + 42 * x, 42 + 42 * y) for y in range(7) for x in range(7)])
+            if point not in positions
+        )
+    masks = {
+        name: Image.new("L", image.size, 0)
+        for name in ("target", "distractor", "changed_pixel")
+    }
+    objects: list[dict[str, Any]] = []
+    for index, (x, y) in enumerate(positions):
+        is_target = index < red_count
+        if variant == "color":
+            color = SEARCH_COLORS["red" if is_target else "blue"]
+            shape = "circle"
+        elif variant == "shape":
+            color = SEARCH_COLORS["green"]
+            shape = "circle" if is_target else "square"
+        else:
+            raise ValueError(f"unknown fixed-eight variant: {variant}")
+        _draw_shape(ImageDraw.Draw(image), shape, x, y, 12, fill=color)
+        mask_name = "target" if is_target else "distractor"
+        _draw_shape(ImageDraw.Draw(masks[mask_name]), shape, x, y, 12, fill=255)
+        if index == 4:
+            _draw_shape(ImageDraw.Draw(masks["changed_pixel"]), shape, x, y, 12, fill=255)
+        objects.append(
+            {
+                "index": index,
+                "center": [x, y],
+                "box": [x - 12, y - 12, x + 12, y + 12],
+                "class": f"{('target' if is_target else 'distractor')}-{shape}",
+            }
+        )
+    return RenderedScene(image=image, masks=masks, objects=objects)
+
+
+def render_search_scene(
+    *,
+    seed: int,
+    scene_id: str,
+    target_color: str,
+    target_shape: str,
+    target_count: int,
+    n_objects: int = 50,
+    size: int = 336,
+) -> RenderedScene:
+    if target_color not in SEARCH_COLORS or target_shape not in SEARCH_SHAPES:
+        raise ValueError("unknown search target conjunction")
+    if not 0 <= target_count <= n_objects:
+        raise ValueError("target_count must be within scene size")
+    rng = random.Random(stable_seed(seed, "point-search", scene_id))
+    image = Image.new("RGB", (size, size), (245, 245, 242))
+    target_mask = Image.new("L", image.size, 0)
+    distractor_mask = Image.new("L", image.size, 0)
+    centers = _sample_centers(rng, n_objects, size=size, margin=14, min_distance=26)
+    objects: list[dict[str, Any]] = []
+    other_colors = [name for name in SEARCH_COLORS if name != target_color]
+    other_shapes = [name for name in SEARCH_SHAPES if name != target_shape]
+    for index, (x, y) in enumerate(centers):
+        if index < target_count:
+            color_name, shape = target_color, target_shape
+            kind = "target"
+        else:
+            distractor_type = index % 3
+            if distractor_type == 0:
+                color_name, shape = target_color, rng.choice(other_shapes)
+                kind = "same-color"
+            elif distractor_type == 1:
+                color_name, shape = rng.choice(other_colors), target_shape
+                kind = "same-shape"
+            else:
+                color_name, shape = rng.choice(other_colors), rng.choice(other_shapes)
+                kind = "neither"
+        _draw_shape(ImageDraw.Draw(image), shape, x, y, 8, fill=SEARCH_COLORS[color_name])
+        target = target_mask if kind == "target" else distractor_mask
+        _draw_shape(ImageDraw.Draw(target), shape, x, y, 9, fill=255)
+        objects.append(
+            {
+                "index": index,
+                "center": [x, y],
+                "normalized_center": [round(x / (size - 1), 6), round(y / (size - 1), 6)],
+                "box": [x - 9, y - 9, x + 9, y + 9],
+                "color": color_name,
+                "shape": shape,
+                "class": kind,
+            }
+        )
+    return RenderedScene(
+        image=image,
+        masks={"target": target_mask, "distractor": distractor_mask},
+        objects=objects,
+    )
+
+
+WALDO_FEATURES = ("striped_torso", "round_glasses", "pointed_hat", "blue_lower")
+
+
+def length_matched_nonspatial_answer(tokenizer: Any, *, direct_answer: str, point_answer: str) -> str:
+    """Return non-spatial text with exactly the point answer's token count."""
+
+    target = len(tokenizer(point_answer, add_special_tokens=False).input_ids)
+    if target < 1:
+        raise ValueError("point answer tokenized to an empty sequence")
+    bases = [f"answer={direct_answer}", str(direct_answer)]
+    neutral_words = (" evidence", " seen", " object", " result", " neutral")
+    for base in bases:
+        for word in neutral_words:
+            for repeats in range(target + 1):
+                candidate = base + word * repeats
+                ids = tokenizer(candidate, add_special_tokens=False).input_ids
+                if len(ids) == target and "(" not in candidate and ")" not in candidate:
+                    return candidate
+                if len(ids) > target:
+                    break
+    raise RuntimeError(
+        f"could not build a non-spatial {target}-token answer for {direct_answer!r}"
+    )
+
+
+def render_waldo_like_scene(
+    *,
+    seed: int,
+    scene_id: str,
+    target_present: bool,
+    clutter: int = 24,
+    similarity: int = 2,
+    target_cell: int | None = None,
+    occluded: bool = False,
+    size: int = 400,
+    target_scale: float = 1.0,
+    background: tuple[int, int, int] = (225, 235, 220),
+) -> RenderedScene:
+    """Render an original four-feature conjunction-search character scene."""
+
+    if similarity not in {1, 2, 3}:
+        raise ValueError("similarity must be one, two, or three shared features")
+    rng = random.Random(stable_seed(seed, "waldo-like", scene_id))
+    image = Image.new("RGB", (size, size), background)
+    masks = {"target": Image.new("L", image.size, 0)}
+    objects: list[dict[str, Any]] = []
+    if target_cell is None:
+        target_cell = rng.randrange(100)
+    target_center = (
+        (target_cell % 10) * (size // 10) + size // 20,
+        (target_cell // 10) * (size // 10) + size // 20,
+    )
+    centers = [target_center] + _sample_centers(
+        rng, clutter, size=size, margin=18, min_distance=28, forbidden=[target_center]
+    )
+    for index, center in enumerate(centers):
+        is_target = index == 0 and target_present
+        incorrect_binding = False
+        if is_target:
+            features = set(WALDO_FEATURES)
+            class_name = "target"
+        elif index == 1 and similarity == 3:
+            features = set(WALDO_FEATURES)
+            class_name = "distractor-incorrect-binding"
+            incorrect_binding = True
+        else:
+            features = set(rng.sample(WALDO_FEATURES, similarity))
+            class_name = f"distractor-shared-{similarity}"
+        mask = masks.setdefault(
+            f"object_{index:03d}", Image.new("L", image.size, 0)
+        )
+        scale = target_scale if is_target else 1.0
+        _draw_character(image, mask, center, features, occluded=is_target and occluded, scale=scale, binding_correct=not incorrect_binding)
+        if is_target:
+            masks["target"] = mask.copy()
+        x, y = center
+        objects.append(
+            {
+                "index": index,
+                "center": [x, y],
+                "box": [x - int(round(12 * scale)), y - int(round(29 * scale)), x + int(round(12 * scale)), y + int(round(18 * scale))],
+                "cell": int((y // (size // 10)) * 10 + x // (size // 10)),
+                "class": class_name,
+                "features": sorted(features),
+                "binding_correct": not incorrect_binding,
+            }
+        )
+    return RenderedScene(image=image, masks=masks, objects=objects)
+
+
+def _sample_centers(
+    rng: random.Random,
+    count: int,
+    *,
+    size: int,
+    margin: int,
+    min_distance: int,
+    forbidden: Iterable[tuple[int, int]] = (),
+) -> list[tuple[int, int]]:
+    centers = list(forbidden)
+    added: list[tuple[int, int]] = []
+    attempts = 0
+    while len(added) < count and attempts < count * 500:
+        attempts += 1
+        point = (rng.randint(margin, size - margin), rng.randint(margin, size - margin))
+        if all(math.dist(point, previous) >= min_distance for previous in centers):
+            centers.append(point)
+            added.append(point)
+    if len(added) != count:
+        raise RuntimeError(f"could place only {len(added)}/{count} objects")
+    return added
+
+
+def _draw_shape(
+    draw: ImageDraw.ImageDraw,
+    shape: str,
+    x: int,
+    y: int,
+    radius: int,
+    *,
+    fill: Any,
+) -> None:
+    if shape == "circle":
+        draw.ellipse((x - radius, y - radius, x + radius, y + radius), fill=fill)
+    elif shape == "square":
+        draw.rectangle((x - radius, y - radius, x + radius, y + radius), fill=fill)
+    elif shape == "triangle":
+        draw.polygon([(x, y - radius), (x - radius, y + radius), (x + radius, y + radius)], fill=fill)
+    elif shape == "diamond":
+        draw.polygon([(x, y - radius), (x - radius, y), (x, y + radius), (x + radius, y)], fill=fill)
+    elif shape == "cross":
+        width = max(2, radius // 3)
+        draw.rectangle((x - width, y - radius, x + width, y + radius), fill=fill)
+        draw.rectangle((x - radius, y - width, x + radius, y + width), fill=fill)
+    elif shape == "pentagon":
+        points = [
+            (
+                x + radius * math.cos(-math.pi / 2 + 2 * math.pi * index / 5),
+                y + radius * math.sin(-math.pi / 2 + 2 * math.pi * index / 5),
+            )
+            for index in range(5)
+        ]
+        draw.polygon(points, fill=fill)
+    else:
+        raise ValueError(f"unknown shape: {shape}")
+
+
+def _draw_character(
+    image: Image.Image,
+    mask: Image.Image,
+    center: tuple[int, int],
+    features: set[str],
+    *,
+    occluded: bool,
+    scale: float = 1.0,
+    binding_correct: bool = True,
+) -> None:
+    x, y = center
+    draw = ImageDraw.Draw(image)
+    mask_draw = ImageDraw.Draw(mask)
+    def s(value: int) -> int: return int(round(value * scale))
+    skin = (225, 175, 135)
+    torso = (215, 45, 45) if "striped_torso" in features else (45, 165, 80)
+    lower = (45, 80, 190) if "blue_lower" in features else (110, 75, 50)
+    if not binding_correct and "blue_lower" in features:
+        torso, lower = lower, torso
+    draw.ellipse((x - s(6), y - s(17), x + s(6), y - s(5)), fill=skin, outline="black")
+    draw.rectangle((x - s(8), y - s(5), x + s(8), y + s(8)), fill=torso, outline="black")
+    if "striped_torso" in features:
+        for offset in (-3, 2, 7):
+            draw.line((x - s(7), y + s(offset), x + s(7), y + s(offset)), fill="white", width=max(1, s(2)))
+    draw.rectangle((x - s(7), y + s(8), x + s(7), y + s(17)), fill=lower, outline="black")
+    if "round_glasses" in features:
+        draw.ellipse((x - s(6), y - s(14), x - s(1), y - s(9)), outline="black", width=1)
+        draw.ellipse((x + s(1), y - s(14), x + s(6), y - s(9)), outline="black", width=1)
+    if "pointed_hat" in features:
+        draw.polygon([(x, y - s(29)), (x - s(9), y - s(17)), (x + s(9), y - s(17))], fill=(235, 190, 35), outline="black")
+    mask_draw.rectangle((x - s(10), y - s(29), x + s(10), y + s(18)), fill=255)
+    if occluded:
+        draw.rectangle((x - s(12), y - s(2), x + s(12), y + s(7)), fill=(120, 105, 80))

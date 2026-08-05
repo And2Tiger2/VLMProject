@@ -1,0 +1,7 @@
+{
+  "schema_version": 1,
+  "coco_annotation": "annotations/instances.json",
+  "license_files": ["LICENSE", "LICENSE.txt", "README.md"],
+  "target_categories": ["waldo"],
+  "page_id_regex": "(?P<page>[^/]+?)(?:[_-](?:crop|patch)[_-]?\\d+)?\\.[^.]+$"
+}

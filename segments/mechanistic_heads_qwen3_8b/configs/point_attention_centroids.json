@@ -1,0 +1,7 @@
+{
+  "schema_version": 1,
+  "model_id": "Qwen/Qwen3-VL-8B-Instruct",
+  "adapter_path": "segments/mechanistic_heads_qwen3_8b/checkpoints/point-answer-lora",
+  "dataset": "segments/mechanistic_heads_qwen3_8b/data/generated/point_search/point_search.jsonl",
+  "split": "ood_target_count_1"
+}
