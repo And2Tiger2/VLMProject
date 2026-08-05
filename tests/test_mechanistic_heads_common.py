@@ -36,7 +36,11 @@ from vlm_eval.mechanistic_heads.causal import (
     repeat_model_inputs,
 )
 from vlm_eval.mechanistic_heads.config import parse_layer_spec, prepare_output_directory
-from vlm_eval.mechanistic_heads.capture import get_language_layers
+from vlm_eval.mechanistic_heads.capture import (
+    MECHANISTIC_ATTENTION_IMPL,
+    get_language_layers,
+    register_qwen3_mechanistic_attention,
+)
 from vlm_eval.mechanistic_heads.qwen3_runtime import runtime_from_config
 
 
@@ -260,6 +264,16 @@ def test_language_layer_discovery_unwraps_peft_style_containers() -> None:
     qwen = SimpleNamespace(language_model=SimpleNamespace(layers=layers))
     wrapped = SimpleNamespace(base_model=SimpleNamespace(model=qwen))
     assert get_language_layers(wrapped) is layers
+
+
+def test_custom_attention_registers_matching_eager_causal_mask() -> None:
+    from transformers.masking_utils import ALL_MASK_ATTENTION_FUNCTIONS, eager_mask
+    from transformers.models.qwen3_vl import modeling_qwen3_vl
+
+    register_qwen3_mechanistic_attention()
+    assert MECHANISTIC_ATTENTION_IMPL in modeling_qwen3_vl.ALL_ATTENTION_FUNCTIONS
+    assert MECHANISTIC_ATTENTION_IMPL in ALL_MASK_ATTENTION_FUNCTIONS
+    assert ALL_MASK_ATTENTION_FUNCTIONS[MECHANISTIC_ATTENTION_IMPL] is eager_mask
 
 
 def test_prompt_subsequence_must_be_unique() -> None:

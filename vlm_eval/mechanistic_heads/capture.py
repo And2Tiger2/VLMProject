@@ -172,11 +172,24 @@ def mechanistic_attention_forward(
 
 
 def register_qwen3_mechanistic_attention() -> None:
+    from transformers.masking_utils import (
+        ALL_MASK_ATTENTION_FUNCTIONS,
+        eager_mask,
+    )
     from transformers.models.qwen3_vl import modeling_qwen3_vl
 
     if MECHANISTIC_ATTENTION_IMPL not in modeling_qwen3_vl.ALL_ATTENTION_FUNCTIONS:
         modeling_qwen3_vl.ALL_ATTENTION_FUNCTIONS.register(
             MECHANISTIC_ATTENTION_IMPL, mechanistic_attention_forward
+        )
+    # Transformers selects the causal-mask builder independently from the
+    # attention kernel. Unregistered custom implementations are assumed to be
+    # external backends that manage causality themselves, and consequently
+    # receive ``attention_mask=None``. Our implementation is eager attention
+    # and must receive the same explicit causal/padding mask as HF eager.
+    if MECHANISTIC_ATTENTION_IMPL not in ALL_MASK_ATTENTION_FUNCTIONS:
+        ALL_MASK_ATTENTION_FUNCTIONS.register(
+            MECHANISTIC_ATTENTION_IMPL, eager_mask
         )
 
 
