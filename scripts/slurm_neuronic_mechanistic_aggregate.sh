@@ -14,6 +14,8 @@ if ! git diff --quiet -- . || ! git diff --cached --quiet -- .; then
   echo "refusing mechanistic aggregation: tracked worktree changes do not match HEAD" >&2
   exit 2
 fi
+export UV_NO_SYNC=1
+export UV_FROZEN=1
 case "$SOURCE_TASK" in
   counting-vap) ROOT=counting_vap ;;
   counting-heads) ROOT=counting_head_scan ;;

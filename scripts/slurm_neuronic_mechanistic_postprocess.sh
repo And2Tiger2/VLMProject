@@ -23,6 +23,10 @@ if ! git diff --quiet -- . || ! git diff --cached --quiet -- .; then
 fi
 export PATH="$CACHE_ROOT/bin:$PATH"
 export UV_CACHE_DIR="$CACHE_ROOT/uv"
+# Consume the submission-time locked environment; do not mutate it from a
+# concurrently scheduled postprocessing job.
+export UV_NO_SYNC=1
+export UV_FROZEN=1
 export HF_HOME="$CACHE_ROOT/huggingface"
 export TOKENIZERS_PARALLELISM=false
 

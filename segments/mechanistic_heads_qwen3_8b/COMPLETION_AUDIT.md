@@ -76,6 +76,9 @@ family has been found.
 - The current instrumentation revision passed all twelve checks on an L40.
 - Subsequent smoke jobs exposed three independent issues now fixed in code:
   union-field TSV output, dense post-`W_O` capture OOM, and missing PEFT setup.
+- The launcher is the sole frozen dependency-sync owner. Preparation, GPU,
+  aggregation, and report jobs run frozen/no-sync, preventing concurrent
+  processes from racing to change the shared virtual environment.
 - The smoke DAG now includes every downstream artifact consumer, so a fresh
   smoke validates controls, locked-validation mechanics, detector/gating,
   reports, and atlas assembly—not only the discovery scans that feed them.

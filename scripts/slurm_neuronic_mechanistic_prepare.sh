@@ -36,6 +36,10 @@ if ! git diff --quiet -- . || ! git diff --cached --quiet -- .; then
 fi
 export PATH="$CACHE_ROOT/bin:$PATH"
 export UV_CACHE_DIR="$CACHE_ROOT/uv"
+# The submission wrapper already installed every locked extra. Preparation
+# must consume that environment without racing a second dependency sync.
+export UV_NO_SYNC=1
+export UV_FROZEN=1
 export HF_HOME="$CACHE_ROOT/huggingface"
 export HUGGINGFACE_HUB_CACHE="$CACHE_ROOT/huggingface/hub"
 export TORCH_HOME="$CACHE_ROOT/torch"

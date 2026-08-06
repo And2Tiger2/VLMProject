@@ -10,6 +10,10 @@ if [[ "$ACTION" == "overnight-smoke" || "$ACTION" == "overnight-smoke-resume" ||
   # Resolve the shared environment once before submitting concurrent jobs.
   # Point-search training requires PEFT from the mechanistic extra.
   uv sync --frozen --extra qwen --extra mechanistic --extra dev
+  # Every submitted process uses this already-resolved shared environment.
+  # Prevent concurrent ``uv run`` calls from trying to mutate it again.
+  export UV_NO_SYNC=1
+  export UV_FROZEN=1
   # Previous revisions' reports/checkpoints cannot be resumed safely. Move
   # them into a recoverable archive before constructing the new DAG.
   uv run python scripts/archive_stale_mechanistic_runs.py --repo "$REPO" --execute

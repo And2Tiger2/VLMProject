@@ -63,6 +63,9 @@
 - Locked VLMBias matched-control distributions use complete answer-sequence
   likelihood without also running redundant greedy generation; behavioral and
   NaturalBench metrics remain fully generated for the selected core conditions.
+- The launcher performs exactly one frozen dependency sync with Qwen, PEFT,
+  and test extras. Every submitted Slurm entrypoint then uses frozen/no-sync
+  mode so concurrent jobs cannot mutate the shared virtual environment.
 - VLMBias semantic-prior contrasts cover all 400 source rows because they do
   not require a mask. Context and detail contrasts remain restricted to the
   114 manually reviewed mask rows, with one subject-grouped split shared by

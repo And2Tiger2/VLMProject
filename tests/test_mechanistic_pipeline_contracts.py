@@ -472,6 +472,17 @@ def test_mechanistic_extras_and_frozen_sync_cover_training_runtime() -> None:
     assert "--seed 260318523 --resume" in wrapper
     assert "generate_point_search_data.py" in wrapper
     assert "--seed 260525427 --overwrite" in wrapper
+    assert "export UV_NO_SYNC=1" in wrapper
+    assert "export UV_FROZEN=1" in wrapper
+    for script in (
+        "slurm_neuronic_mechanistic_prepare.sh",
+        "slurm_neuronic_mechanistic_heads.sh",
+        "slurm_neuronic_mechanistic_aggregate.sh",
+        "slurm_neuronic_mechanistic_postprocess.sh",
+    ):
+        source = (ROOT / "scripts" / script).read_text(encoding="utf-8")
+        assert "export UV_NO_SYNC=1" in source
+        assert "export UV_FROZEN=1" in source
 
 
 def test_preparation_uses_study_specific_generator_seeds() -> None:
