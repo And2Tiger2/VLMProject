@@ -8,6 +8,7 @@
 set -euo pipefail
 REPO="${REPO:-$SLURM_SUBMIT_DIR}"
 SOURCE_TASK="${SOURCE_TASK:?SOURCE_TASK is required}"
+JOB_STARTED_AT="$(date +%s)"
 cd "$REPO"
 case "$SOURCE_TASK" in
   counting-vap) ROOT=counting_vap ;;
@@ -26,3 +27,7 @@ uv run python scripts/aggregate_mechanistic_shards.py \
   --input-root "segments/mechanistic_heads_qwen3_8b/runs/$ROOT/full" \
   --output-dir "segments/mechanistic_heads_qwen3_8b/runs/$ROOT/full" \
   --task "$SOURCE_TASK" --seed 0 --resume
+uv run python scripts/validate_mechanistic_run.py \
+  --repo "$REPO" \
+  --run-dir "segments/mechanistic_heads_qwen3_8b/runs/$ROOT/full" \
+  --newer-than-epoch "$JOB_STARTED_AT"

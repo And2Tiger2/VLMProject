@@ -39,5 +39,5 @@ def correlation(left,right):
 def read_tsv(path):
     with path.open("r",encoding="utf-8") as handle:return list(csv.DictReader(handle,delimiter="\t"))
 def write_tsv(path,rows):
-    with path.open("w",encoding="utf-8",newline="") as handle:writer=csv.DictWriter(handle,fieldnames=list(rows[0]) if rows else ["comparison"],delimiter="\t");writer.writeheader();writer.writerows(rows)
+    with path.open("w",encoding="utf-8",newline="") as handle:writer=csv.DictWriter(handle,fieldnames=sorted({key for row in rows for key in row}) or ["comparison"],delimiter="\t");writer.writeheader();writer.writerows(rows)
 if __name__=="__main__":main()

@@ -50,12 +50,17 @@ def main() -> None:
     )
     manifest = args.output_dir / "dataset_manifest.json"
     manifest.write_text(json.dumps(result, indent=2, sort_keys=True), encoding="utf-8")
+    generated_images = sorted(args.output_dir.rglob("*.png"))
     write_run_manifest(
         args.output_dir,
         config={**config, "smoke": args.smoke, "limit": effective_limit(args)},
         seeds={"generator": args.seed},
         inputs=[args.config],
-        outputs=[manifest, *(Path(path) for path in result["artifacts"])],
+        outputs=[
+            manifest,
+            *(Path(path) for path in result["artifacts"]),
+            *generated_images,
+        ],
         status="complete",
         repo_root=Path.cwd(),
     )
@@ -254,6 +259,17 @@ def generate_point_search_datasets(
             split: len({row["group_id"] for row in waldo_rows if row["split"] == split})
             for split in sorted({row["split"] for row in waldo_rows})
         },
+        "waldo_pair_split_group_counts": {
+            family: {
+                split: len({row.group_id for row in pairs if row.split == split})
+                for split in sorted({row.split for row in pairs})
+            }
+            for family, pairs in (
+                ("search", search_pairs),
+                ("verification", verification_pairs),
+                ("distractor", distractor_pairs),
+            )
+        },
         "artifacts": [
             str(point_path),
             str(waldo_path),
@@ -292,7 +308,14 @@ def _write_waldo_pairs(
             if not resume or not image_path.exists():
                 scene.image.save(image_path)
             paths[name] = image_path.resolve()
-        split = "locked_test" if index % 5 == 0 else "train"
+        split_bucket = index % 10
+        split = (
+            "prototype"
+            if split_bucket < 6
+            else "validation"
+            if split_bucket < 8
+            else "locked_test"
+        )
         strong_decoy_cell = next(
             int(obj["cell"])
             for obj in scenes["high_decoy"].objects

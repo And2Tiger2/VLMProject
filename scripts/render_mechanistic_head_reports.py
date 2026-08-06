@@ -84,8 +84,9 @@ def main() -> None:
     _write_correlations(rows, correlation_path)
     double_path = args.output_dir / "task_by_head_set_double_dissociation.tsv"
     _write_double_dissociation(rows, double_path, k=int(config.get("top_k", 50)))
+    validation_statuses = load_validation_statuses(config, inputs)
     status = args.output_dir / "STATUS.md"
-    status.write_text(_status_markdown(rows, figures, inputs), encoding="utf-8")
+    status.write_text(_status_markdown(rows, figures, inputs, validation_statuses), encoding="utf-8")
     write_run_manifest(args.output_dir, config={**config, "verified_architecture": {"n_layers": n_layers, "n_heads": n_heads, "source": architecture_source}}, seeds={"render": args.seed}, inputs=inputs, outputs=[atlas_path, overlap_path, correlation_path, double_path, status, *figures], status="complete", repo_root=Path.cwd())
     print(json.dumps({"valid": True, "atlas": str(atlas_path), "figures": [str(path) for path in figures]}, indent=2))
 
@@ -97,6 +98,16 @@ def resolve_architecture(config: dict[str, Any]) -> tuple[int, int, str]:
         if not value:
             continue
         manifest = Path(value).parent / "run_manifest.json"
+        if manifest.is_file():
+            arch = json.loads(manifest.read_text(encoding="utf-8")).get("config", {}).get("architecture")
+            if arch:
+                dimensions = (int(arch["n_layers"]), int(arch["n_heads"]))
+                if dimensions != (36, 32):
+                    raise RuntimeError(f"unexpected Qwen3 architecture in {manifest}: {dimensions}")
+                return *dimensions, str(manifest)
+    instrumentation = config.get("status_sources", {}).get("instrumentation")
+    if instrumentation:
+        manifest = Path(instrumentation).parent / "run_manifest.json"
         if manifest.is_file():
             arch = json.loads(manifest.read_text(encoding="utf-8")).get("config", {}).get("architecture")
             if arch:
@@ -248,6 +259,8 @@ def _write_correlations(rows: list[dict[str, Any]], path: Path) -> None:
         for right in columns[left_idx + 1:]:
             pairs = [(float(row[left]), float(row[right])) for row in rows if row.get(left) is not None and row.get(right) is not None]
             output.append({"left": left, "right": right, "n": len(pairs), "spearman_rho": _spearman([p[0] for p in pairs], [p[1] for p in pairs]) if len(pairs) >= 3 else ""})
+    if not output:
+        output.append({"left": "pending", "right": "pending", "n": 0, "spearman_rho": ""})
     _write_table(path, output, ["left", "right", "n", "spearman_rho"])
 
 
@@ -259,6 +272,8 @@ def _write_double_dissociation(rows: list[dict[str, Any]], path: Path, *, k: int
         for measured in columns:
             values = [float(row[measured]) for row in selected if row.get(measured) is not None]
             output.append({"head_set": f"top{k}_{head_set}", "measured_task": measured, "n": len(values), "mean_signed_score": sum(values) / len(values) if values else "", "mean_absolute_score": sum(abs(value) for value in values) / len(values) if values else ""})
+    if not output:
+        output.append({"head_set": "pending", "measured_task": "pending", "n": 0, "mean_signed_score": "", "mean_absolute_score": ""})
     _write_table(path, output, ["head_set", "measured_task", "n", "mean_signed_score", "mean_absolute_score"])
 
 
@@ -272,15 +287,48 @@ def _write_overlaps(rows: list[dict[str, Any]], path: Path, *, k: int) -> None:
     sets = {column: {(row["layer"], row["head"]) for row in sorted([item for item in rows if item.get(column) is not None], key=lambda item: abs(float(item[column])), reverse=True)[:k]} for column in columns}
     with path.open("w", encoding="utf-8", newline="") as handle:
         writer = csv.DictWriter(handle, fieldnames=["left", "right", "k", "intersection", "jaccard"], delimiter="\t"); writer.writeheader()
+        wrote = False
         for left_idx, left in enumerate(columns):
             for right in columns[left_idx + 1:]:
                 intersection = len(sets[left] & sets[right]); union = len(sets[left] | sets[right])
                 writer.writerow({"left": left, "right": right, "k": k, "intersection": intersection, "jaccard": intersection / union if union else 0})
+                wrote = True
+        if not wrote:
+            writer.writerow({"left": "pending", "right": "pending", "k": k, "intersection": 0, "jaccard": ""})
 
 
-def _status_markdown(rows: list[dict[str, Any]], figures: list[Path], inputs: list[Path]) -> str:
+def load_validation_statuses(config: dict[str, Any], inputs: list[Path]) -> dict[str, dict[str, Any]]:
+    statuses = {}
+    for name, value in config.get("status_sources", {}).items():
+        path = Path(value)
+        if not path.is_file():
+            statuses[name] = {
+                "valid": None,
+                "label": "computationally pending",
+                "missing_path": str(path),
+            }
+        else:
+            statuses[name] = json.loads(path.read_text(encoding="utf-8"))
+            inputs.append(path)
+    return statuses
+
+
+def _status_markdown(rows: list[dict[str, Any]], figures: list[Path], inputs: list[Path], validation_statuses: dict[str, dict[str, Any]]) -> str:
     available = [column for column in ATLAS_COLUMNS[2:] if any(row.get(column) is not None for row in rows)]
-    return "\n".join(["# Mechanistic Heads Status", "", "## Implemented", "", "- Unified 36x32 head atlas schema and PNG report renderer.", "- Available score families: " + (", ".join(available) if available else "none yet"), "", "## Run", "", "- Report rendering only; this file does not imply GPU calibration success.", "", "## Passed", "", f"- Joined {len(rows)} architecture slots from {len(inputs)} existing input artifacts.", "", "## Failed", "", "- None reported by the renderer.", "", "## Computationally pending", "", "- Any score family absent from the list above.", "- Locked behavioral confirmation and matched-control distributions.", "", "## Figures", "", *[f"- `{path.name}`" for path in figures], "", "## Deviations", "", "- See `../IMPLEMENTATION_PLAN.md`; labels remain instrumentation/methods-based until GPU manifests validate each study.", ""])
+    passed=[];failed=[];pending=[]
+    for name, summary in validation_statuses.items():
+        label=str(summary.get("label","unlabeled"))
+        calibration=str(summary.get("calibration_result",""))
+        item=f"{name}: {label}"+(f" ({calibration})" if calibration else "")
+        if "pending" in label:
+            pending.append(item)
+        elif summary.get("valid") is not True or "failed" in label or "failed" in calibration:
+            failed.append(item)
+        else:
+            passed.append(item)
+    absent=[column for column in ATLAS_COLUMNS[2:] if column not in available]
+    if absent:pending.append("Missing atlas score families: "+", ".join(absent))
+    return "\n".join(["# Mechanistic Heads Status", "", "## Implemented", "", "- Unified runtime-verified 36x32 head atlas and report renderer.", "- Available score families: " + (", ".join(available) if available else "none"), "", "## Run", "", *([f"- {name}" for name in validation_statuses] or ["- No validation summaries were supplied."]), "", "## Passed", "", *([f"- {item}" for item in passed] or ["- None."]), f"- Joined {len(rows)} architecture slots from {len(inputs)} hashed input artifacts.", "", "## Failed", "", *([f"- {item}" for item in failed] or ["- None reported by supplied summaries."]), "", "## Computationally pending", "", *([f"- {item}" for item in pending] or ["- No atlas score family is missing."]), "- VLMBias detail contrast remains pending if original factual images were unavailable during preparation.", "", "## Figures", "", *[f"- `{path.name}`" for path in figures], "", "## Deviations", "", "- See `../IMPLEMENTATION_PLAN.md`; causal labels remain provisional unless their stability and locked-control gates pass.", ""])
 
 
 if __name__ == "__main__":

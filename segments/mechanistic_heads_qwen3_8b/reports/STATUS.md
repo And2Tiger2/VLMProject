@@ -4,9 +4,10 @@
 
 - Phase 0 audit and additive data/cache policy; prior gaze artifacts are untouched.
 - Runtime-verified Qwen3 architecture and exact post-`W_O` head decomposition.
-- Full-sequence candidate likelihood, token spans, capture hooks, exact head and
-  module patching, attention-map transplantation, five ablation modes,
-  layer-sharded scans, resume checkpoints, hashes, and manifests.
+- Full-sequence candidate likelihood with Qwen multimodal metadata, token spans,
+  capture hooks, exact lazy post-`W_O` projection, module patching,
+  attention-map transplantation, five ablation modes, layer-sharded scans,
+  context-bound resume checkpoints, hashes, and manifests.
 - Deterministic SynDot, constant-eight, color/shape search, and original
   four-feature Waldo-like generators with exact masks and grouped splits.
 - Counting VAP/head scan/controls/locked validation; point training, behavior,
@@ -15,7 +16,10 @@
   NaturalBench retention; unified 1,152-head atlas and PNG reporting.
 - Dependency-safe `overnight-smoke` and explicit `overnight-all` Slurm DAGs.
   Full discovery arrays are serialized at four concurrent layer GPUs and all
-  downstream validations use `afterok` gates.
+  downstream validations use `afterok` gates. Cross-task matched validations
+  now wait for the general-importance artifact they consume. Failed branches
+  are killed as invalid dependencies, while an `afterany` final status job
+  records failures and computationally pending work.
 
 ## Run
 
@@ -28,29 +32,40 @@
   The grouped split contains 256 prototype, 512 validation, and 12,678 locked
   test image IDs. One identical-candidate pair was excluded; pairing success
   was 99.993%. External images/cache remain ignored by Git.
-- No GPU scan, model evaluation, or training was launched by implementation.
+- The real Qwen instrumentation gate passed all 12 checks on an L40 at commit
+  `9dbf9d0`. The repaired final revision remains pending a new SHA-bound gate.
+- Smoke counting behavior and counting-head scan completed on the earlier DAG.
+  Other smokes either failed safely or never ran; no full scientific stage ran.
 
 ## Passed
 
-- 174 CPU tests.
+- The complete CPU unit/integration suite passes in the audited checkout.
 - Both synthetic generator smokes write real schemas, images, masks, pairs,
   grouped splits, manifests, input/output hashes, and resume markers.
-- Python compilation, JSON config parsing, CLI help, and shell syntax checks.
+- Python compilation, every JSON config, all 26 task CLI imports/help routes,
+  shell syntax, dry-run DAG generation, checkpoint context rejection, and
+  output-hash validation.
+- Resume contexts bind exact datasets, source images, MMMC split fingerprints,
+  and adapter identities; smoke/full adapters are isolated; prototype point
+  head-discovery families do not overlap validation or locked-test families.
 - Installed Transformers source confirms raw per-head outputs are concatenated
   before one `o_proj`.
 
 ## Failed
 
-- No scientific calibration has failed yet because no GPU scientific run has
-  been performed. No replication success is claimed.
+- Earlier smokes found and the implementation now fixes: multimodal
+  teacher-forcing length mismatch, custom causal-mask registration, eager
+  backend comparison, dense projected-head OOMs, missing PEFT installation,
+  mixed-row TSV output, and validation jobs scheduled before their inputs.
+- No scientific calibration result exists yet; no replication success is
+  claimed.
 
 ## Computationally pending
 
-- Mandatory one-GPU instrumentation smoke, including real-model backend/cache
-  equivalence and runtime 36×32 assertion.
+- Mandatory rerun of the one-GPU instrumentation smoke for the final Git SHA.
 - Full synthetic dataset generation on Neuronic and Qwen behavioral calibration.
-- MMMC Qwen-tokenization audit after the model processor is available (the
-  completed metadata/pairing audit intentionally used `--skip-tokenization`).
+- VLMBias detail contrast unless external original factual images are supplied;
+  semantic-prior and context contrasts are prepared.
 - Point-model LoRA pilots; optional full-weight training is opt-in.
 - All head scans, cross-seed repeats, matched-control distributions, locked
   behavioral confirmations, conflict detector, NaturalBench retention, atlas,

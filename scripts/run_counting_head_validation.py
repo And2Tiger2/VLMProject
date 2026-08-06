@@ -27,7 +27,7 @@ from vlm_eval.mechanistic_heads.preflight import (
     validation_path_from_config,
 )
 from vlm_eval.mechanistic_heads.qwen3_runtime import Qwen3MechanisticRuntime
-from vlm_eval.mechanistic_heads.reproducibility import seed_everything, write_run_manifest
+from vlm_eval.mechanistic_heads.reproducibility import referenced_image_paths, seed_everything, write_run_manifest
 from vlm_eval.mechanistic_heads.schema import read_paired_jsonl
 
 
@@ -49,10 +49,18 @@ def main() -> None:
     gaze_rows = json.loads(Path(config["gaze_ranking"]).read_text(encoding="utf-8"))
     gaze_heads = [(int(row["layer"]), int(row["head"])) for row in gaze_rows]
     controls = read_tsv(Path(config["controls"]))
-    head_sets = build_head_sets(ranking, gaze_heads, controls, smoke=args.smoke)
+    head_sets = build_head_sets(
+        ranking,
+        gaze_heads,
+        controls,
+        smoke=args.smoke,
+        control_families=tuple(config.get("validation_control_families", ("fully_matched",))),
+    )
 
     pairs = [pair for pair in read_paired_jsonl(Path(config["paired_dataset"])) if pair.split == str(config.get("split", "locked_test"))]
     limit = effective_limit(args)
+    if limit is None and config.get("max_examples") is not None:
+        limit = int(config["max_examples"])
     if limit is not None:
         pairs = pairs[:limit]
     if not pairs:
@@ -100,7 +108,7 @@ def main() -> None:
     figure_path=args.output_dir/"count_head_double_dissociation.png";render_validation(summary["aggregate"],figure_path)
     summary_path = args.output_dir / "summary.json"
     summary_path.write_text(json.dumps(summary, indent=2), encoding="utf-8")
-    write_run_manifest(args.output_dir, config={**config, "architecture": vars(runtime.architecture), "head_sets": {key: value for key, value in head_sets.items()}}, seeds={"global": args.seed}, inputs=[args.config, Path(config["count_ranking"]), Path(config["controls"]), Path(config["paired_dataset"]), Path(config["gaze_ranking"])], outputs=[output, summary_path,figure_path], status="complete", repo_root=Path.cwd())
+    write_run_manifest(args.output_dir, config={**config, "architecture": vars(runtime.architecture), "head_sets": {key: value for key, value in head_sets.items()}}, seeds={"global": args.seed}, inputs=[args.config, Path(config["count_ranking"]), Path(config["controls"]), Path(config["paired_dataset"]), Path(config["gaze_ranking"]), *referenced_image_paths(pairs)], outputs=[output, summary_path,figure_path], status="complete", repo_root=Path.cwd())
     print(json.dumps(summary, indent=2))
 
 
@@ -117,7 +125,7 @@ def build_mean_replacements(runtime: Any, pairs: list[Any], layers: list[int], *
     return {key: value / len(pairs) for key, value in sums.items()}
 
 
-def build_head_sets(ranking: list[dict[str, str]], gaze: list[tuple[int, int]], controls: list[dict[str, str]], *, smoke: bool) -> dict[str, list[tuple[int, int]]]:
+def build_head_sets(ranking: list[dict[str, str]], gaze: list[tuple[int, int]], controls: list[dict[str, str]], *, smoke: bool, control_families: tuple[str, ...] = ("fully_matched",)) -> dict[str, list[tuple[int, int]]]:
     ks = (10,) if smoke else (10, 25, 50)
     result: dict[str, list[tuple[int, int]]] = {}
     for k in ks:
@@ -125,12 +133,19 @@ def build_head_sets(ranking: list[dict[str, str]], gaze: list[tuple[int, int]], 
         result[f"gaze_top{k}"] = gaze[:k]
         grouped: dict[tuple[str, int], list[tuple[int, int]]] = defaultdict(list)
         for row in controls:
-            if int(row["selected_k"]) == k:
+            if int(row["selected_k"]) == k and row["control_family"] in control_families:
                 grouped[(row["control_family"], int(row["draw"]))].append((int(row["layer"]), int(row["head"])))
         max_draws = 1 if smoke else 20
         for (family, draw), heads in sorted(grouped.items()):
             if draw < max_draws:
                 result[f"{family}_k{k}_draw{draw:02d}"] = heads
+        low = [
+            (int(row["layer"]), int(row["head"]))
+            for row in controls
+            if int(row["selected_k"]) == k and row["control_family"] == "low_count_score"
+        ]
+        if low:
+            result[f"low_count_score_k{k}"] = low
     return result
 
 
@@ -146,7 +161,7 @@ def summarize(rows: list[dict[str, Any]], head_sets: dict[str, list[tuple[int, i
     for row in rows:
         flip_grouped[(row["head_set"], row["intervention"])].append(int(row["answer_flip"]))
     aggregate = [{"head_set": head_set, "intervention": intervention, "n": len(values), "mean_margin_shift": sum(values) / len(values), "answer_flip_rate": sum(flip_grouped[(head_set, intervention)]) / len(values)} for (head_set, intervention), values in sorted(grouped.items())]
-    return {"valid": True, "label": "locked confirmation", "architecture": vars(runtime.architecture), "n_head_sets": len(head_sets), "n_rows": len(rows), "aggregate": aggregate, "claim_gate": "Count heads must additionally pass split-half/cross-seed stability and matched-control criteria before declaration."}
+    return {"valid": True, "label": "locked confirmation", "architecture": vars(runtime.architecture), "n_head_sets": len(head_sets), "n_rows": len(rows), "aggregate": aggregate, "control_policy": "Locked behavioral validation uses 20 jointly matched draws per k; separate single-feature control distributions remain in count_head_controls.tsv.", "claim_gate": "Count heads must additionally pass split-half/cross-seed stability and matched-control criteria before declaration."}
 
 
 def render_validation(rows,path):
@@ -162,7 +177,7 @@ def read_tsv(path: Path) -> list[dict[str, str]]:
 
 def write_tsv(path: Path, rows: list[dict[str, Any]]) -> None:
     with path.open("w", encoding="utf-8", newline="") as handle:
-        writer = csv.DictWriter(handle, fieldnames=list(rows[0]) if rows else ["pair_id"], delimiter="\t")
+        writer = csv.DictWriter(handle, fieldnames=sorted({key for row in rows for key in row}) or ["pair_id"], delimiter="\t")
         writer.writeheader(); writer.writerows(rows)
 
 

@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import argparse
-import csv
 import json
 from pathlib import Path
 from typing import Any
@@ -20,9 +19,11 @@ from vlm_eval.mechanistic_heads.config import (
     parse_layer_spec,
     prepare_output_directory,
 )
+from vlm_eval.mechanistic_heads.checkpoint import JsonlCheckpoint
 from vlm_eval.mechanistic_heads.qwen3_runtime import Qwen3MechanisticRuntime
 from vlm_eval.mechanistic_heads.preflight import require_scientific_validation, validation_path_from_config
-from vlm_eval.mechanistic_heads.reproducibility import seed_everything, write_run_manifest
+from vlm_eval.mechanistic_heads.io import write_tsv
+from vlm_eval.mechanistic_heads.reproducibility import hash_paths, referenced_image_paths, seed_everything, write_run_manifest
 from vlm_eval.mechanistic_heads.schema import read_paired_jsonl
 
 
@@ -36,11 +37,12 @@ def main() -> None:
     if not args.smoke:
         require_scientific_validation(validation_path_from_config(config))
     output = args.output_dir / "layerwise_vap.tsv"
+    checkpoint_path = args.output_dir / "layerwise_vap.checkpoint.jsonl"
     prepare_output_directory(
         args.output_dir,
         resume=args.resume,
         overwrite=args.overwrite,
-        known_outputs=(output.name,),
+        known_outputs=(output.name, checkpoint_path.name),
     )
     seed_everything(args.seed)
     runtime = Qwen3MechanisticRuntime(
@@ -59,22 +61,51 @@ def main() -> None:
     limit = effective_limit(args)
     if limit is not None:
         pairs = pairs[:limit]
-    rows = run_vap(runtime, pairs=pairs, layers=layers)
+    run_inputs = [
+        args.config,
+        Path(config["paired_dataset"]),
+        *referenced_image_paths(pairs),
+    ]
+    checkpoint = JsonlCheckpoint(
+        checkpoint_path,
+        key=lambda row: (
+            row["pair_id"],
+            row["direction"],
+            int(row["layer"]),
+            row["scope"],
+            row["module"],
+        ),
+        resume=args.resume,
+        context={
+            "config": config,
+            "seed": args.seed,
+            "smoke": args.smoke,
+            "layers": layers,
+            "input_sha256": hash_paths(run_inputs),
+        },
+    )
+    rows = run_vap(runtime, pairs=pairs, layers=layers, checkpoint=checkpoint)
     _write_tsv(output, rows)
     write_run_manifest(
         args.output_dir,
         config={**config, "layers": layers, "smoke": args.smoke, "architecture": vars(runtime.architecture)},
         seeds={"global": args.seed},
-        inputs=[args.config, Path(config["paired_dataset"])],
-        outputs=[output],
+        inputs=run_inputs,
+        outputs=[output, checkpoint_path, checkpoint.meta_path],
         status="complete",
         repo_root=Path.cwd(),
     )
     print(json.dumps({"valid": True, "rows": len(rows), "output": str(output)}, indent=2))
 
 
-def run_vap(runtime: Any, *, pairs: list[Any], layers: list[int]) -> list[dict[str, Any]]:
-    rows: list[dict[str, Any]] = []
+def run_vap(
+    runtime: Any,
+    *,
+    pairs: list[Any],
+    layers: list[int],
+    checkpoint: JsonlCheckpoint | None = None,
+) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = list(checkpoint.rows) if checkpoint else []
     scopes = (
         "all_image_tokens",
         "last_image_token",
@@ -117,13 +148,21 @@ def run_vap(runtime: Any, *, pairs: list[Any], layers: list[int]) -> list[dict[s
                     target_positions = scope_positions(target, scope)
                     source_positions = scope_positions(source, scope)
                     if not target_positions and not source_positions:
-                        rows.append({"pair_id": pair.pair_id, "direction": direction, "layer": layer_idx, "scope": scope, "module": "not_applicable", "baseline_source_minus_target_margin": baseline_margin, "patched_source_minus_target_margin": baseline_margin, "margin_shift": 0.0, "answer_flip": 0, "note": "repository template contains no system message"})
+                        row = {"pair_id": pair.pair_id, "direction": direction, "layer": layer_idx, "scope": scope, "module": "not_applicable", "baseline_source_minus_target_margin": baseline_margin, "patched_source_minus_target_margin": baseline_margin, "margin_shift": 0.0, "answer_flip": 0, "note": "repository template contains no system message"}
+                        key = (pair.pair_id, direction, layer_idx, scope, "not_applicable")
+                        if not checkpoint or checkpoint.missing(key):
+                            rows.append(row)
+                            if checkpoint:
+                                checkpoint.append([row])
                         continue
                     if target_positions != source_positions:
                         raise RuntimeError(
                             f"unaligned {scope} positions for {pair.pair_id}; refusing silent truncation"
                         )
                     for module_kind in modules:
+                        key = (pair.pair_id, direction, layer_idx, scope, module_kind)
+                        if checkpoint and not checkpoint.missing(key):
+                            continue
                         with module_activation_patch(
                             runtime.model,
                             layer_idx=layer_idx,
@@ -137,8 +176,7 @@ def run_vap(runtime: Any, *, pairs: list[Any], layers: list[int]) -> list[dict[s
                                 positive_answer=source_answer,
                                 negative_answer=target_answer,
                             )
-                        rows.append(
-                            {
+                        row = {
                                 "pair_id": pair.pair_id,
                                 "direction": direction,
                                 "layer": layer_idx,
@@ -149,19 +187,14 @@ def run_vap(runtime: Any, *, pairs: list[Any], layers: list[int]) -> list[dict[s
                                 "margin_shift": patched_margin - baseline_margin,
                                 "answer_flip": int(baseline_margin <= 0 < patched_margin),
                             }
-                        )
+                        rows.append(row)
+                        if checkpoint:
+                            checkpoint.append([row])
     return rows
 
 
 def _write_tsv(path: Path, rows: list[dict[str, Any]]) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with path.open("w", encoding="utf-8", newline="") as handle:
-        fields = sorted({key for row in rows for key in row}) or ["pair_id"]
-        writer = csv.DictWriter(
-            handle, fieldnames=fields, delimiter="\t", extrasaction="ignore"
-        )
-        writer.writeheader()
-        writer.writerows(rows)
+    write_tsv(path, rows, fallback="pair_id")
 
 
 if __name__ == "__main__":

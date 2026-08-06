@@ -7,4 +7,5 @@
   "split": "locked_test",
   "driving_heads": 30,
   "confidence_threshold": 0.6
+  ,"max_examples": 500
 }

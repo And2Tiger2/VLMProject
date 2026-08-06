@@ -29,9 +29,11 @@ def main() -> None:
     seed_everything(args.seed); runtime = Qwen3MechanisticRuntime(model_id=str(config.get("model_id", "Qwen/Qwen3-VL-8B-Instruct")), device_map=args.device_map)
     pairs = [pair for pair in read_paired_jsonl(Path(config["paired_dataset"])) if pair.split == str(config.get("split", "locked_test"))]
     limit = effective_limit(args)
+    if limit is None and config.get("max_examples") is not None: limit=int(config["max_examples"])
     if limit is not None: pairs = pairs[:limit]
     detector = json.loads(Path(config["detector"]).read_text(encoding="utf-8")); ranking = read_tsv(Path(config["head_scores"])); driving = [(int(row["layer"]), int(row["head"])) for row in sorted(ranking, key=lambda row: float(row["mean_signed_intervention_score"]), reverse=True)[:int(config.get("driving_heads", 30))]]; resisting = [tuple(head) for head in detector["resisting_heads"]]
-    images = MMMCImages(args.cache_dir); prepared = []
+    audit_path = Path(config["paired_dataset"]).with_name("audit.json")
+    images = MMMCImages(args.cache_dir, audit_path=audit_path); prepared = []
     for pair in pairs:
         image = images.resolve(pair.recipient_image); inputs = runtime.prepare(image, pair.recipient_prompt, prompt_mode="raw"); margin, scores = candidate_margin(runtime, inputs, positive_answer=pair.bias_answer, negative_answer=pair.correct_answer)
         capture = capture_prefill(runtime, image_path=image, prompt=pair.recipient_prompt, layers=sorted({layer for layer, _ in resisting}), to_cpu=True); vectors = [capture.store.raw_heads[layer][0, capture.prompt_length-1, head, :].float().detach().cpu().numpy() for layer, head in resisting]; feature = np.stack(vectors).mean(0); probability = detector_probability(feature, detector); prepared.append((pair, inputs, margin, scores, probability))
@@ -45,7 +47,7 @@ def main() -> None:
             rows.append({"condition": condition, "pair_id": pair.pair_id, "intervened": int(intervene), "detector_probability": probability, "pairwise_confidence": pairwise_confidence, "hallucination_advantage": margin, "logp_hallucinated": scores["positive"], "logp_factual": scores["negative"], "margin_shift": margin-baseline_margin})
     write_tsv(output, rows); summary = summarize(rows); summary.update({"valid": True, "label": "instrumentation smoke test" if args.smoke else "locked confirmation", "architecture": vars(runtime.architecture)})
     summary_path = args.output_dir / "summary.json"; summary_path.write_text(json.dumps(summary, indent=2), encoding="utf-8")
-    write_run_manifest(args.output_dir, config={**config, "architecture": vars(runtime.architecture)}, seeds={"global": args.seed}, inputs=[args.config, Path(config["paired_dataset"]), Path(config["head_scores"]), Path(config["detector"])], outputs=[output, summary_path], status="complete", repo_root=Path.cwd()); print(json.dumps(summary, indent=2))
+    write_run_manifest(args.output_dir, config={**config, "architecture": vars(runtime.architecture)}, seeds={"global": args.seed}, inputs=[args.config, Path(config["paired_dataset"]), audit_path, Path(config["head_scores"]), Path(config["detector"])], outputs=[output, summary_path], status="complete", repo_root=Path.cwd()); print(json.dumps(summary, indent=2))
 
 
 def detector_probability(feature: np.ndarray, detector: dict) -> float:
@@ -58,5 +60,5 @@ def summarize(rows: list[dict]) -> dict:
 def read_tsv(path: Path) -> list[dict]:
     with path.open("r",encoding="utf-8") as handle:return list(csv.DictReader(handle,delimiter="\t"))
 def write_tsv(path: Path,rows:list[dict])->None:
-    with path.open("w",encoding="utf-8",newline="") as handle:writer=csv.DictWriter(handle,fieldnames=list(rows[0]) if rows else ["empty"],delimiter="\t");writer.writeheader();writer.writerows(rows)
+    with path.open("w",encoding="utf-8",newline="") as handle:writer=csv.DictWriter(handle,fieldnames=sorted({key for row in rows for key in row}) or ["empty"],delimiter="\t");writer.writeheader();writer.writerows(rows)
 if __name__=="__main__":main()

@@ -5,6 +5,7 @@ import argparse
 import csv
 import json
 from pathlib import Path
+import subprocess
 
 from vlm_eval.mechanistic_heads.config import add_standard_run_arguments, load_json_config, prepare_output_directory
 from vlm_eval.mechanistic_heads.reproducibility import write_run_manifest
@@ -27,26 +28,54 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Aggregate verified per-layer mechanistic scans.")
     add_standard_run_arguments(parser); parser.add_argument("--task", choices=sorted(ARTIFACTS), required=True); parser.add_argument("--input-root", type=Path, required=True)
     args = parser.parse_args(); config = load_json_config(args.config)
-    shards = sorted(args.input_root.glob("layer-*"), key=lambda path: int(path.name.split("-")[-1]))
+    shards = sorted(args.input_root.glob("layer-*"), key=shard_layer)
     if not shards:
         raise RuntimeError(f"no layer shards found under {args.input_root}")
     manifests = []
     runtime_architecture = None
-    for index, shard in enumerate(shards):
+    current_sha = subprocess.run(
+        ["git", "rev-parse", "HEAD"], check=True, text=True, capture_output=True
+    ).stdout.strip()
+    observed_layers: list[int] = []
+    for shard in shards:
+        layer_idx = shard_layer(shard)
         manifest_path = shard / "run_manifest.json"
         if not manifest_path.is_file(): raise RuntimeError(f"missing shard manifest: {manifest_path}")
         manifest = json.loads(manifest_path.read_text(encoding="utf-8")); arch = manifest["config"]["architecture"]
+        if manifest.get("status") != "complete":
+            raise RuntimeError(f"incomplete shard manifest: {manifest_path}")
+        if manifest.get("git_sha") != current_sha:
+            raise RuntimeError(
+                f"stale shard Git SHA in {manifest_path}: {manifest.get('git_sha')} != {current_sha}"
+            )
         observed = (int(arch["n_layers"]), int(arch["n_heads"]))
         if runtime_architecture is None:
             runtime_architecture = observed
         elif observed != runtime_architecture:
             raise RuntimeError(f"architecture mismatch in {manifest_path}: {observed} != {runtime_architecture}")
-        if manifest["config"]["layers"] != [index]: raise RuntimeError(f"shard {shard} does not contain layer {index}")
+        if manifest["config"]["layers"] != [layer_idx]:
+            raise RuntimeError(f"shard {shard} does not contain layer {layer_idx}")
+        declared_outputs = manifest.get("output_sha256", {})
+        for artifact in ARTIFACTS[args.task]:
+            artifact_path = shard / artifact
+            declared = declared_outputs.get(str(artifact_path))
+            if declared is None:
+                declared = declared_outputs.get(str(artifact_path.resolve()))
+            if declared is None:
+                raise RuntimeError(f"shard does not hash {artifact}: {manifest_path}")
+            from vlm_eval.mechanistic_heads.reproducibility import sha256_file
+
+            if not artifact_path.is_file() or sha256_file(artifact_path) != declared:
+                raise RuntimeError(f"missing or modified shard artifact: {artifact_path}")
+        observed_layers.append(layer_idx)
         manifests.append(manifest_path)
     assert runtime_architecture is not None
     n_layers, n_heads = runtime_architecture
-    if len(shards) != n_layers:
-        raise RuntimeError(f"runtime config reports {n_layers} layers, but found {len(shards)} shards")
+    expected_layers = list(range(n_layers))
+    if observed_layers != expected_layers:
+        raise RuntimeError(
+            f"runtime config requires layer shards {expected_layers}, found {observed_layers}"
+        )
     configured_layers = config.get("expected_layers")
     configured_heads = config.get("expected_heads")
     if configured_layers is not None and int(configured_layers) != n_layers:
@@ -74,6 +103,13 @@ def merge_tsv(paths: list[Path], output: Path) -> None:
             rows.extend(reader)
     with output.open("w", encoding="utf-8", newline="") as handle:
         writer = csv.DictWriter(handle, fieldnames=fieldnames or ["empty"], delimiter="\t"); writer.writeheader(); writer.writerows(rows)
+
+
+def shard_layer(path: Path) -> int:
+    suffix = path.name.removeprefix("layer-")
+    if not suffix.isdigit():
+        raise RuntimeError(f"invalid layer shard directory name: {path}")
+    return int(suffix)
 
 
 if __name__ == "__main__": main()

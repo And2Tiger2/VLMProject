@@ -7,8 +7,19 @@
   "include_validation_k_sweep": false,
   "matched_control_distributions": true,
   "control_draws": 20,
+  "max_examples": 500,
+  "diagnostic_single_feature_controls": false,
+  "generation_condition_prefixes": [
+    "baseline",
+    "driving_top",
+    "resisting_top",
+    "joint_top",
+    "random_seed"
+  ],
   "random_control_margin_tolerance": 0.25,
   "gaze_ranking": "segments/gaze_heads_qwen3_8b/runs/gaze_discovery_seed42_merged/gaze_head_ranking.json",
   "general_causal_importance": "segments/mechanistic_heads_qwen3_8b/reports/general_importance/general_head_importance.tsv",
+  "stability_report": "segments/mechanistic_heads_qwen3_8b/reports/maci_stability/summary.json",
+  "validation_ablation_report": "segments/mechanistic_heads_qwen3_8b/runs/maci_ablation/full/summary.json",
   "paper_style": {"driving_heads": 30, "resisting_heads": 40, "joint_heads": 30, "random_control_seeds": 5, "ablation": "zero", "decoding": "greedy"}
 }

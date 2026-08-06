@@ -9,7 +9,11 @@ import platform
 import random
 import subprocess
 import sys
+from dataclasses import asdict, is_dataclass
 from typing import Any, Iterable
+
+
+IMAGE_SUFFIXES = {".bmp", ".gif", ".jpeg", ".jpg", ".png", ".tif", ".tiff", ".webp"}
 
 
 def sha256_file(path: Path) -> str:
@@ -21,7 +25,39 @@ def sha256_file(path: Path) -> str:
 
 
 def hash_paths(paths: Iterable[Path]) -> dict[str, str]:
-    return {str(path): sha256_file(path) for path in sorted(paths) if path.is_file()}
+    unique = sorted({Path(path) for path in paths}, key=lambda path: str(path))
+    missing = [str(path) for path in unique if not path.is_file()]
+    if missing:
+        raise FileNotFoundError(
+            "cannot write reproducibility manifest; declared files are missing: "
+            + ", ".join(missing)
+        )
+    return {str(path): sha256_file(path) for path in unique}
+
+
+def referenced_image_paths(records: Iterable[Any]) -> list[Path]:
+    """Collect and validate every local image referenced by nested records."""
+
+    found: set[Path] = set()
+
+    def visit(value: Any) -> None:
+        if is_dataclass(value) and not isinstance(value, type):
+            visit(asdict(value))
+        elif isinstance(value, dict):
+            for child in value.values():
+                visit(child)
+        elif isinstance(value, (list, tuple, set)):
+            for child in value:
+                visit(child)
+        elif isinstance(value, str) and Path(value).suffix.casefold() in IMAGE_SUFFIXES:
+            path = Path(value)
+            if not path.is_file():
+                raise FileNotFoundError(f"referenced image is missing: {path}")
+            found.add(path)
+
+    for record in records:
+        visit(record)
+    return sorted(found, key=lambda path: str(path))
 
 
 def git_sha(cwd: Path | None = None) -> str | None:

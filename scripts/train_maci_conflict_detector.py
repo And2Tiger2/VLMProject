@@ -11,7 +11,7 @@ import numpy as np
 from vlm_eval.mechanistic_heads.causal import capture_prefill
 from vlm_eval.mechanistic_heads.config import add_standard_run_arguments, effective_limit, load_json_config, prepare_output_directory
 from vlm_eval.mechanistic_heads.mmmc import MMMCImages
-from vlm_eval.mechanistic_heads.preflight import require_scientific_validation, validation_path_from_config
+from vlm_eval.mechanistic_heads.preflight import require_calibration_report, require_scientific_validation, validation_path_from_config
 from vlm_eval.mechanistic_heads.qwen3_runtime import Qwen3MechanisticRuntime
 from vlm_eval.mechanistic_heads.reproducibility import seed_everything, write_run_manifest
 from vlm_eval.mechanistic_heads.schema import read_paired_jsonl
@@ -26,17 +26,27 @@ def main() -> None:
     config = load_json_config(args.config)
     if not args.smoke:
         require_scientific_validation(validation_path_from_config(config))
+        require_calibration_report(Path(config["stability_report"]), boolean_key="passes_stability_gate")
+        require_calibration_report(Path(config["ablation_report"]))
     output = args.output_dir / "conflict_detector.json"
     prepare_output_directory(args.output_dir, resume=args.resume, overwrite=args.overwrite, known_outputs=(output.name,))
     seed_everything(args.seed)
     runtime = Qwen3MechanisticRuntime(model_id=str(config.get("model_id", "Qwen/Qwen3-VL-8B-Instruct")), device_map=args.device_map)
     resisting = load_resisting_heads(Path(config["head_scores"]), k=int(config.get("resisting_heads", 40)))
     pairs = read_paired_jsonl(Path(config["paired_dataset"])); limit = effective_limit(args)
+    by_split = {}
+    for pair in pairs: by_split.setdefault(pair.split, []).append(pair)
     if limit is not None:
-        by_split = {}
-        for pair in pairs: by_split.setdefault(pair.split, []).append(pair)
         pairs = [pair for rows in by_split.values() for pair in rows[:limit]]
-    images = MMMCImages(args.cache_dir)
+    else:
+        split_limits = config.get("max_pairs_by_split", {})
+        pairs = [
+            pair
+            for split, rows in by_split.items()
+            for pair in rows[: int(split_limits.get(split, len(rows)))]
+        ]
+    audit_path = Path(config["paired_dataset"]).with_name("audit.json")
+    images = MMMCImages(args.cache_dir, audit_path=audit_path)
     features, labels, splits = [], [], []
     layers = sorted({layer for layer, _ in resisting})
     for pair in pairs:
@@ -47,7 +57,7 @@ def main() -> None:
     result = fit_detector(np.stack(features), np.asarray(labels), splits, seed=args.seed)
     result.update({"valid": True, "label": "instrumentation smoke test" if args.smoke else "methods-based reproduction", "resisting_heads": [list(head) for head in resisting], "feature": "mean last-prefill raw A_hV_h over resisting heads"})
     output.write_text(json.dumps(result, indent=2), encoding="utf-8")
-    write_run_manifest(args.output_dir, config={**config, "architecture": vars(runtime.architecture)}, seeds={"global": args.seed}, inputs=[args.config, Path(config["paired_dataset"]), Path(config["head_scores"])], outputs=[output], status="complete", repo_root=Path.cwd())
+    write_run_manifest(args.output_dir, config={**config, "architecture": vars(runtime.architecture)}, seeds={"global": args.seed}, inputs=[args.config, Path(config["paired_dataset"]), audit_path, Path(config["head_scores"]),Path(config["stability_report"]),Path(config["ablation_report"])], outputs=[output], status="complete", repo_root=Path.cwd())
     print(json.dumps(result, indent=2))
 
 

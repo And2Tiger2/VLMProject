@@ -15,8 +15,9 @@ from vlm_eval.mechanistic_heads.config import (
     load_json_config,
     prepare_output_directory,
 )
-from vlm_eval.mechanistic_heads.reproducibility import seed_everything, write_run_manifest
+from vlm_eval.mechanistic_heads.reproducibility import git_sha, hash_paths, referenced_image_paths, seed_everything, write_run_manifest
 from vlm_eval.mechanistic_heads.preflight import require_scientific_validation, validation_path_from_config
+from vlm_eval.mechanistic_heads.qwen3_runtime import checkpoint_manifest_inputs
 from vlm_eval.mechanistic_heads.synthetic import length_matched_nonspatial_answer
 
 
@@ -50,6 +51,7 @@ def main() -> None:
     limit = effective_limit(args)
     if limit is not None:
         rows = rows[:limit]
+    training_inputs = [args.config, Path(config["dataset"]), *referenced_image_paths(rows)]
     if args.condition == "base":
         result = {
             "valid": True,
@@ -58,6 +60,19 @@ def main() -> None:
             "n_rows": len(rows),
         }
     else:
+        training_context = {
+            "schema_version": 1,
+            "git_sha": git_sha(Path.cwd()),
+            "config": config,
+            "condition": args.condition,
+            "seed": args.seed,
+            "smoke": args.smoke,
+            "input_sha256": hash_paths(training_inputs),
+        }
+        context_path = args.output_dir / "training_context.json"
+        validate_or_write_training_context(
+            context_path, training_context, resume=args.resume
+        )
         result = train_condition(
             rows,
             output_dir=args.output_dir,
@@ -70,12 +85,15 @@ def main() -> None:
         )
     summary = args.output_dir / "training_summary.json"
     summary.write_text(json.dumps(result, indent=2), encoding="utf-8")
+    checkpoint_outputs = checkpoint_manifest_inputs(
+        {"adapter_path": str(args.output_dir)}
+    )
     write_run_manifest(
         args.output_dir,
         config={**config, "condition": args.condition, "smoke": args.smoke},
         seeds={"global": args.seed},
-        inputs=[args.config, Path(config["dataset"])],
-        outputs=[summary],
+        inputs=training_inputs,
+        outputs=sorted(set([summary, *checkpoint_outputs])),
         status="complete",
         repo_root=Path.cwd(),
     )
@@ -197,6 +215,8 @@ def train_condition(
         num_train_epochs=float(config.get("epochs", 1)),
         max_steps=max_steps,
         save_strategy="no" if smoke else "steps",
+        save_steps=int(config.get("save_steps", 50)),
+        save_total_limit=int(config.get("save_total_limit", 2)),
         logging_steps=1,
         report_to=[],
         seed=seed,
@@ -225,6 +245,17 @@ def train_condition(
 def args_resume_checkpoint(output_dir: Path) -> str | None:
     checkpoints = sorted(output_dir.glob("checkpoint-*"))
     return str(checkpoints[-1]) if checkpoints else None
+
+
+def validate_or_write_training_context(path: Path, expected: dict[str, Any], *, resume: bool) -> None:
+    checkpoints = list(path.parent.glob("checkpoint-*"))
+    if resume and checkpoints:
+        if not path.is_file():
+            raise RuntimeError("training checkpoints exist without a reproducibility context")
+        observed = json.loads(path.read_text(encoding="utf-8"))
+        if observed != expected:
+            raise RuntimeError("training checkpoint context does not match this run")
+    path.write_text(json.dumps(expected, indent=2, sort_keys=True), encoding="utf-8")
 
 
 def _read_jsonl(path: Path) -> list[dict[str, Any]]:

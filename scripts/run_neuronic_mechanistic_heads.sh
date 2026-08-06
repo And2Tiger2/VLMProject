@@ -9,7 +9,10 @@ cd "$REPO"
 if [[ "$ACTION" == "overnight-smoke" || "$ACTION" == "overnight-all" || "$ACTION" == "overnight-all-resume" ]]; then
   # Resolve the shared environment once before submitting concurrent jobs.
   # Point-search training requires PEFT from the mechanistic extra.
-  uv sync --extra qwen --extra mechanistic --extra dev
+  uv sync --frozen --extra qwen --extra mechanistic --extra dev
+  # Previous revisions' reports/checkpoints cannot be resumed safely. Move
+  # them into a recoverable archive before constructing the new DAG.
+  uv run python scripts/archive_stale_mechanistic_runs.py --repo "$REPO" --execute
 fi
 
 case "$ACTION" in
@@ -58,6 +61,15 @@ case "$ACTION" in
       --output-dir segments/mechanistic_heads_qwen3_8b/reports/general_importance \
       --seed 0 --resume
     ;;
+  maci-stability)
+    uv run python scripts/analyze_maci_head_stability.py \
+      --config segments/mechanistic_heads_qwen3_8b/configs/maci_stability.json \
+      --output-dir segments/mechanistic_heads_qwen3_8b/reports/maci_stability \
+      --seed 260318523 --resume
+    ;;
+  archive-stale)
+    uv run python scripts/archive_stale_mechanistic_runs.py --repo "$REPO" --execute
+    ;;
   atlas)
     uv run python scripts/render_mechanistic_head_reports.py \
       --config segments/mechanistic_heads_qwen3_8b/configs/head_atlas.json \
@@ -84,6 +96,6 @@ case "$ACTION" in
     fi
     ;;
   help|*)
-    echo "usage: $0 {overnight-smoke|overnight-all|overnight-all-resume|prepare-synthetic|download-mmmc|instrumentation|counting-behavior|counting-vap|counting-heads|general-importance|counting-controls|counting-validation|waldo-behavior|point-centroids|search-heads|verification-heads|distractor-heads|point-ablation|maci-heads|maci-heads-aligned|maci-ablation|maci-confirm|maci-detector|maci-gated|vlmbias-heads|vlmbias-validation|atlas} [smoke|full]"
+    echo "usage: $0 {archive-stale|overnight-smoke|overnight-all|overnight-all-resume|prepare-synthetic|download-mmmc|instrumentation|counting-behavior|counting-vap|counting-heads|general-importance|counting-controls|counting-validation|waldo-behavior|point-centroids|search-heads|verification-heads|distractor-heads|point-ablation|maci-heads|maci-heads-aligned|maci-stability|maci-ablation|maci-confirm|maci-detector|maci-gated|vlmbias-heads|vlmbias-validation|atlas} [smoke|full]"
     ;;
 esac

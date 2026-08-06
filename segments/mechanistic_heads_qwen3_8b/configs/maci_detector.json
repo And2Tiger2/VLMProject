@@ -3,7 +3,14 @@
   "model_id": "Qwen/Qwen3-VL-8B-Instruct",
   "paired_dataset": "segments/mechanistic_heads_qwen3_8b/data/mmmc/prepared/object_pairs.jsonl",
   "head_scores": "segments/mechanistic_heads_qwen3_8b/runs/maci_head_scan/full/maci_head_scores.tsv",
+  "stability_report": "segments/mechanistic_heads_qwen3_8b/reports/maci_stability/summary.json",
+  "ablation_report": "segments/mechanistic_heads_qwen3_8b/runs/maci_ablation/full/summary.json",
   "resisting_heads": 40,
   "classifier": "L1 logistic regression",
   "threshold_selection": "validation F1"
+  ,"max_pairs_by_split": {
+    "prototype": 256,
+    "validation": 512,
+    "locked_test": 500
+  }
 }

@@ -13,7 +13,7 @@ from PIL import Image
 
 from vlm_eval.mechanistic_heads.config import add_standard_run_arguments, effective_limit, load_json_config, prepare_output_directory
 from vlm_eval.mechanistic_heads.qwen3_runtime import checkpoint_manifest_inputs, runtime_from_config
-from vlm_eval.mechanistic_heads.reproducibility import seed_everything, write_run_manifest
+from vlm_eval.mechanistic_heads.reproducibility import referenced_image_paths, seed_everything, write_run_manifest
 
 
 CELL_RE = re.compile(r"(?:cell|candidate)\s*=\s*(\d{1,2})", re.I)
@@ -22,12 +22,12 @@ POINT_RE = re.compile(r"point\s*=\s*\((0(?:\.\d+)?|1(?:\.0+)?),(0(?:\.\d+)?|1(?:
 
 def main() -> None:
     parser=argparse.ArgumentParser(description="Evaluate synthetic Waldo-like localization and verification tasks.")
-    add_standard_run_arguments(parser);parser.add_argument("--device-map",default="cuda")
+    add_standard_run_arguments(parser);parser.add_argument("--device-map",default="cuda");parser.add_argument("--checkpoint")
     args=parser.parse_args();config=load_json_config(args.config);output=args.output_dir/"waldo_behavior.tsv"
     prepare_output_directory(args.output_dir,resume=args.resume,overwrite=args.overwrite,known_outputs=(output.name,"summary.json"));seed_everything(args.seed)
     dataset=read_jsonl(Path(config["dataset"]));dataset=[row for row in dataset if row["split"]==str(config.get("split","locked_test"))];limit=effective_limit(args)
     if limit is not None:dataset=dataset[:limit]
-    runtime=runtime_from_config(config,device_map=args.device_map)
+    runtime=runtime_from_config(config,device_map=args.device_map,checkpoint_override=args.checkpoint)
     rows=[]
     for example in dataset:
         tasks=task_specs(example)
@@ -38,7 +38,7 @@ def main() -> None:
             parsed,correct,error=parse_result(task,text,expected)
             rows.append({"id":example["id"],"task":task,"target_present":int(example["target_present"]),"target_scale":example["metadata"]["target_scale"],"clutter":len(example["objects"])-int(example["target_present"]),"prompt_wording_variant":example["metadata"]["prompt_wording_variant"],"expected":expected,"output":text,"parsed":parsed,"correct":int(correct),"localization_error":error})
     write_tsv(output,rows);summary={"valid":True,"label":"instrumentation smoke test" if args.smoke else "modified replication","n_examples":len(dataset),"by_task":summarize(rows),"architecture":vars(runtime.architecture),"deviation":"original non-copyright target and deterministic text output replace real Waldo/HTML boxes"}
-    summary_path=args.output_dir/"summary.json";summary_path.write_text(json.dumps(summary,indent=2),encoding="utf-8");write_run_manifest(args.output_dir,config={**config,"architecture":vars(runtime.architecture)},seeds={"global":args.seed},inputs=[args.config,Path(config["dataset"]),*checkpoint_manifest_inputs(config)],outputs=[output,summary_path],status="complete",repo_root=Path.cwd());print(json.dumps(summary,indent=2))
+    summary_path=args.output_dir/"summary.json";summary_path.write_text(json.dumps(summary,indent=2),encoding="utf-8");write_run_manifest(args.output_dir,config={**config,"architecture":vars(runtime.architecture)},seeds={"global":args.seed},inputs=[args.config,Path(config["dataset"]),*referenced_image_paths(dataset),*checkpoint_manifest_inputs(config,checkpoint_override=args.checkpoint)],outputs=[output,summary_path],status="complete",repo_root=Path.cwd());print(json.dumps(summary,indent=2))
 
 
 def task_specs(row:dict[str,Any])->list[tuple[str,str,str,str]]:
@@ -78,5 +78,5 @@ def summarize(rows:list[dict[str,Any]])->dict[str,Any]:
 
 def read_jsonl(path:Path)->list[dict[str,Any]]:return [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
 def write_tsv(path:Path,rows:list[dict[str,Any]])->None:
-    with path.open("w",encoding="utf-8",newline="") as handle:writer=csv.DictWriter(handle,fieldnames=list(rows[0]) if rows else ["id"],delimiter="\t");writer.writeheader();writer.writerows(rows)
+    with path.open("w",encoding="utf-8",newline="") as handle:writer=csv.DictWriter(handle,fieldnames=sorted({key for row in rows for key in row}) or ["id"],delimiter="\t");writer.writeheader();writer.writerows(rows)
 if __name__=="__main__":main()

@@ -13,7 +13,7 @@ from PIL import Image
 
 from vlm_eval.mechanistic_heads.config import add_standard_run_arguments, effective_limit, load_json_config, prepare_output_directory
 from vlm_eval.mechanistic_heads.qwen3_runtime import Qwen3MechanisticRuntime
-from vlm_eval.mechanistic_heads.reproducibility import seed_everything, write_run_manifest
+from vlm_eval.mechanistic_heads.reproducibility import referenced_image_paths, seed_everything, write_run_manifest
 
 
 def main() -> None:
@@ -55,7 +55,7 @@ def main() -> None:
         "architecture": vars(runtime.architecture),
     }
     summary_path = args.output_dir / "summary.json"; summary_path.write_text(json.dumps(summary, indent=2), encoding="utf-8")
-    write_run_manifest(args.output_dir, config={**config, "smoke": args.smoke, "architecture": vars(runtime.architecture)}, seeds={"global": args.seed}, inputs=[args.config, Path(config["dataset"])], outputs=[output, summary_path], status="complete", repo_root=Path.cwd())
+    write_run_manifest(args.output_dir, config={**config, "smoke": args.smoke, "architecture": vars(runtime.architecture)}, seeds={"global": args.seed}, inputs=[args.config, Path(config["dataset"]), *referenced_image_paths(rows)], outputs=[output, summary_path], status="complete", repo_root=Path.cwd())
     print(json.dumps(summary, indent=2))
 
 
@@ -65,7 +65,7 @@ def read_jsonl(path: Path) -> list[dict]:
 
 def write_tsv(path: Path, rows: list[dict]) -> None:
     with path.open("w", encoding="utf-8", newline="") as handle:
-        writer = csv.DictWriter(handle, fieldnames=list(rows[0]) if rows else ["id"], delimiter="\t"); writer.writeheader(); writer.writerows(rows)
+        writer = csv.DictWriter(handle, fieldnames=sorted({key for row in rows for key in row}) or ["id"], delimiter="\t"); writer.writeheader(); writer.writerows(rows)
 
 
 if __name__ == "__main__":

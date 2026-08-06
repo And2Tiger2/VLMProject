@@ -13,6 +13,7 @@ set -euo pipefail
 REPO="${REPO:-$SLURM_SUBMIT_DIR}"
 CACHE_ROOT="${CACHE_ROOT:-$REPO/.cache/vlmproject}"
 SEED="${SEED:-260318523}"
+JOB_STARTED_AT="$(date +%s)"
 
 mkdir -p "$CACHE_ROOT/uv" "$CACHE_ROOT/huggingface" "$CACHE_ROOT/torch" \
   "$REPO/segments/mechanistic_heads_qwen3_8b/runs/slurm"
@@ -48,3 +49,12 @@ HF_HUB_OFFLINE=0 uv run python scripts/prepare_mmmc.py \
   --output-dir segments/mechanistic_heads_qwen3_8b/data/mmmc/prepared \
   --cache-dir segments/mechanistic_heads_qwen3_8b/data/mmmc_cache \
   --seed "$SEED" --resume
+
+for RUN_DIR in \
+  segments/mechanistic_heads_qwen3_8b/data/generated/counting \
+  segments/mechanistic_heads_qwen3_8b/data/generated/point_search \
+  segments/mechanistic_heads_qwen3_8b/data/generated/vlmbias_contrasts \
+  segments/mechanistic_heads_qwen3_8b/data/mmmc/prepared; do
+  uv run python scripts/validate_mechanistic_run.py \
+    --repo "$REPO" --run-dir "$RUN_DIR" --newer-than-epoch "$JOB_STARTED_AT"
+done

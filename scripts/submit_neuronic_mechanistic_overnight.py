@@ -8,6 +8,8 @@ from pathlib import Path
 import subprocess
 from typing import Iterable
 
+from vlm_eval.mechanistic_heads.preflight import require_completed_manifest
+
 
 REPO_DEFAULT = "/n/fs/pvl-memory/at7979/VLMProject"
 GPU_SCRIPT = "scripts/slurm_neuronic_mechanistic_heads.sh"
@@ -32,11 +34,17 @@ class Submitter:
         exports: dict[str, str],
         dependencies: Iterable[str] = (),
         array: str | None = None,
+        dependency_mode: str = "afterok",
     ) -> str:
+        if name in self.jobs:
+            raise RuntimeError(f"duplicate Slurm job name in submission graph: {name}")
         command = ["sbatch", "--parsable"]
+        if dependency_mode not in {"afterok", "afterany"}:
+            raise ValueError(f"unsupported dependency mode: {dependency_mode}")
+        command.append("--kill-on-invalid-dep=yes")
         deps = [str(value) for value in dependencies if value]
         if deps:
-            command.append("--dependency=afterok:" + ":".join(deps))
+            command.append(f"--dependency={dependency_mode}:" + ":".join(deps))
         if array is not None:
             command.append(f"--array={array}")
         exported = {"REPO": str(self.repo), **exports}
@@ -165,36 +173,28 @@ def submit_full_suite(
     count_vap = submitter.scan("counting_vap", "counting-vap", dependencies=[point_train])
     count_heads = submitter.scan("counting_heads", "counting-heads", dependencies=[count_vap])
 
-    point_centroids = submitter.scan("point_centroids", "point-centroids", dependencies=[count_heads, point_train])
+    point_centroids = submitter.scan("point_centroids", "point-centroids", dependencies=[count_heads, point_train, point_behavior])
     search = submitter.scan("search_heads", "search-heads", dependencies=[point_centroids])
     verification = submitter.scan("verification_heads", "verification-heads", dependencies=[search])
     distractor = submitter.scan("distractor_heads", "distractor-heads", dependencies=[verification])
-    point_ablation = submitter.gpu(
-        "point_ablation",
-        "point-ablation",
-        "full",
-        dependencies=[search, verification, distractor],
-    )
-    point_reports = submitter.submit(
-        "point_reports",
-        POST_SCRIPT,
-        exports={"TASK": "point-reports"},
-        dependencies=[point_ablation, point_behavior, waldo_behavior],
-    )
-
     maci = submitter.scan("maci_heads", "maci-heads", dependencies=[distractor])
-    maci_aligned = submitter.scan("maci_heads_aligned", "maci-heads-aligned", dependencies=[maci])
+    maci_stability = submitter.submit(
+        "maci_stability",
+        POST_SCRIPT,
+        exports={"TASK": "maci-stability"},
+        dependencies=[maci],
+    )
     maci_ablation = submitter.gpu("maci_ablation", "maci-ablation", "full", dependencies=[maci])
-    maci_detector = submitter.gpu("maci_detector", "maci-detector", "full", dependencies=[maci])
+    maci_detector = submitter.gpu("maci_detector", "maci-detector", "full", dependencies=[maci, maci_stability, maci_ablation])
     maci_gated = submitter.gpu("maci_gated", "maci-gated", "full", dependencies=[maci_detector])
-    maci_confirm = submitter.gpu("maci_confirmation", "maci-confirm", "full", dependencies=[maci_ablation])
 
-    vlmbias = submitter.scan("vlmbias_heads", "vlmbias-heads", dependencies=[maci_aligned])
-    vlmbias_validation = submitter.gpu(
-        "vlmbias_validation",
-        "vlmbias-validation",
-        "full",
-        dependencies=[vlmbias, maci_detector],
+    # VLMBias does not consume the optional equal-length all-prefill MACI
+    # branch. Run the core VLMBias scan first, then serialize the secondary
+    # aligned scan behind it so a legitimate unequal-length exclusion cannot
+    # invalidate the core path or increase scan concurrency above four GPUs.
+    vlmbias = submitter.scan("vlmbias_heads", "vlmbias-heads", dependencies=[maci])
+    maci_aligned = submitter.scan(
+        "maci_heads_aligned", "maci-heads-aligned", dependencies=[vlmbias]
     )
 
     general = submitter.submit(
@@ -202,6 +202,33 @@ def submit_full_suite(
         POST_SCRIPT,
         exports={"TASK": "general-importance"},
         dependencies=[count_heads, search, verification, distractor, maci, vlmbias],
+    )
+    # These locked validations require the cross-task importance table for
+    # matched controls. Scheduling them before `general` makes them fail even
+    # when every upstream scan succeeded.
+    point_ablation = submitter.gpu(
+        "point_ablation",
+        "point-ablation",
+        "full",
+        dependencies=[search, verification, distractor, general],
+    )
+    point_reports = submitter.submit(
+        "point_reports",
+        POST_SCRIPT,
+        exports={"TASK": "point-reports"},
+        dependencies=[point_ablation, point_behavior, waldo_behavior],
+    )
+    maci_confirm = submitter.gpu(
+        "maci_confirmation",
+        "maci-confirm",
+        "full",
+        dependencies=[maci_ablation, maci_stability, general],
+    )
+    vlmbias_validation = submitter.gpu(
+        "vlmbias_validation",
+        "vlmbias-validation",
+        "full",
+        dependencies=[vlmbias, maci_detector, general],
     )
     # Counting controls wait for cross-task general importance so the required
     # general-causal-importance-matched distribution is not silently omitted.
@@ -221,7 +248,8 @@ def submit_full_suite(
         "head_atlas",
         POST_SCRIPT,
         exports={"TASK": "atlas"},
-        dependencies=[general, count_validation, point_reports, maci_gated, maci_confirm, vlmbias_validation],
+        dependencies=[general, count_validation, point_reports, maci_stability, maci_gated, maci_confirm, vlmbias_validation],
+        dependency_mode="afterany",
     )
     return [
         point_train,
@@ -232,6 +260,7 @@ def submit_full_suite(
         point_ablation,
         point_reports,
         maci_aligned,
+        maci_stability,
         maci_gated,
         maci_confirm,
         vlmbias_validation,
@@ -301,23 +330,95 @@ def main() -> None:
 
 
 def require_valid_prepared_data(repo: Path) -> None:
-    required = (
-        "segments/mechanistic_heads_qwen3_8b/data/generated/counting/mechanistic_pairs.jsonl",
-        "segments/mechanistic_heads_qwen3_8b/data/generated/point_search/search_pairs.jsonl",
-        "segments/mechanistic_heads_qwen3_8b/data/generated/point_search/verification_pairs.jsonl",
-        "segments/mechanistic_heads_qwen3_8b/data/generated/point_search/distractor_pairs.jsonl",
-        "segments/mechanistic_heads_qwen3_8b/data/generated/vlmbias_contrasts/vlmbias_signed_contrasts.jsonl",
-        "segments/mechanistic_heads_qwen3_8b/data/mmmc/prepared/object_pairs.jsonl",
-    )
-    missing = [value for value in required if not repo.joinpath(value).is_file()]
+    groups = {
+        "segments/mechanistic_heads_qwen3_8b/data/generated/counting": (
+            "mechanistic_pairs.jsonl", "constant_complexity_pairs.jsonl", "syndot.jsonl", "dataset_manifest.json"
+        ),
+        "segments/mechanistic_heads_qwen3_8b/data/generated/point_search": (
+            "point_search.jsonl", "waldo_like.jsonl", "search_pairs.jsonl",
+            "verification_pairs.jsonl", "distractor_pairs.jsonl", "dataset_manifest.json",
+        ),
+        "segments/mechanistic_heads_qwen3_8b/data/generated/vlmbias_contrasts": (
+            "vlmbias_signed_contrasts.jsonl", "audit.json"
+        ),
+        "segments/mechanistic_heads_qwen3_8b/data/mmmc/prepared": (
+            "object_pairs.jsonl", "audit.json"
+        ),
+    }
+    missing = []
+    manifests: dict[str, dict] = {}
+    for root_value, names in groups.items():
+        root = repo / root_value
+        outputs = tuple(root / name for name in names)
+        missing.extend(str(path.relative_to(repo)) for path in outputs if not path.is_file())
+        if all(path.is_file() for path in outputs):
+            manifests[root_value] = require_completed_manifest(
+                root, expected_outputs=outputs
+            )
     audit_path = repo / "segments/mechanistic_heads_qwen3_8b/data/mmmc/prepared/audit.json"
-    if not audit_path.is_file():
-        missing.append(str(audit_path.relative_to(repo)))
-    elif not json.loads(audit_path.read_text(encoding="utf-8")).get("valid"):
+    if audit_path.is_file() and not json.loads(audit_path.read_text(encoding="utf-8")).get("valid"):
         raise RuntimeError(f"MMMC preparation audit is not valid: {audit_path}")
     if missing:
         raise FileNotFoundError(
             "cannot reuse preparation; missing required artifacts: " + ", ".join(missing)
+        )
+    for root_value in (
+        "segments/mechanistic_heads_qwen3_8b/data/generated/counting",
+        "segments/mechanistic_heads_qwen3_8b/data/generated/point_search",
+    ):
+        root = repo / root_value
+        declared = {
+            str(Path(value).resolve())
+            for value in manifests[root_value].get("output_sha256", {})
+        }
+        referenced: set[str] = set()
+
+        def collect_paths(value: object) -> None:
+            if isinstance(value, str) and value.lower().endswith(".png"):
+                referenced.add(str(Path(value).resolve()))
+            elif isinstance(value, dict):
+                for child in value.values():
+                    collect_paths(child)
+            elif isinstance(value, list):
+                for child in value:
+                    collect_paths(child)
+
+        for jsonl_path in root.glob("*.jsonl"):
+            for line in jsonl_path.read_text(encoding="utf-8").splitlines():
+                if line.strip():
+                    collect_paths(json.loads(line))
+        if not referenced:
+            raise RuntimeError(f"prepared dataset contains no referenced PNGs: {root}")
+        untracked = sorted(referenced - declared)
+        if untracked:
+            raise RuntimeError(
+                f"prepared dataset has {len(untracked)} unhashed referenced PNGs under {root}; "
+                "rerun preparation with the current pipeline"
+            )
+    counting = json.loads((repo / "segments/mechanistic_heads_qwen3_8b/data/generated/counting/dataset_manifest.json").read_text(encoding="utf-8"))
+    point = json.loads((repo / "segments/mechanistic_heads_qwen3_8b/data/generated/point_search/dataset_manifest.json").read_text(encoding="utf-8"))
+    mmmc = json.loads(audit_path.read_text(encoding="utf-8"))
+    if counting.get("counts", {}).get("mechanistic_pairs") != 100:
+        raise RuntimeError("prepared counting data does not contain the required 100 mechanistic pairs")
+    if point.get("counts", {}).get("point_search_train") != 2000:
+        raise RuntimeError("prepared point-search data does not contain the required 2,000 training scenes")
+    expected_pair_splits = {"prototype": 300, "validation": 100, "locked_test": 100}
+    pair_split_counts = point.get("waldo_pair_split_group_counts")
+    if not isinstance(pair_split_counts, dict) or any(
+        family_counts != expected_pair_splits
+        for family_counts in pair_split_counts.values()
+    ) or set(pair_split_counts) != {"search", "verification", "distractor"}:
+        raise RuntimeError(
+            "prepared Waldo-like head pairs do not have the required disjoint "
+            "300/100/100 prototype/validation/locked split; rerun preparation"
+        )
+    if int(mmmc.get("split_pair_counts", {}).get("locked_test", 0)) < 500:
+        raise RuntimeError("prepared MMMC data does not contain at least 500 locked examples")
+    if not isinstance(mmmc.get("dataset_fingerprints"), dict) or not mmmc[
+        "dataset_fingerprints"
+    ]:
+        raise RuntimeError(
+            "prepared MMMC data predates source-fingerprint validation; rerun preparation"
         )
 
 

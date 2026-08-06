@@ -14,7 +14,7 @@ from vlm_eval.mechanistic_heads.config import (
     load_json_config,
     prepare_output_directory,
 )
-from vlm_eval.mechanistic_heads.reproducibility import seed_everything, write_run_manifest
+from vlm_eval.mechanistic_heads.reproducibility import referenced_image_paths, seed_everything, write_run_manifest
 from vlm_eval.mechanistic_heads.schema import PairedExample, assert_no_group_leakage, write_paired_jsonl
 from vlm_eval.mechanistic_heads.splits import group_split
 
@@ -42,12 +42,20 @@ def main() -> None:
     write_paired_jsonl(output, pairs)
     audit_path = args.output_dir / "audit.json"
     audit_path.write_text(json.dumps(audit, indent=2), encoding="utf-8")
+    referenced_images = referenced_image_paths(pairs)
+    output_root = args.output_dir.resolve()
+    derived_outputs = [
+        path for path in referenced_images if path.resolve().is_relative_to(output_root)
+    ]
+    source_inputs = [
+        path for path in referenced_images if not path.resolve().is_relative_to(output_root)
+    ]
     write_run_manifest(
         args.output_dir,
         config={**config, "smoke": args.smoke},
         seeds={"split": args.seed},
-        inputs=[args.config, Path(config["vlmbias_dataset"]), Path(config["accepted_masks"])],
-        outputs=[output, audit_path],
+        inputs=[args.config, Path(config["vlmbias_dataset"]), Path(config["accepted_masks"]), *source_inputs],
+        outputs=[output, audit_path, *derived_outputs],
         status="complete",
         repo_root=Path.cwd(),
     )
@@ -180,6 +188,13 @@ def prepare_contrasts(
                         source_id=group_id,
                     )
                 )
+        else:
+            exclusions.append(
+                {
+                    "id": example_id,
+                    "reason": "detail contrast unavailable: original factual image is not present",
+                }
+            )
     assert_no_group_leakage(pairs)
     counts = {
         contrast: sum(pair.metadata["contrast"] == contrast for pair in pairs)
@@ -195,6 +210,11 @@ def prepare_contrasts(
             for split in ("prototype", "validation", "locked_test")
         },
         "exclusions": exclusions,
+        "detail_status": (
+            "available"
+            if counts["detail"]
+            else "computationally pending: no external original factual images were available"
+        ),
         "errors": [] if pairs else ["no contrast pairs produced"],
     }
 

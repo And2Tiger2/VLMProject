@@ -26,7 +26,7 @@ from vlm_eval.mechanistic_heads.config import (
 from vlm_eval.mechanistic_heads.checkpoint import JsonlCheckpoint
 from vlm_eval.mechanistic_heads.qwen3_runtime import Qwen3MechanisticRuntime
 from vlm_eval.mechanistic_heads.preflight import require_scientific_validation, validation_path_from_config
-from vlm_eval.mechanistic_heads.reproducibility import seed_everything, write_run_manifest
+from vlm_eval.mechanistic_heads.reproducibility import hash_paths, referenced_image_paths, seed_everything, write_run_manifest
 from vlm_eval.mechanistic_heads.scan import symmetric_bidirectional_score
 from vlm_eval.mechanistic_heads.schema import read_paired_jsonl
 
@@ -65,10 +65,12 @@ def main() -> None:
     limit = effective_limit(args)
     if limit is not None:
         pairs = pairs[:limit]
+    run_inputs = [args.config, Path(config["paired_dataset"]), *referenced_image_paths(pairs)]
     checkpoint = JsonlCheckpoint(
         checkpoint_path,
         key=lambda row: (row["pair_id"], int(row["layer"]), int(row["head"]), row["scope"]),
         resume=args.resume,
+        context={"config":config,"seed":args.seed,"smoke":args.smoke,"layers":layers,"input_sha256":hash_paths(run_inputs)},
     )
     rows = run_head_scan(
         runtime,
@@ -90,8 +92,8 @@ def main() -> None:
             "architecture": vars(runtime.architecture),
         },
         seeds={"global": args.seed},
-        inputs=[args.config, Path(config["paired_dataset"])],
-        outputs=[output, checkpoint_path],
+        inputs=run_inputs,
+        outputs=[output, checkpoint_path, checkpoint.meta_path],
         status="complete",
         repo_root=Path.cwd(),
     )
@@ -231,7 +233,7 @@ def run_head_scan(
 def _write_tsv(path: Path, rows: list[dict[str, Any]]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", encoding="utf-8", newline="") as handle:
-        writer = csv.DictWriter(handle, fieldnames=list(rows[0]) if rows else ["pair_id"], delimiter="\t")
+        writer = csv.DictWriter(handle, fieldnames=sorted({key for row in rows for key in row}) or ["pair_id"], delimiter="\t")
         writer.writeheader()
         writer.writerows(rows)
 

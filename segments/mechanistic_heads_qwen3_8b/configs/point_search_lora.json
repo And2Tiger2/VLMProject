@@ -12,4 +12,6 @@
   "epochs": 1,
   "batch_size": 1,
   "gradient_accumulation_steps": 8
+  ,"save_steps": 50
+  ,"save_total_limit": 2
 }

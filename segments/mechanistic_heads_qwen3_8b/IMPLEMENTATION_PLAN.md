@@ -3,6 +3,13 @@
 Status: repository audit and implementation completed; GPU instrumentation,
 calibration, full scans, training, and locked confirmations remain pending.
 
+Post-audit note: the real-model instrumentation gate passed all 12 checks on an
+L40 at commit `9dbf9d0`. Subsequent smoke failures exposed and led to fixes for
+teacher-forcing multimodal metadata, custom causal masks, dense projected-head
+OOMs, missing PEFT installation, mixed TSV schemas, and invalid DAG ordering.
+Because instrumentation is SHA-bound, the final repaired revision must pass the
+gate again before any full runner will start.
+
 This workstream is additive. It must not modify or overwrite any artifact under
 `segments/gaze_heads_qwen3_8b/runs/gaze_discovery_*` or any prior VLMBias,
 NaturalBench, static-steering, or ROI-attention result.
@@ -131,6 +138,26 @@ names under `scripts/` and delegate to the shared library.
 - Full LoRA or full-weight search training is never part of smoke mode. The
   optional paper-style full-weight configuration is expected to dominate the
   compute budget and is not launched automatically.
+- Long head scans write fsync-backed per-example/head checkpoints whose Git
+  SHA, config, seed, layer set, scope, smoke/full mode, paired-data hashes,
+  referenced-image hashes, and adapter identity must match on resume.
+- Point/Waldo head discovery uses prototype families only; validation and
+  locked-test families are disjoint by source template/group. Smoke and full
+  LoRA checkpoints are isolated so a smoke adapter cannot satisfy a full run.
+- LoRA adapters are safely merged before mechanistic inference. This makes the
+  captured `o_proj.weight` the effective adapted projection, so post-`W_O`
+  per-head contributions include the LoRA delta rather than the frozen base
+  matrix alone.
+- MMMC manifests record the Hugging Face split fingerprints and every MACI
+  consumer verifies those fingerprints before resolving image IDs.
+- Slurm descendants use fail-fast invalid-dependency handling. The final status
+  renderer alone uses `afterany`, allowing it to record failed and pending
+  branches without fabricating their head scores.
+- Default locked validations use at least 20 jointly matched controls rather
+  than also evaluating six redundant one-feature families. MMMC locked
+  validation is deterministically capped at 500 examples, point ablation at 50
+  examples per study, and counting validation at 40 base pairs plus their sham
+  variants. These are explicit compute-bounded modified-replication choices.
 
 ## Study implementation sequence
 
@@ -189,6 +216,10 @@ names under `scripts/` and delegate to the shared library.
   invention.
 - Qwen3-specific `k` sweeps are validation-selected modified replications and
   remain separate from the paper-style top-30 driving/top-40 resisting result.
+- The locked default evaluates 500 examples (the requested minimum), uses 20
+  jointly matched control draws, and limits greedy decoding to paper-style and
+  five random-control conditions; all conditions retain full-sequence
+  likelihood evaluation.
 
 ### VLMBias adaptation
 
@@ -196,6 +227,9 @@ names under `scripts/` and delegate to the shared library.
   not claims from the three source papers.
 - Existing all-400 analyses are not reused as confirmation. Final effects need
   a subject/domain-held-out split with selection and reporting separated.
+- Detail contrasts are reported as computationally pending when external
+  original factual images are unavailable; the preparer no longer silently
+  emits a zero-row detail study.
 
 ## Run and reporting gates
 

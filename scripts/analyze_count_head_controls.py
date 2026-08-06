@@ -11,6 +11,7 @@ from pathlib import Path
 from vlm_eval.mechanistic_heads.config import add_standard_run_arguments, load_json_config, prepare_output_directory
 from vlm_eval.mechanistic_heads.controls import layer_matched_control_draws, multivariate_matched_control_draws
 from vlm_eval.mechanistic_heads.reproducibility import write_run_manifest
+from vlm_eval.mechanistic_heads.io import write_tsv
 
 
 def main() -> None:
@@ -133,9 +134,4 @@ def correlation(left: list[float], right: list[float]) -> float:
 def mean(rows: list[dict], key: str) -> float: return sum(float(row[key]) for row in rows) / len(rows)
 def read_tsv(path: Path) -> list[dict]:
     with path.open("r", encoding="utf-8") as handle: return list(csv.DictReader(handle, delimiter="\t"))
-def write_tsv(path: Path, rows: list[dict]) -> None:
-    fields = list(rows[0]) if rows else ["empty"]
-    with path.open("w", encoding="utf-8", newline="") as handle: writer = csv.DictWriter(handle, fieldnames=fields, delimiter="\t"); writer.writeheader(); writer.writerows(rows)
-
-
 if __name__ == "__main__": main()

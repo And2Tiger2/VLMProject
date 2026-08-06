@@ -80,6 +80,9 @@ def prepare_mmmc(
     from datasets import load_dataset
 
     dataset = load_dataset(DATASET_ID, cache_dir=str(cache_dir) if cache_dir else None)
+    dataset_fingerprints = {
+        split: str(rows._fingerprint) for split, rows in dataset.items()
+    }
     # Pairing uses metadata only. Prevent PIL decoding all ~40k images during
     # the audit while still downloading and retaining the official dataset.
     dataset = {
@@ -211,6 +214,7 @@ def prepare_mmmc(
         "valid": bool(pairs) and locked_ok,
         "label": "instrumentation smoke test" if smoke else "dataset preparation",
         "dataset_id": DATASET_ID,
+        "dataset_fingerprints": dataset_fingerprints,
         "license": "CC BY-SA 3.0",
         "split_sizes": split_sizes,
         "n_rows_scanned": len(scanned),

@@ -3,5 +3,8 @@
   "study": "point_search_behavior",
   "model_id": "Qwen/Qwen3-VL-8B-Instruct",
   "dataset": "segments/mechanistic_heads_qwen3_8b/data/generated/point_search/point_search.jsonl",
-  "max_new_tokens": 256
+  "max_new_tokens": 256,
+  "calibration_split": "ood_target_count_1",
+  "minimum_calibration_count_accuracy": 0.5,
+  "minimum_calibration_point_parse_rate": 0.5
 }

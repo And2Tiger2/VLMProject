@@ -38,6 +38,7 @@ def main() -> None:
     if args.smoke: conditions={key:value for key,value in conditions.items() if key in {"baseline","driving_suppress","resisting_amplify","joint_role_aware","conflict_gated"}}
     locked_ids={pair.pair_id.split("-",1)[1] for pair in read_paired_jsonl(Path(config["paired_contrasts"])) if pair.split==str(config.get("split","locked_test")) and pair.metadata["contrast"]==contrast}
     examples=[example for example in load_examples(str(config["vlmbias_dataset"])) if example.id in locked_ids]; limit=effective_limit(args)
+    if limit is None and config.get("max_examples") is not None: limit=int(config["max_examples"])
     if limit is not None: examples=examples[:limit]
     rows=[]; baseline_state={}
     for condition,(scales,gate) in conditions.items():
@@ -56,10 +57,13 @@ def main() -> None:
     summaries={}; transitions={}
     for condition in conditions:
         group=[row for row in rows if row["condition"]==condition]; predictions=[dict_to_prediction(row) for row in group]; summaries[condition]={**summarize(predictions),"invalid_rate":sum(row["state"]=="invalid" for row in group)/len(group) if group else 0,"unconditional_bias_answer_rate":sum(row["state"]=="bias" for row in group)/len(group) if group else 0,"mean_bias_minus_correct_margin":sum(row["bias_minus_correct_margin"] for row in group)/len(group) if group else None,"mean_margin_shift":sum(row["margin_shift"] for row in group)/len(group) if group else None,"intervention_rate":sum(row["intervened"] for row in group)/len(group) if group else 0}; counts=Counter(f"{baseline_state.get(row['example_id'],'missing')}->{row['state']}" for row in group);transitions[condition]={key:counts.get(key,0) for key in ("bias->correct","bias->other_wrong","correct->bias","correct->other_wrong")};transitions[condition]["all"]=dict(counts)
-    naturalbench={}
+    naturalbench={}; naturalbench_input_paths=[]
     if config.get("naturalbench_dataset"):
         calls=load_naturalbench_calls(str(config["naturalbench_dataset"]),limit_groups=(2 if args.smoke else config.get("naturalbench_limit_groups")))
+        naturalbench_input_paths=[Path(call.image_path) for call in calls]
         for condition,(scales,gate) in conditions.items():
+            if not should_run_naturalbench(condition, config):
+                continue
             predictions=[]
             for call in calls:
                 image = Image.open(call.image_path).convert("RGB")
@@ -69,9 +73,9 @@ def main() -> None:
                 with projected_head_scaling(runtime.model,scales if intervene else {}): generated=runtime.model.generate(**inputs,do_sample=False,max_new_tokens=8)
                 text=runtime.processor.batch_decode(generated[:,inputs.input_ids.shape[1]:],skip_special_tokens=True,clean_up_tokenization_spaces=False)[0].strip(); parsed=extract_naturalbench_answer(text,call.question_type); predictions.append(NaturalBenchPrediction(call.group_id,call.call_id,call.question_id,call.image_id,call.question_type,call.prompt,call.ground_truth,text,parsed,normalize_naturalbench_answer(parsed)==normalize_naturalbench_answer(call.ground_truth),call.source))
             naturalbench[condition]=summarize_naturalbench(predictions)
-    summary={"valid":True,"label":"instrumentation smoke test" if args.smoke else "locked confirmation","selection_contrast":contrast,"n_locked_examples":len(examples),"head_sets":{"driving":driving,"resisting":resisting},"vlmbias":summaries,"transitions":transitions,"naturalbench":naturalbench,"architecture":vars(runtime.architecture)}
+    summary={"valid":True,"label":"instrumentation smoke test" if args.smoke else "locked confirmation","selection_contrast":contrast,"n_locked_examples":len(examples),"head_sets":{"driving":driving,"resisting":resisting},"vlmbias":summaries,"transitions":transitions,"naturalbench":naturalbench,"control_policy":"20 joint matches on layer, image attention, projected norm, entropy, gaze, and general causal importance; NaturalBench retention is evaluated on core interventions only","architecture":vars(runtime.architecture)}
     summary_path=args.output_dir/"summary.json";summary_path.write_text(json.dumps(summary,indent=2),encoding="utf-8")
-    manifest_inputs=[args.config,Path(config["head_scores"]),Path(config["paired_contrasts"]),Path(config["vlmbias_dataset"])]
+    manifest_inputs=[args.config,Path(config["head_scores"]),Path(config["paired_contrasts"]),Path(config["vlmbias_dataset"]),*[Path(example.image_path) for example in examples if example.image_path],*naturalbench_input_paths]
     for key in ("naturalbench_dataset","gaze_ranking","conflict_detector","general_causal_importance"):
         if config.get(key):manifest_inputs.append(Path(config[key]))
     write_run_manifest(args.output_dir,config={**config,"architecture":vars(runtime.architecture)},seeds={"global":args.seed},inputs=manifest_inputs,outputs=[output,summary_path],status="complete",repo_root=Path.cwd());print(json.dumps(summary,indent=2))
@@ -91,8 +95,11 @@ def build_conditions(driving,resisting,rows,config,seed,n_layers,n_heads,*,have_
         for row in read_tsv(general_path):features[(int(row["layer"]),int(row["head"]))]["general_causal_importance"]=float(row["general_causal_importance"])
     elif require_external_general:raise RuntimeError("locked VLMBias validation requires cross-task general causal importance controls")
     draws=max(20,int(config.get("control_draws",20)))
+    diagnostic_families=bool(config.get("diagnostic_single_feature_controls",False))
     for role,selected,scale in (("driving",driving,0.0),("resisting",resisting,float(config.get("resisting_scale",2.0)))):
-        families={"layer":layer_matched_control_draws(selected,n_layers=n_layers,n_heads=n_heads,n_draws=draws,seed=seed),"image":multivariate_matched_control_draws(selected,features,feature_names=("image_attention",),n_draws=draws,seed=seed+1),"norm":multivariate_matched_control_draws(selected,features,feature_names=("projected_output_norm",),n_draws=draws,seed=seed+2),"entropy":multivariate_matched_control_draws(selected,features,feature_names=("attention_entropy",),n_draws=draws,seed=seed+3),"gaze":multivariate_matched_control_draws(selected,features,feature_names=("gaze_score",),n_draws=draws,seed=seed+4),"general":multivariate_matched_control_draws(selected,features,feature_names=("general_causal_importance",),n_draws=draws,seed=seed+5),"fully":multivariate_matched_control_draws(selected,features,n_draws=draws,seed=seed+6)}
+        families={"fully":multivariate_matched_control_draws(selected,features,n_draws=draws,seed=seed+6)}
+        if diagnostic_families:
+            families.update({"layer":layer_matched_control_draws(selected,n_layers=n_layers,n_heads=n_heads,n_draws=draws,seed=seed),"image":multivariate_matched_control_draws(selected,features,feature_names=("image_attention",),n_draws=draws,seed=seed+1),"norm":multivariate_matched_control_draws(selected,features,feature_names=("projected_output_norm",),n_draws=draws,seed=seed+2),"entropy":multivariate_matched_control_draws(selected,features,feature_names=("attention_entropy",),n_draws=draws,seed=seed+3),"gaze":multivariate_matched_control_draws(selected,features,feature_names=("gaze_score",),n_draws=draws,seed=seed+4),"general":multivariate_matched_control_draws(selected,features,feature_names=("general_causal_importance",),n_draws=draws,seed=seed+5)})
         for family,control_draws in families.items():
             for index,heads in enumerate(control_draws):conditions[f"control_{role}_{family}_{index:02d}"]=({head:scale for head in heads},"always")
     return conditions
@@ -108,6 +115,7 @@ def dict_to_prediction(row):
     from vlm_eval.types import Prediction
     fields=Prediction.__dataclass_fields__;return Prediction(**{key:row[key] for key in fields})
 def avg(rows,key):return sum(float(row[key]) for row in rows)/len(rows)
+def should_run_naturalbench(condition,config):return condition.startswith(tuple(config.get("naturalbench_condition_prefixes",("baseline","driving_suppress","resisting_amplify","joint_role_aware","conflict_gated"))))
 def read_tsv(path):
     with path.open("r",encoding="utf-8") as handle:return list(csv.DictReader(handle,delimiter="\t"))
 if __name__=="__main__":main()

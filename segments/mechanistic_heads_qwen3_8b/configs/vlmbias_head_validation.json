@@ -14,4 +14,12 @@
   "resisting_k": 40,
   "resisting_scale": 2.0,
   "control_draws": 20
+  ,"diagnostic_single_feature_controls": false
+  ,"naturalbench_condition_prefixes": [
+    "baseline",
+    "driving_suppress",
+    "resisting_amplify",
+    "joint_role_aware",
+    "conflict_gated"
+  ]
 }

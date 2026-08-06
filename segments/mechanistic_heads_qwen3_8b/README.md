@@ -16,7 +16,9 @@ model weights, checkpoints, and activation stores are ignored by Git.
 - Deterministic generators, exact masks, all behavioral tasks, locked
   validators, matched controls, and report renderers: implemented and
   smoke-tested where no model is required.
-- GPU calibration: not run in this checkout.
+- The mandatory real-model instrumentation gate passed all 12 checks on an
+  NVIDIA L40 for commit `9dbf9d0`. It must be rerun after any code change;
+  full scientific jobs reject a report from an older Git SHA.
 - MMMC: downloaded with the exact official
   `datasets.load_dataset("ustc-zhangzm/MMMC")` call; the local audit found
   13,446 unambiguous object-conflict pairs and a 256/512/12,678 grouped
@@ -142,7 +144,19 @@ bash scripts/run_neuronic_mechanistic_heads.sh overnight-all-resume
 ```
 
 This refuses to submit unless every required generated pair file and a valid
-MMMC audit already exist.
+MMMC audit already exist. It also verifies the preparation manifests and every
+declared input/output hash, rather than trusting file existence alone.
+
+Before retrying after a code change, inspect and recoverably archive result
+directories from older revisions (prepared data are not moved):
+
+```bash
+uv run python scripts/archive_stale_mechanistic_runs.py --repo "$PWD"
+bash scripts/run_neuronic_mechanistic_heads.sh archive-stale
+```
+
+The first command is a dry run. The second performs moves into
+`segments/mechanistic_heads_qwen3_8b/archive/`; it does not delete results.
 
 ## Full-run commands
 
@@ -164,6 +178,13 @@ Full scan commands automatically submit 36 one-layer array tasks with at most
 four GPUs active, followed by a CPU aggregation job that refuses missing,
 duplicated, misnumbered, or wrong-architecture shards. Head candidates within
 a layer are also model-microbatched; serial equivalence is tested.
+
+All long scans bind their resume checkpoints to the Git SHA, complete config,
+seed, scan scope, paired-data hashes, referenced image hashes, and adapter
+identity. Smoke and full point-training adapters use separate checkpoint roots.
+The submission graph asks Slurm to remove descendants of failed prerequisites;
+the final atlas/status job uses `afterany` so it can still summarize completed,
+failed, and computationally pending branches.
 
 After discovery scans, build cross-task importance, matched controls, and
 locked confirmations:
@@ -230,12 +251,17 @@ uv run python scripts/train_maci_conflict_detector.py \
 The detector averages last-prefill raw head activations over validated
 resisting heads, fits L1 logistic regression on prototype examples, selects its
 threshold by validation F1, and reports AUROC/AUPRC/F1/intervention rate on the
-locked split.
+first deterministic 500 locked examples. This meets the requested locked-test
+minimum while bounding the overnight job.
 
 The MACI validation sweep and locked confirmation are deliberately separate.
 Use `maci_ablation.json` for validation-selected k and
-`maci_ablation_locked.json` for the paper-style locked result and full matched
-control distributions.
+`maci_ablation_locked.json` for the paper-style locked result and 20 control
+draws jointly matched on layer counts, image attention, projected-output norm,
+attention entropy, gaze score, and general causal importance. Greedy generation
+is run for paper-style and five random-control conditions; matched controls use
+the complete answer-sequence likelihood metric. Separate one-feature diagnostic
+control families are available but are not in the default overnight DAG.
 
 ## Atlas and reports
 
@@ -252,7 +278,9 @@ The renderer writes a 1,152-row TSV, top-k overlaps, PNG heatmaps, gaze-score
 scatterplots, per-family PNG heatmaps, rank correlations, layer distributions,
 a clustered atlas, a double-dissociation table, a run manifest, and `STATUS.md`.
 Missing studies remain blank;
-the renderer never fabricates scores.
+the renderer never fabricates scores. If a branch fails, placeholder tables and
+the final `STATUS.md` explicitly label it computationally pending instead of
+allowing a header-only artifact to masquerade as a successful result.
 
 ## Real Waldo is locked
 
@@ -266,7 +294,8 @@ mandatory license/page-split checks are documented in
 uv run pytest -q
 ```
 
-Current CPU tests (174 passing in this implementation checkout) cover all common tensor identities, sequence-scoring math,
+Current CPU tests cover all common tensor identities, sequence-scoring math,
 span invariants, normalization, deterministic generation, grouped leakage,
-control sampling, and reproducibility schemas. GPU checks are written by the
-mandatory instrumentation job and are not claimed as passed locally.
+control sampling, resume-context rejection, DAG contracts, shard completeness,
+and reproducibility schemas. GPU checks are written by the mandatory
+instrumentation job and must match the current Git SHA.

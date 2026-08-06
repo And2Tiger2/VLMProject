@@ -4,4 +4,5 @@
   "adapter_path": "segments/mechanistic_heads_qwen3_8b/checkpoints/point-answer-lora",
   "dataset": "segments/mechanistic_heads_qwen3_8b/data/generated/point_search/point_search.jsonl",
   "split": "ood_target_count_1"
+  ,"point_calibration": "segments/mechanistic_heads_qwen3_8b/runs/point_behavior/point_answer/summary.json"
 }

@@ -44,5 +44,5 @@ def aggregate(path:Path,column:str,contrast:str|None)->dict[tuple[int,int],float
 def percentile_abs(values:dict[tuple[int,int],float],universe:list[tuple[int,int]])->dict[tuple[int,int],float]:
     ordered=sorted(universe,key=lambda head:(abs(values[head]),head));denominator=max(1,len(ordered)-1);return {head:index/denominator for index,head in enumerate(ordered)}
 def write_tsv(path:Path,rows:list[dict[str,Any]])->None:
-    with path.open("w",encoding="utf-8",newline="") as handle:writer=csv.DictWriter(handle,fieldnames=list(rows[0]) if rows else ["layer"],delimiter="\t");writer.writeheader();writer.writerows(rows)
+    with path.open("w",encoding="utf-8",newline="") as handle:writer=csv.DictWriter(handle,fieldnames=sorted({key for row in rows for key in row}) or ["layer"],delimiter="\t");writer.writeheader();writer.writerows(rows)
 if __name__=="__main__":main()

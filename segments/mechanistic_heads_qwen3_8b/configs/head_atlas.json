@@ -11,5 +11,14 @@
   "verification_scores": "segments/mechanistic_heads_qwen3_8b/runs/verification_head_scan/full/verification_head_scores.tsv",
   "distractor_scores": "segments/mechanistic_heads_qwen3_8b/runs/distractor_head_scan/full/distractor_head_scores.tsv",
   "mmmc_scores": "segments/mechanistic_heads_qwen3_8b/runs/maci_head_scan/full/maci_head_scores.tsv",
-  "vlmbias_scores": "segments/mechanistic_heads_qwen3_8b/runs/vlmbias_signed_head_scan/full/vlmbias_signed_head_scores.tsv"
+  "vlmbias_scores": "segments/mechanistic_heads_qwen3_8b/runs/vlmbias_signed_head_scan/full/vlmbias_signed_head_scores.tsv",
+  "status_sources": {
+    "instrumentation": "segments/mechanistic_heads_qwen3_8b/reports/instrumentation/instrumentation_validation.json",
+    "counting_locked_validation": "segments/mechanistic_heads_qwen3_8b/runs/counting_validation/full/summary.json",
+    "point_locked_ablation": "segments/mechanistic_heads_qwen3_8b/runs/point_head_ablation/full/summary.json",
+    "maci_stability": "segments/mechanistic_heads_qwen3_8b/reports/maci_stability/summary.json",
+    "maci_locked_confirmation": "segments/mechanistic_heads_qwen3_8b/runs/maci_ablation_locked/full/summary.json",
+    "maci_gated_intervention": "segments/mechanistic_heads_qwen3_8b/runs/maci_gated_intervention/full/summary.json",
+    "vlmbias_locked_validation": "segments/mechanistic_heads_qwen3_8b/runs/vlmbias_head_validation/full/summary.json"
+  }
 }

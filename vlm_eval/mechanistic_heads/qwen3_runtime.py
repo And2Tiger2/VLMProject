@@ -122,12 +122,21 @@ class Qwen3MechanisticRuntime:
             device_map=_resolve_device_map(device_map, torch),
             attn_implementation=loader_attention_backend,
         )
+        self.adapter_merged = False
         if resolved_adapter is not None:
             try:
                 from peft import PeftModel
             except ImportError as exc:
                 raise RuntimeError("Adapter checkpoints require `uv sync --extra mechanistic`.") from exc
-            self.model = PeftModel.from_pretrained(self.model, resolved_adapter)
+            adapted = PeftModel.from_pretrained(self.model, resolved_adapter)
+            # Exact post-W_O attribution must use the effective projection
+            # matrix, including the LoRA delta.  PEFT's unmerged Linear wrapper
+            # exposes the frozen base ``weight`` while applying the adapter in
+            # a separate forward branch, which would make per-head projection
+            # incomplete.  Safe-merging is inference-equivalent and leaves one
+            # concrete weight matrix for every mechanistic hook.
+            self.model = adapted.merge_and_unload(safe_merge=True)
+            self.adapter_merged = True
         if attention_backend == MECHANISTIC_ATTENTION_IMPL:
             text_config = getattr(self.model.config, "text_config", None)
             vision_config = getattr(self.model.config, "vision_config", None)
@@ -214,6 +223,21 @@ def runtime_from_config(
             f"configured point-model checkpoint does not exist: {checkpoint_path}; "
             "run the Point-Answer training calibration first"
         )
+    if checkpoint_path.is_dir():
+        from vlm_eval.mechanistic_heads.preflight import require_completed_manifest
+
+        identity_files = checkpoint_manifest_inputs(
+            config, checkpoint_override=str(checkpoint_path)
+        )
+        if not identity_files:
+            raise RuntimeError(
+                f"configured point-model checkpoint has no identity files: {checkpoint_path}"
+            )
+        require_completed_manifest(
+            checkpoint_path,
+            expected_outputs=tuple(identity_files),
+            require_current_git=True,
+        )
     if checkpoint_path.joinpath("adapter_config.json").is_file():
         return Qwen3MechanisticRuntime(
             model_id=base_model,
@@ -241,5 +265,6 @@ def checkpoint_manifest_inputs(
         "config.json",
         "model.safetensors.index.json",
         "training_summary.json",
+        "training_context.json",
     )
     return [root / name for name in names if (root / name).is_file()]

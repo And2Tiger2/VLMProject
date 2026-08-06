@@ -17,7 +17,7 @@ from vlm_eval.mechanistic_heads.config import (
     prepare_output_directory,
 )
 from vlm_eval.mechanistic_heads.qwen3_runtime import Qwen3MechanisticRuntime
-from vlm_eval.mechanistic_heads.preflight import require_scientific_validation, validation_path_from_config
+from vlm_eval.mechanistic_heads.preflight import require_calibration_report, require_scientific_validation, validation_path_from_config
 from vlm_eval.mechanistic_heads.mmmc import MMMCImages
 from vlm_eval.mechanistic_heads.reproducibility import seed_everything, write_run_manifest
 from vlm_eval.mechanistic_heads.schema import read_paired_jsonl
@@ -32,6 +32,10 @@ def main() -> None:
     config = load_json_config(args.config)
     if not args.smoke:
         require_scientific_validation(validation_path_from_config(config))
+        if config.get("stability_report"):
+            require_calibration_report(Path(config["stability_report"]), boolean_key="passes_stability_gate")
+        if config.get("validation_ablation_report"):
+            require_calibration_report(Path(config["validation_ablation_report"]))
     output = args.output_dir / "maci_ablation.tsv"
     prepare_output_directory(
         args.output_dir,
@@ -63,9 +67,12 @@ def main() -> None:
         if pair.split == str(config.get("split", "validation"))
     ]
     limit = effective_limit(args)
+    if limit is None and config.get("max_examples") is not None:
+        limit = int(config["max_examples"])
     if limit is not None:
         pairs = pairs[:limit]
-    images = MMMCImages(args.cache_dir)
+    audit_path = Path(config["paired_dataset"]).with_name("audit.json")
+    images = MMMCImages(args.cache_dir, audit_path=audit_path)
     rows = []
     for condition, heads in conditions.items():
         for pair in pairs:
@@ -79,14 +86,19 @@ def main() -> None:
                     positive_answer=pair.bias_answer,
                     negative_answer=pair.correct_answer,
                 )
-                generated = runtime.model.generate(
-                    **inputs, do_sample=False, max_new_tokens=32
-                )
-            continuation = generated[:, inputs.input_ids.shape[1] :]
-            text = runtime.processor.batch_decode(
-                continuation, skip_special_tokens=True, clean_up_tokenization_spaces=False
-            )[0].strip()
-            normalized = text.casefold().strip(" .")
+                generated = None
+                if should_generate(condition, config):
+                    generated = runtime.model.generate(
+                        **inputs, do_sample=False, max_new_tokens=32
+                    )
+            text = ""
+            normalized = ""
+            if generated is not None:
+                continuation = generated[:, inputs.input_ids.shape[1] :]
+                text = runtime.processor.batch_decode(
+                    continuation, skip_special_tokens=True, clean_up_tokenization_spaces=False
+                )[0].strip()
+                normalized = text.casefold().strip(" .")
             rows.append(
                 {
                     "condition": condition,
@@ -96,8 +108,9 @@ def main() -> None:
                     "logp_hallucinated": scores["positive"],
                     "logp_factual": scores["negative"],
                     "generated": text,
-                    "generated_factual": int(normalized == pair.correct_answer.casefold().strip(" .")),
-                    "generated_hallucinated": int(normalized == pair.bias_answer.casefold().strip(" .")),
+                    "generation_scored": int(generated is not None),
+                    "generated_factual": int(normalized == pair.correct_answer.casefold().strip(" .")) if generated is not None else "",
+                    "generated_hallucinated": int(normalized == pair.bias_answer.casefold().strip(" .")) if generated is not None else "",
                 }
             )
     _write_tsv(output, rows)
@@ -114,12 +127,16 @@ def main() -> None:
         "conditions":len(conditions),
         "aggregate":aggregates,
         "claim_checks":claim_checks,
+        "control_policy":"20 joint matches on layer, image attention, projected norm, entropy, gaze, and general causal importance; single-feature diagnostic families are opt-in",
+        "generation_policy":"greedy generation for paper-style and five random controls; matched controls use complete candidate-sequence likelihood",
         "output":str(output),
         "architecture":vars(runtime.architecture),
     }
     summary_path=args.output_dir/"summary.json";summary_path.write_text(json.dumps(summary,indent=2),encoding="utf-8")
-    manifest_inputs=[args.config,Path(config["paired_dataset"]),Path(config["head_scores"])]
+    manifest_inputs=[args.config,Path(config["paired_dataset"]),audit_path,Path(config["head_scores"])]
     if bool(config.get("matched_control_distributions",False)):manifest_inputs.extend([Path(config["gaze_ranking"]),Path(config["general_causal_importance"])])
+    for key in ("stability_report","validation_ablation_report"):
+        if config.get(key):manifest_inputs.append(Path(config[key]))
     write_run_manifest(
         args.output_dir,
         config={**config, "conditions": {name: len(heads) for name, heads in conditions.items()},"architecture":vars(runtime.architecture)},
@@ -176,8 +193,11 @@ def matched_conditions(rows,ranking,*,config,n_layers,n_heads,seed):
     gaze={(int(row["layer"]),int(row["head"])):float(row.get("score",row.get("gaze_score",0))) for row in json.loads(Path(config["gaze_ranking"]).read_text(encoding="utf-8"))};general={(int(row["layer"]),int(row["head"])):float(row["general_causal_importance"]) for row in _read_tsv(Path(config["general_causal_importance"]))}
     features={(int(row["layer"]),int(row["head"])):{"image_attention":float(row["image_attention"]),"projected_output_norm":float(row["projected_output_norm"]),"attention_entropy":float(row["attention_entropy"]),"gaze_score":gaze.get((int(row["layer"]),int(row["head"])),0),"general_causal_importance":general[(int(row["layer"]),int(row["head"]))]} for row in rows}
     result={};n_draws=max(20,int(config.get("control_draws",20)));sets={"driving":[head for head,score in ranking if score>0][:30],"resisting":[head for head,score in reversed(ranking) if score<0][:40]}
+    diagnostic_families = bool(config.get("diagnostic_single_feature_controls", False))
     for role,selected in sets.items():
-        families={"layer":layer_matched_control_draws(selected,n_layers=n_layers,n_heads=n_heads,n_draws=n_draws,seed=seed),"image":multivariate_matched_control_draws(selected,features,feature_names=("image_attention",),n_draws=n_draws,seed=seed+1),"norm":multivariate_matched_control_draws(selected,features,feature_names=("projected_output_norm",),n_draws=n_draws,seed=seed+2),"entropy":multivariate_matched_control_draws(selected,features,feature_names=("attention_entropy",),n_draws=n_draws,seed=seed+3),"gaze":multivariate_matched_control_draws(selected,features,feature_names=("gaze_score",),n_draws=n_draws,seed=seed+4),"general":multivariate_matched_control_draws(selected,features,feature_names=("general_causal_importance",),n_draws=n_draws,seed=seed+5),"fully":multivariate_matched_control_draws(selected,features,n_draws=n_draws,seed=seed+6)}
+        families={"fully":multivariate_matched_control_draws(selected,features,n_draws=n_draws,seed=seed+6)}
+        if diagnostic_families:
+            families.update({"layer":layer_matched_control_draws(selected,n_layers=n_layers,n_heads=n_heads,n_draws=n_draws,seed=seed),"image":multivariate_matched_control_draws(selected,features,feature_names=("image_attention",),n_draws=n_draws,seed=seed+1),"norm":multivariate_matched_control_draws(selected,features,feature_names=("projected_output_norm",),n_draws=n_draws,seed=seed+2),"entropy":multivariate_matched_control_draws(selected,features,feature_names=("attention_entropy",),n_draws=n_draws,seed=seed+3),"gaze":multivariate_matched_control_draws(selected,features,feature_names=("gaze_score",),n_draws=n_draws,seed=seed+4),"general":multivariate_matched_control_draws(selected,features,feature_names=("general_causal_importance",),n_draws=n_draws,seed=seed+5)})
         for family,draws in families.items():
             for index,heads in enumerate(draws):result[f"{role}_control_{family}_{index:02d}"]=heads
     return result
@@ -191,11 +211,26 @@ def aggregate_conditions(rows):
         condition: {
             "n": len(group),
             "mean_hallucination_advantage": sum(float(row["hallucination_advantage"]) for row in group) / len(group),
-            "factual_generation_rate": sum(int(row["generated_factual"]) for row in group) / len(group),
-            "hallucinated_generation_rate": sum(int(row["generated_hallucinated"]) for row in group) / len(group),
+            "factual_generation_rate": generation_rate(group, "generated_factual"),
+            "hallucinated_generation_rate": generation_rate(group, "generated_hallucinated"),
         }
         for condition, group in sorted(grouped.items())
     }
+
+
+def generation_rate(rows, key):
+    scored = [row for row in rows if int(row.get("generation_scored", 1))]
+    return sum(int(row[key]) for row in scored) / len(scored) if scored else None
+
+
+def should_generate(condition: str, config: dict) -> bool:
+    prefixes = tuple(
+        config.get(
+            "generation_condition_prefixes",
+            ("baseline", "driving_top", "resisting_top", "joint_top", "random_seed"),
+        )
+    )
+    return condition.startswith(prefixes)
 
 
 def maci_claim_checks(aggregates, *, random_tolerance):
@@ -230,7 +265,7 @@ def _read_tsv(path:Path)->list[dict[str,str]]:
 
 def _write_tsv(path: Path, rows: list[dict[str, Any]]) -> None:
     with path.open("w", encoding="utf-8", newline="") as handle:
-        writer = csv.DictWriter(handle, fieldnames=list(rows[0]) if rows else ["condition"], delimiter="\t")
+        writer = csv.DictWriter(handle, fieldnames=sorted({key for row in rows for key in row}) or ["condition"], delimiter="\t")
         writer.writeheader()
         writer.writerows(rows)
 

@@ -49,12 +49,17 @@ def main() -> None:
     )
     manifest_path = args.output_dir / "dataset_manifest.json"
     manifest_path.write_text(json.dumps(result, indent=2, sort_keys=True), encoding="utf-8")
+    generated_images = sorted(args.output_dir.rglob("*.png"))
     write_run_manifest(
         args.output_dir,
         config={**config, "smoke": args.smoke, "limit": effective_limit(args)},
         seeds={"generator": args.seed},
         inputs=[args.config],
-        outputs=[manifest_path, *(Path(path) for path in result["artifacts"])],
+        outputs=[
+            manifest_path,
+            *(Path(path) for path in result["artifacts"]),
+            *generated_images,
+        ],
         status="complete",
         repo_root=Path.cwd(),
     )

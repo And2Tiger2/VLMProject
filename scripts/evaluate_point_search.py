@@ -12,7 +12,7 @@ from PIL import Image
 
 from vlm_eval.mechanistic_heads.config import add_standard_run_arguments, effective_limit, load_json_config, prepare_output_directory
 from vlm_eval.mechanistic_heads.qwen3_runtime import checkpoint_manifest_inputs, runtime_from_config
-from vlm_eval.mechanistic_heads.reproducibility import seed_everything, write_run_manifest
+from vlm_eval.mechanistic_heads.reproducibility import referenced_image_paths, seed_everything, write_run_manifest
 from vlm_eval.mechanistic_heads.synthetic import length_matched_nonspatial_answer
 
 
@@ -59,10 +59,13 @@ def main() -> None:
     for split in sorted({row["split"] for row in records}):
         group = [row for row in records if row["split"] == split]
         rmses = [float(row["point_rmse"]) for row in group if row["point_rmse"] != ""]
-        by_split[split] = {"n": len(group), "count_accuracy": sum(row["count_correct"] for row in group) / len(group), "sequence_exact": sum(row["sequence_exact"] for row in group) / len(group), "point_rmse": sum(rmses) / len(rmses) if rmses else None}
-    summary = {"valid": True, "label": "instrumentation smoke test" if args.smoke else "modified replication", "condition": args.condition, "n": len(records), "by_split": by_split, "architecture": vars(runtime.architecture), "deviation": "deterministic textual coordinates replace paper HTML point boxes"}
+        positive = [row for row in group if int(row["target_count"]) > 0]
+        by_split[split] = {"n": len(group), "count_accuracy": sum(row["count_correct"] for row in group) / len(group), "sequence_exact": sum(row["sequence_exact"] for row in group) / len(group), "point_parse_rate": sum(row["point_rmse"] != "" for row in positive) / len(positive) if positive else None, "point_rmse": sum(rmses) / len(rmses) if rmses else None}
+    calibration_split=str(config.get("calibration_split","ood_target_count_1"));calibration=by_split.get(calibration_split,{})
+    calibration_passed=(args.condition!="point_answer") or (float(calibration.get("count_accuracy",0))>=float(config.get("minimum_calibration_count_accuracy",0.5)) and float(calibration.get("point_parse_rate",0))>=float(config.get("minimum_calibration_point_parse_rate",0.5)))
+    summary = {"valid": True, "label": "instrumentation smoke test" if args.smoke else ("modified replication" if calibration_passed else "failed calibration"), "condition": args.condition, "n": len(records), "by_split": by_split, "calibration_split":calibration_split,"calibration_passed":calibration_passed,"architecture": vars(runtime.architecture), "deviation": "deterministic textual coordinates replace paper HTML point boxes"}
     summary_path = args.output_dir / "summary.json"; summary_path.write_text(json.dumps(summary, indent=2), encoding="utf-8")
-    write_run_manifest(args.output_dir, config={**config, "condition": args.condition, "smoke": args.smoke, "architecture": vars(runtime.architecture)}, seeds={"global": args.seed}, inputs=[args.config, Path(config["dataset"]), *checkpoint_manifest_inputs(config, checkpoint_override=args.checkpoint)], outputs=[output, summary_path], status="complete", repo_root=Path.cwd())
+    write_run_manifest(args.output_dir, config={**config, "condition": args.condition, "smoke": args.smoke, "architecture": vars(runtime.architecture)}, seeds={"global": args.seed}, inputs=[args.config, Path(config["dataset"]), *referenced_image_paths(rows), *checkpoint_manifest_inputs(config, checkpoint_override=args.checkpoint)], outputs=[output, summary_path], status="complete", repo_root=Path.cwd())
     print(json.dumps(summary, indent=2))
 
 
@@ -81,7 +84,7 @@ def read_jsonl(path: Path) -> list[dict]:
 
 def write_tsv(path: Path, rows: list[dict]) -> None:
     with path.open("w", encoding="utf-8", newline="") as handle:
-        writer = csv.DictWriter(handle, fieldnames=list(rows[0]) if rows else ["id"], delimiter="\t"); writer.writeheader(); writer.writerows(rows)
+        writer = csv.DictWriter(handle, fieldnames=sorted({key for row in rows for key in row}) or ["id"], delimiter="\t"); writer.writeheader(); writer.writerows(rows)
 
 
 if __name__ == "__main__": main()

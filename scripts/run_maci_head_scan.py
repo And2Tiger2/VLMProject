@@ -23,10 +23,11 @@ from vlm_eval.mechanistic_heads.config import (
     parse_layer_spec,
     prepare_output_directory,
 )
+from vlm_eval.mechanistic_heads.checkpoint import JsonlCheckpoint
 from vlm_eval.mechanistic_heads.qwen3_runtime import Qwen3MechanisticRuntime
 from vlm_eval.mechanistic_heads.preflight import require_scientific_validation, validation_path_from_config
 from vlm_eval.mechanistic_heads.mmmc import MMMCImages
-from vlm_eval.mechanistic_heads.reproducibility import seed_everything, write_run_manifest
+from vlm_eval.mechanistic_heads.reproducibility import hash_paths, seed_everything, write_run_manifest
 from vlm_eval.mechanistic_heads.schema import read_paired_jsonl
 
 
@@ -46,11 +47,12 @@ def main() -> None:
         require_scientific_validation(validation_path_from_config(config))
     per_example = args.output_dir / "maci_head_scores_per_example.tsv"
     aggregate = args.output_dir / "maci_head_scores.tsv"
+    checkpoint_path = args.output_dir / "maci_head_scores.checkpoint.jsonl"
     prepare_output_directory(
         args.output_dir,
         resume=args.resume,
         overwrite=args.overwrite,
-        known_outputs=(per_example.name, aggregate.name),
+        known_outputs=(per_example.name, aggregate.name, checkpoint_path.name),
     )
     seed_everything(args.seed)
     runtime = Qwen3MechanisticRuntime(
@@ -72,8 +74,16 @@ def main() -> None:
     limit = effective_limit(args)
     if limit is not None:
         pairs = pairs[:limit]
-    images = MMMCImages(cache_dir=args.cache_dir)
-    rows = run_maci_scan(runtime, pairs=pairs, layers=layers, scope=args.scope, images=images, head_microbatch=args.head_microbatch)
+    audit_path = Path(config["paired_dataset"]).with_name("audit.json")
+    images = MMMCImages(cache_dir=args.cache_dir, audit_path=audit_path)
+    run_inputs = [args.config, Path(config["paired_dataset"]), audit_path]
+    checkpoint = JsonlCheckpoint(
+        checkpoint_path,
+        key=lambda row: (row["pair_id"], row.get("layer"), row.get("head"), row["scope"]),
+        resume=args.resume,
+        context={"config":config,"seed":args.seed,"smoke":args.smoke,"layers":layers,"scope":args.scope,"input_sha256":hash_paths(run_inputs)},
+    )
+    rows = run_maci_scan(runtime, pairs=pairs, layers=layers, scope=args.scope, images=images, head_microbatch=args.head_microbatch, checkpoint=checkpoint)
     _write_tsv(per_example, rows)
     aggregates = aggregate_scores(rows)
     _write_tsv(aggregate, aggregates)
@@ -81,8 +91,8 @@ def main() -> None:
         args.output_dir,
         config={**config, "scope": args.scope, "layers": layers, "smoke": args.smoke, "head_microbatch": args.head_microbatch, "architecture": vars(runtime.architecture)},
         seeds={"global": args.seed},
-        inputs=[args.config, Path(config["paired_dataset"])],
-        outputs=[per_example, aggregate],
+        inputs=run_inputs,
+        outputs=[per_example, aggregate, checkpoint_path, checkpoint.meta_path],
         status="complete",
         repo_root=Path.cwd(),
     )
@@ -97,9 +107,15 @@ def run_maci_scan(
     scope: str,
     images: MMMCImages,
     head_microbatch: int = 32,
+    checkpoint: JsonlCheckpoint | None = None,
 ) -> list[dict[str, Any]]:
-    rows: list[dict[str, Any]] = []
+    rows: list[dict[str, Any]] = list(checkpoint.rows) if checkpoint else []
     for pair in pairs:
+        if checkpoint and not checkpoint.missing((pair.pair_id, -1, -1, scope)):
+            continue
+        expected = [(pair.pair_id, layer, head, scope) for layer in layers for head in range(runtime.architecture.n_heads)]
+        if checkpoint and all(not checkpoint.missing(key) for key in expected):
+            continue
         clean = capture_prefill(
             runtime,
             image_path=images.resolve(pair.donor_image),
@@ -123,16 +139,16 @@ def run_maci_scan(
             donor_positions = [clean.prompt_length - 1]
         else:
             if conflict.prompt_length != clean.prompt_length:
-                rows.append(
-                    {
+                excluded_row = {
                         "pair_id": pair.pair_id,
-                        "layer": None,
-                        "head": None,
+                        "layer": -1,
+                        "head": -1,
                         "scope": scope,
                         "excluded": True,
                         "exclusion_reason": "unequal prefill lengths",
                     }
-                )
+                rows.append(excluded_row)
+                if checkpoint: checkpoint.append([excluded_row])
                 continue
             recipient_positions = list(range(conflict.prompt_length))
             donor_positions = list(range(clean.prompt_length))
@@ -143,6 +159,10 @@ def run_maci_scan(
         for layer_idx in layers:
             for start in range(0, runtime.architecture.n_heads, effective_head_microbatch):
                 head_indices = list(range(start, min(start + effective_head_microbatch, runtime.architecture.n_heads)))
+                if checkpoint:
+                    head_indices = [head for head in head_indices if checkpoint.missing((pair.pair_id, layer_idx, head, scope))]
+                if not head_indices:
+                    continue
                 repeated = repeat_model_inputs(conflict.inputs, len(head_indices))
                 with batched_projected_head_patch(
                     runtime.model,
@@ -159,12 +179,13 @@ def run_maci_scan(
                         positive_answer=pair.bias_answer,
                         negative_answer=pair.correct_answer,
                     )
+                chunk_rows = []
                 for batch_idx, head_idx in enumerate(head_indices):
                     patched_l = float(patched_values[batch_idx].detach().cpu())
                     attention = conflict.store.attention_probabilities[layer_idx][0, head_idx, recipient_positions, :].float().clamp_min(1e-12)
                     projected = conflict.store.projected_heads[layer_idx][0, recipient_positions, head_idx, :]
                     image_index = runtime.torch.as_tensor(conflict.image_positions, dtype=runtime.torch.long, device=attention.device)
-                    rows.append({
+                    chunk_rows.append({
                         "pair_id": pair.pair_id,
                         "group_id": pair.group_id,
                         "split": pair.split,
@@ -181,6 +202,8 @@ def run_maci_scan(
                         "excluded": False,
                         "exclusion_reason": None,
                     })
+                rows.extend(chunk_rows)
+                if checkpoint: checkpoint.append(chunk_rows)
     return rows
 
 

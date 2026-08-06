@@ -16,6 +16,7 @@ CACHE_ROOT="${CACHE_ROOT:-$REPO/.cache/vlmproject}"
 TASK="${TASK:?TASK is required}"
 MODE="${MODE:-smoke}"
 SEED="${SEED:-260318523}"
+JOB_STARTED_AT="$(date +%s)"
 
 mkdir -p "$CACHE_ROOT/uv" "$CACHE_ROOT/huggingface" "$CACHE_ROOT/torch" \
   "$REPO/segments/mechanistic_heads_qwen3_8b/runs/slurm"
@@ -38,6 +39,11 @@ elif [[ "$MODE" != "full" ]]; then
   exit 2
 fi
 OUT_SUFFIX="$MODE"
+POINT_CHECKPOINT_ROOT="segments/mechanistic_heads_qwen3_8b/checkpoints"
+if [[ "$MODE" == "smoke" ]]; then
+  POINT_CHECKPOINT_ROOT="$POINT_CHECKPOINT_ROOT/smoke"
+fi
+POINT_ANSWER_CHECKPOINT="$POINT_CHECKPOINT_ROOT/point-answer-lora"
 layer_args=()
 if [[ -n "${SLURM_ARRAY_TASK_ID:-}" ]]; then
   layer_args+=(--layers "$SLURM_ARRAY_TASK_ID")
@@ -46,30 +52,35 @@ fi
 
 case "$TASK" in
   instrumentation)
+    VERIFY_DIR="segments/mechanistic_heads_qwen3_8b/reports/instrumentation"
     uv run python scripts/validate_mechanistic_instrumentation.py \
       --config segments/mechanistic_heads_qwen3_8b/configs/instrumentation_smoke.json \
       --output-dir segments/mechanistic_heads_qwen3_8b/reports/instrumentation \
       --seed "$SEED" --device-map cuda --resume "${smoke_args[@]}"
     ;;
   counting-behavior)
+    VERIFY_DIR="segments/mechanistic_heads_qwen3_8b/runs/counting_behavior/$OUT_SUFFIX"
     uv run python scripts/run_counting_behavior.py \
       --config segments/mechanistic_heads_qwen3_8b/configs/counting_behavior.json \
       --output-dir "segments/mechanistic_heads_qwen3_8b/runs/counting_behavior/$OUT_SUFFIX" \
       --seed "$SEED" --device-map cuda --resume "${layer_args[@]}" "${smoke_args[@]}"
     ;;
   counting-vap)
+    VERIFY_DIR="segments/mechanistic_heads_qwen3_8b/runs/counting_vap/$OUT_SUFFIX"
     uv run python scripts/run_counting_vap.py \
       --config segments/mechanistic_heads_qwen3_8b/configs/counting_vap.json \
       --output-dir "segments/mechanistic_heads_qwen3_8b/runs/counting_vap/$OUT_SUFFIX" \
       --seed "$SEED" --device-map cuda --resume "${layer_args[@]}" "${smoke_args[@]}"
     ;;
   counting-heads)
+    VERIFY_DIR="segments/mechanistic_heads_qwen3_8b/runs/counting_head_scan/$OUT_SUFFIX"
     uv run python scripts/run_counting_head_scan.py \
       --config segments/mechanistic_heads_qwen3_8b/configs/counting_head_scan.json \
       --output-dir "segments/mechanistic_heads_qwen3_8b/runs/counting_head_scan/$OUT_SUFFIX" \
       --seed "$SEED" --device-map cuda --resume "${layer_args[@]}" "${smoke_args[@]}"
     ;;
   counting-validation)
+    VERIFY_DIR="segments/mechanistic_heads_qwen3_8b/runs/counting_validation/$OUT_SUFFIX"
     uv run python scripts/run_counting_head_validation.py \
       --config segments/mechanistic_heads_qwen3_8b/configs/counting_validation.json \
       --output-dir "segments/mechanistic_heads_qwen3_8b/runs/counting_validation/$OUT_SUFFIX" \
@@ -83,9 +94,10 @@ case "$TASK" in
       echo "point training array index must be 0-3" >&2
       exit 2
     fi
+    VERIFY_DIR="$POINT_CHECKPOINT_ROOT/${point_slugs[$point_index]}-lora"
     uv run python scripts/train_point_search.py \
       --config segments/mechanistic_heads_qwen3_8b/configs/point_search_lora.json \
-      --output-dir "segments/mechanistic_heads_qwen3_8b/checkpoints/${point_slugs[$point_index]}-lora" \
+      --output-dir "$VERIFY_DIR" \
       --condition "${point_conditions[$point_index]}" \
       --seed "$SEED" --device-map cuda --resume "${smoke_args[@]}"
     ;;
@@ -99,12 +111,13 @@ case "$TASK" in
     fi
     checkpoint_args=()
     if [[ "${behavior_conditions[$behavior_index]}" != "base" ]]; then
-      checkpoint_args+=(--checkpoint "segments/mechanistic_heads_qwen3_8b/checkpoints/${behavior_slugs[$behavior_index]}-lora")
+      checkpoint_args+=(--checkpoint "$POINT_CHECKPOINT_ROOT/${behavior_slugs[$behavior_index]}-lora")
     fi
     behavior_root="segments/mechanistic_heads_qwen3_8b/runs/point_behavior"
     if [[ "$MODE" == "smoke" ]]; then
       behavior_root="segments/mechanistic_heads_qwen3_8b/runs/point_behavior_smoke"
     fi
+    VERIFY_DIR="$behavior_root/${behavior_conditions[$behavior_index]}"
     uv run python scripts/evaluate_point_search.py \
       --config segments/mechanistic_heads_qwen3_8b/configs/point_search_behavior.json \
       --output-dir "$behavior_root/${behavior_conditions[$behavior_index]}" \
@@ -112,42 +125,55 @@ case "$TASK" in
       --seed "$SEED" --device-map cuda --resume "${checkpoint_args[@]}" "${smoke_args[@]}"
     ;;
   waldo-behavior)
+    VERIFY_DIR="segments/mechanistic_heads_qwen3_8b/runs/waldo_behavior/$OUT_SUFFIX"
     uv run python scripts/run_waldo_behavior.py \
       --config segments/mechanistic_heads_qwen3_8b/configs/waldo_behavior.json \
       --output-dir "segments/mechanistic_heads_qwen3_8b/runs/waldo_behavior/$OUT_SUFFIX" \
-      --seed "$SEED" --device-map cuda --resume "${smoke_args[@]}"
+      --seed "$SEED" --device-map cuda --checkpoint "$POINT_ANSWER_CHECKPOINT" \
+      --resume "${smoke_args[@]}"
     ;;
   search-heads)
+    VERIFY_DIR="segments/mechanistic_heads_qwen3_8b/runs/search_head_scan/$OUT_SUFFIX"
     uv run python scripts/run_search_head_scan.py \
       --config segments/mechanistic_heads_qwen3_8b/configs/search_head_scan.json \
       --output-dir "segments/mechanistic_heads_qwen3_8b/runs/search_head_scan/$OUT_SUFFIX" \
-      --seed "$SEED" --device-map cuda --resume "${layer_args[@]}" "${smoke_args[@]}"
+      --seed "$SEED" --device-map cuda --checkpoint "$POINT_ANSWER_CHECKPOINT" \
+      --resume "${layer_args[@]}" "${smoke_args[@]}"
     ;;
   point-centroids)
+    VERIFY_DIR="segments/mechanistic_heads_qwen3_8b/runs/point_attention_centroids/$OUT_SUFFIX"
     uv run python scripts/run_point_attention_centroids.py \
       --config segments/mechanistic_heads_qwen3_8b/configs/point_attention_centroids.json \
       --output-dir "segments/mechanistic_heads_qwen3_8b/runs/point_attention_centroids/$OUT_SUFFIX" \
-      --seed "$SEED" --device-map cuda --resume "${layer_args[@]}" "${smoke_args[@]}"
+      --seed "$SEED" --device-map cuda --checkpoint "$POINT_ANSWER_CHECKPOINT" \
+      --resume "${layer_args[@]}" "${smoke_args[@]}"
     ;;
   verification-heads)
+    VERIFY_DIR="segments/mechanistic_heads_qwen3_8b/runs/verification_head_scan/$OUT_SUFFIX"
     uv run python scripts/run_verification_head_scan.py \
       --config segments/mechanistic_heads_qwen3_8b/configs/verification_head_scan.json \
       --output-dir "segments/mechanistic_heads_qwen3_8b/runs/verification_head_scan/$OUT_SUFFIX" \
-      --seed "$SEED" --device-map cuda --resume "${layer_args[@]}" "${smoke_args[@]}"
+      --seed "$SEED" --device-map cuda --checkpoint "$POINT_ANSWER_CHECKPOINT" \
+      --resume "${layer_args[@]}" "${smoke_args[@]}"
     ;;
   distractor-heads)
+    VERIFY_DIR="segments/mechanistic_heads_qwen3_8b/runs/distractor_head_scan/$OUT_SUFFIX"
     uv run python scripts/run_distractor_head_scan.py \
       --config segments/mechanistic_heads_qwen3_8b/configs/distractor_head_scan.json \
       --output-dir "segments/mechanistic_heads_qwen3_8b/runs/distractor_head_scan/$OUT_SUFFIX" \
-      --seed "$SEED" --device-map cuda --resume "${layer_args[@]}" "${smoke_args[@]}"
+      --seed "$SEED" --device-map cuda --checkpoint "$POINT_ANSWER_CHECKPOINT" \
+      --resume "${layer_args[@]}" "${smoke_args[@]}"
     ;;
   point-ablation)
+    VERIFY_DIR="segments/mechanistic_heads_qwen3_8b/runs/point_head_ablation/$OUT_SUFFIX"
     uv run python scripts/run_point_head_ablation.py \
       --config segments/mechanistic_heads_qwen3_8b/configs/point_head_ablation.json \
       --output-dir "segments/mechanistic_heads_qwen3_8b/runs/point_head_ablation/$OUT_SUFFIX" \
-      --seed "$SEED" --device-map cuda --resume "${smoke_args[@]}"
+      --seed "$SEED" --device-map cuda --checkpoint "$POINT_ANSWER_CHECKPOINT" \
+      --resume "${smoke_args[@]}"
     ;;
   maci-heads)
+    VERIFY_DIR="segments/mechanistic_heads_qwen3_8b/runs/maci_head_scan/$OUT_SUFFIX"
     uv run python scripts/run_maci_head_scan.py \
       --config segments/mechanistic_heads_qwen3_8b/configs/maci_head_scan.json \
       --output-dir "segments/mechanistic_heads_qwen3_8b/runs/maci_head_scan/$OUT_SUFFIX" \
@@ -155,6 +181,7 @@ case "$TASK" in
       --seed "$SEED" --device-map cuda --resume "${layer_args[@]}" "${smoke_args[@]}"
     ;;
   maci-heads-aligned)
+    VERIFY_DIR="segments/mechanistic_heads_qwen3_8b/runs/maci_head_scan_aligned/$OUT_SUFFIX"
     uv run python scripts/run_maci_head_scan.py \
       --config segments/mechanistic_heads_qwen3_8b/configs/maci_head_scan.json \
       --output-dir "segments/mechanistic_heads_qwen3_8b/runs/maci_head_scan_aligned/$OUT_SUFFIX" \
@@ -163,6 +190,7 @@ case "$TASK" in
       --seed "$SEED" --device-map cuda --resume "${layer_args[@]}" "${smoke_args[@]}"
     ;;
   maci-ablation)
+    VERIFY_DIR="segments/mechanistic_heads_qwen3_8b/runs/maci_ablation/$OUT_SUFFIX"
     uv run python scripts/run_maci_ablation.py \
       --config segments/mechanistic_heads_qwen3_8b/configs/maci_ablation.json \
       --output-dir "segments/mechanistic_heads_qwen3_8b/runs/maci_ablation/$OUT_SUFFIX" \
@@ -170,6 +198,7 @@ case "$TASK" in
       --seed "$SEED" --device-map cuda --resume "${smoke_args[@]}"
     ;;
   maci-confirm)
+    VERIFY_DIR="segments/mechanistic_heads_qwen3_8b/runs/maci_ablation_locked/$OUT_SUFFIX"
     uv run python scripts/run_maci_ablation.py \
       --config segments/mechanistic_heads_qwen3_8b/configs/maci_ablation_locked.json \
       --output-dir "segments/mechanistic_heads_qwen3_8b/runs/maci_ablation_locked/$OUT_SUFFIX" \
@@ -177,6 +206,7 @@ case "$TASK" in
       --seed "$SEED" --device-map cuda --resume "${smoke_args[@]}"
     ;;
   maci-detector)
+    VERIFY_DIR="segments/mechanistic_heads_qwen3_8b/runs/maci_detector/$OUT_SUFFIX"
     uv run python scripts/train_maci_conflict_detector.py \
       --config segments/mechanistic_heads_qwen3_8b/configs/maci_detector.json \
       --output-dir "segments/mechanistic_heads_qwen3_8b/runs/maci_detector/$OUT_SUFFIX" \
@@ -184,6 +214,7 @@ case "$TASK" in
       --seed "$SEED" --device-map cuda --resume "${smoke_args[@]}"
     ;;
   maci-gated)
+    VERIFY_DIR="segments/mechanistic_heads_qwen3_8b/runs/maci_gated_intervention/$OUT_SUFFIX"
     uv run python scripts/run_maci_gated_intervention.py \
       --config segments/mechanistic_heads_qwen3_8b/configs/maci_gated_intervention.json \
       --output-dir "segments/mechanistic_heads_qwen3_8b/runs/maci_gated_intervention/$OUT_SUFFIX" \
@@ -191,12 +222,14 @@ case "$TASK" in
       --seed "$SEED" --device-map cuda --resume "${smoke_args[@]}"
     ;;
   vlmbias-heads)
+    VERIFY_DIR="segments/mechanistic_heads_qwen3_8b/runs/vlmbias_signed_head_scan/$OUT_SUFFIX"
     uv run python scripts/run_vlmbias_signed_head_scan.py \
       --config segments/mechanistic_heads_qwen3_8b/configs/vlmbias_signed_head_scan.json \
       --output-dir "segments/mechanistic_heads_qwen3_8b/runs/vlmbias_signed_head_scan/$OUT_SUFFIX" \
       --seed "$SEED" --device-map cuda --resume "${layer_args[@]}" "${smoke_args[@]}"
     ;;
   vlmbias-validation)
+    VERIFY_DIR="segments/mechanistic_heads_qwen3_8b/runs/vlmbias_head_validation/$OUT_SUFFIX"
     uv run python scripts/run_vlmbias_head_validation.py \
       --config segments/mechanistic_heads_qwen3_8b/configs/vlmbias_head_validation.json \
       --output-dir "segments/mechanistic_heads_qwen3_8b/runs/vlmbias_head_validation/$OUT_SUFFIX" \
@@ -207,3 +240,6 @@ case "$TASK" in
     exit 2
     ;;
 esac
+
+uv run python scripts/validate_mechanistic_run.py \
+  --repo "$REPO" --run-dir "$VERIFY_DIR" --newer-than-epoch "$JOB_STARTED_AT"
