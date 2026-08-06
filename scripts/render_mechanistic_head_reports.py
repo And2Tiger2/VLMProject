@@ -311,11 +311,17 @@ def _write_overlaps(rows: list[dict[str, Any]], path: Path, *, k: int) -> None:
         name: {(row["layer"], row["head"]) for row in selected}
         for name, selected in ranked.items()
     }
+    # Signed functions deliberately produce separate positive/negative role
+    # sets (for example ``mmmc_signed_score_positive`` and
+    # ``mmmc_signed_score_negative``).  Iterate those resolved set names, not
+    # the unsplit source columns, or the first signed score family raises a
+    # KeyError during atlas rendering.
+    set_names = sorted(sets)
     with path.open("w", encoding="utf-8", newline="") as handle:
         writer = csv.DictWriter(handle, fieldnames=["left", "right", "k", "intersection", "jaccard"], delimiter="\t"); writer.writeheader()
         wrote = False
-        for left_idx, left in enumerate(columns):
-            for right in columns[left_idx + 1:]:
+        for left_idx, left in enumerate(set_names):
+            for right in set_names[left_idx + 1:]:
                 intersection = len(sets[left] & sets[right]); union = len(sets[left] | sets[right])
                 writer.writerow({"left": left, "right": right, "k": k, "intersection": intersection, "jaccard": intersection / union if union else 0})
                 wrote = True

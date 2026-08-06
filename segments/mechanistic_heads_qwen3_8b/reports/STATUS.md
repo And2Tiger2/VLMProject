@@ -57,6 +57,12 @@
   without changing the configured effective batch size.
 - Every Slurm entrypoint refuses tracked code/config changes, so a run cannot
   execute bytes that differ from the Git SHA written into its manifest.
+- Atlas top-k overlaps expand signed hallucination/bias scores into separate
+  positive and negative functional sets; completed signed branches no longer
+  collide with their unsplit source-column names during report rendering.
+- Locked VLMBias matched-control distributions use complete answer-sequence
+  likelihood without also running redundant greedy generation; behavioral and
+  NaturalBench metrics remain fully generated for the selected core conditions.
 - VLMBias semantic-prior contrasts cover all 400 source rows because they do
   not require a mask. Context and detail contrasts remain restricted to the
   114 manually reviewed mask rows, with one subject-grouped split shared by
@@ -80,7 +86,7 @@
 
 ## Passed
 
-- The complete CPU unit/integration suite passes in the audited checkout (263
+- The complete CPU unit/integration suite passes in the audited checkout (265
   tests in the final local audit).
 - Both synthetic generator smokes write real schemas, images, masks, pairs,
   grouped splits, manifests, input/output hashes, and resume markers.

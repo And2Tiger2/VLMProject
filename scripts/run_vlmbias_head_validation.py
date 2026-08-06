@@ -68,6 +68,7 @@ def main() -> None:
     if limit is not None: examples=examples[:limit]
     rows=[]; baseline_state={}
     for condition,(scales,gate) in conditions.items():
+        generation_scored = should_generate_vlmbias(condition)
         for example in examples:
             image = example.image or Image.open(example.image_path).convert("RGB")
             inputs=runtime.prepare(image,example.prompt,prompt_mode="raw"); margin,_=candidate_margin(runtime,inputs,positive_answer=example.expected_bias,negative_answer=example.ground_truth)
@@ -75,14 +76,22 @@ def main() -> None:
             intervene = gate == "always" or (gate == "detector" and detector_probability_value >= float(detector["threshold"]))
             with projected_head_scaling(runtime.model,scales if intervene else {}):
                 post_margin,_=candidate_margin(runtime,inputs,positive_answer=example.expected_bias,negative_answer=example.ground_truth)
-                generated=runtime.model.generate(**inputs,do_sample=False,max_new_tokens=int(config.get("max_new_tokens",16)))
-            text=runtime.processor.batch_decode(generated[:,inputs.input_ids.shape[1]:],skip_special_tokens=True,clean_up_tokenization_spaces=False)[0].strip(); prediction=score_response(example,text); state=prediction_state(prediction)
-            if condition=="baseline": baseline_state[example.id]=state
-            rows.append({"condition":condition,"intervened":int(intervene),"conflict_probability":detector_probability_value,"baseline_bias_minus_correct_margin":margin,"bias_minus_correct_margin":post_margin,"margin_shift":post_margin-margin,"state":state,**prediction_to_dict(prediction)})
+                generated=(runtime.model.generate(**inputs,do_sample=False,max_new_tokens=int(config.get("max_new_tokens",16))) if generation_scored else None)
+            row={"condition":condition,"example_id":example.id,"intervened":int(intervene),"conflict_probability":detector_probability_value,"baseline_bias_minus_correct_margin":margin,"bias_minus_correct_margin":post_margin,"margin_shift":post_margin-margin,"generation_scored":int(generation_scored)}
+            if generated is not None:
+                text=runtime.processor.batch_decode(generated[:,inputs.input_ids.shape[1]:],skip_special_tokens=True,clean_up_tokenization_spaces=False)[0].strip(); prediction=score_response(example,text); state=prediction_state(prediction)
+                row.update({"state":state,**prediction_to_dict(prediction)})
+                if condition=="baseline": baseline_state[example.id]=state
+            else:
+                row["state"]="not_scored"
+            rows.append(row)
     output.write_text("".join(json.dumps(row,ensure_ascii=False,default=str)+"\n" for row in rows),encoding="utf-8")
     summaries={}; transitions={}
     for condition in conditions:
-        group=[row for row in rows if row["condition"]==condition]; predictions=[dict_to_prediction(row) for row in group]; summaries[condition]={**summarize(predictions),"invalid_rate":sum(row["state"]=="invalid" for row in group)/len(group) if group else 0,"unconditional_bias_answer_rate":sum(row["state"]=="bias" for row in group)/len(group) if group else 0,"mean_bias_minus_correct_margin":sum(row["bias_minus_correct_margin"] for row in group)/len(group) if group else None,"mean_margin_shift":sum(row["margin_shift"] for row in group)/len(group) if group else None,"intervention_rate":sum(row["intervened"] for row in group)/len(group) if group else 0}; counts=Counter(f"{baseline_state.get(row['example_id'],'missing')}->{row['state']}" for row in group);transitions[condition]={key:counts.get(key,0) for key in ("bias->correct","bias->other_wrong","correct->bias","correct->other_wrong")};transitions[condition]["all"]=dict(counts)
+        group=[row for row in rows if row["condition"]==condition]; scored=[row for row in group if row["generation_scored"]]; predictions=[dict_to_prediction(row) for row in scored]
+        generated_metrics=({**summarize(predictions),"invalid_rate":sum(row["state"]=="invalid" for row in scored)/len(scored),"unconditional_bias_answer_rate":sum(row["state"]=="bias" for row in scored)/len(scored)} if scored else {"generation_scored":False})
+        summaries[condition]={**generated_metrics,"n_likelihood_examples":len(group),"n_generated_examples":len(scored),"mean_bias_minus_correct_margin":sum(row["bias_minus_correct_margin"] for row in group)/len(group) if group else None,"mean_margin_shift":sum(row["margin_shift"] for row in group)/len(group) if group else None,"intervention_rate":sum(row["intervened"] for row in group)/len(group) if group else 0}
+        counts=Counter(f"{baseline_state.get(row['example_id'],'missing')}->{row['state']}" for row in scored);transitions[condition]={key:counts.get(key,0) for key in ("bias->correct","bias->other_wrong","correct->bias","correct->other_wrong")};transitions[condition]["all"]=dict(counts)
     naturalbench={}; naturalbench_input_paths=[]
     if config.get("naturalbench_dataset"):
         calls=load_naturalbench_calls(str(config["naturalbench_dataset"]),limit_groups=(2 if args.smoke else config.get("naturalbench_limit_groups")))
@@ -106,7 +115,7 @@ def main() -> None:
         naturalbench,
         naturalbench_tolerance=float(config.get("naturalbench_retention_tolerance", 0.05)),
     )
-    summary={"valid":True,"label":"instrumentation smoke test" if args.smoke else ("locked confirmation" if claim_checks["all_pass"] else "failed calibration"),"calibration_result":"not assessed in smoke" if args.smoke else ("passed" if claim_checks["all_pass"] else "failed calibration"),"selection_contrast":contrast,"n_locked_examples":len(examples),"head_sets":{"driving":driving,"resisting":resisting},"vlmbias":summaries,"transitions":normalized_transitions,"naturalbench":naturalbench,"claim_checks":claim_checks,"claim_gate":"Role-aware heads are confirmed only if driving suppression, resisting amplification, and their joint intervention all lower the bias-vs-correct margin without increasing generated bias answers, beat their matched controls where available, and retain NaturalBench within tolerance.","control_policy":"20 joint matches on layer, image attention, projected norm, entropy, gaze, and general causal importance; NaturalBench retention is evaluated on core interventions only","architecture":vars(runtime.architecture)}
+    summary={"valid":True,"label":"instrumentation smoke test" if args.smoke else ("locked confirmation" if claim_checks["all_pass"] else "failed calibration"),"calibration_result":"not assessed in smoke" if args.smoke else ("passed" if claim_checks["all_pass"] else "failed calibration"),"selection_contrast":contrast,"n_locked_examples":len(examples),"head_sets":{"driving":driving,"resisting":resisting},"vlmbias":summaries,"transitions":normalized_transitions,"naturalbench":naturalbench,"claim_checks":claim_checks,"claim_gate":"Role-aware heads are confirmed only if driving suppression, resisting amplification, and their joint intervention all lower the bias-vs-correct margin without increasing generated bias answers, beat their matched controls where available, and retain NaturalBench within tolerance.","control_policy":"20 joint matches on layer, image attention, projected norm, entropy, gaze, and general causal importance; matched controls use complete candidate-sequence likelihood, while generation and NaturalBench retention are evaluated on core interventions only","architecture":vars(runtime.architecture)}
     summary_path=args.output_dir/"summary.json";summary_path.write_text(json.dumps(summary,indent=2),encoding="utf-8")
     manifest_inputs=[args.config,Path(config["head_scores"]),Path(config["paired_contrasts"]),Path(config["vlmbias_dataset"]),*[Path(example.image_path) for example in examples if example.image_path],*naturalbench_input_paths]
     for key in ("naturalbench_dataset","gaze_ranking","conflict_detector","general_causal_importance"):
@@ -149,6 +158,7 @@ def dict_to_prediction(row):
     fields=Prediction.__dataclass_fields__;return Prediction(**{key:row[key] for key in fields})
 def avg(rows,key):return sum(float(row[key]) for row in rows)/len(rows)
 def should_run_naturalbench(condition,config):return condition.startswith(tuple(config.get("naturalbench_condition_prefixes",("baseline","driving_suppress","resisting_amplify","joint_role_aware","conflict_gated"))))
+def should_generate_vlmbias(condition):return not condition.startswith("control_")
 
 
 def vlmbias_claim_checks(summaries, transitions, naturalbench, *, naturalbench_tolerance):

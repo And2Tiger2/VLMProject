@@ -789,6 +789,14 @@ def test_vlmbias_locked_claim_gate_requires_direction_controls_and_retention() -
     )["all_pass"]
 
 
+def test_vlmbias_matched_controls_are_likelihood_only() -> None:
+    module = load_script("run_vlmbias_head_validation.py")
+    assert module.should_generate_vlmbias("baseline")
+    assert module.should_generate_vlmbias("joint_role_aware")
+    assert not module.should_generate_vlmbias("control_driving_fully_00")
+    assert not module.should_generate_vlmbias("control_resisting_fully_19")
+
+
 def test_maci_gated_claim_requires_budget_matched_detector_benefit() -> None:
     module = load_script("run_maci_gated_intervention.py")
     conditions = {
@@ -1503,6 +1511,34 @@ def test_final_atlas_reports_missing_branches_as_pending(tmp_path: Path) -> None
         with path.open(encoding="utf-8") as handle:
             table = list(csv.DictReader(handle, delimiter="\t"))
         assert table and "pending" in table[0].values()
+
+
+def test_atlas_overlaps_expand_signed_scores_into_role_specific_sets(
+    tmp_path: Path,
+) -> None:
+    module = load_script("render_mechanistic_head_reports.py")
+    rows = [
+        {
+            "layer": 0,
+            "head": head,
+            "count_causal_score": float(head + 1),
+            "mmmc_signed_score": value,
+            **{
+                column: None
+                for column in module.ATLAS_COLUMNS[2:]
+                if column not in {"count_causal_score", "mmmc_signed_score"}
+            },
+        }
+        for head, value in enumerate((2.0, 1.0, -1.0, -2.0))
+    ]
+    output = tmp_path / "overlaps.tsv"
+    module._write_overlaps(rows, output, k=2)
+    with output.open(encoding="utf-8") as handle:
+        table = list(csv.DictReader(handle, delimiter="\t"))
+    labels = {row["left"] for row in table} | {row["right"] for row in table}
+    assert "mmmc_signed_score_positive" in labels
+    assert "mmmc_signed_score_negative" in labels
+    assert "count_causal_score" in labels
 
 
 def test_failed_calibration_blocks_downstream_scientific_stage(tmp_path: Path) -> None:
