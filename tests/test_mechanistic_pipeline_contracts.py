@@ -1014,6 +1014,91 @@ def test_smoke_profile_submits_bounded_preparation(tmp_path: Path) -> None:
     assert "MODE=smoke" in export_arg
 
 
+def test_prepared_reuse_applies_profile_appropriate_size_gates() -> None:
+    module = load_script("submit_neuronic_mechanistic_overnight.py")
+    smoke = {
+        "counting": {
+            "counts": {
+                "mechanistic_pairs": 4,
+                "mechanistic_repeat_pairs_each": 4,
+                "mechanistic_repeat_seeds": [11, 12],
+            }
+        },
+        "point": {
+            "counts": {"point_search_train": 2},
+            "waldo_pair_split_group_counts": {
+                family: {"prototype": 2}
+                for family in ("search", "verification", "distractor")
+            },
+        },
+        "vlmbias": {
+            "semantic_source_rows": 2,
+            "context_detail_source_rows": 2,
+            "counts_by_contrast": {"semantic_prior": 2},
+            "split_group_counts": {"prototype": 1, "validation": 1},
+        },
+        "mmmc": {
+            "split_pair_counts": {
+                "prototype": 3,
+                "validation": 3,
+                "locked_test": 2,
+            }
+        },
+    }
+    module.validate_prepared_dataset_contracts(**smoke, profile="smoke")
+    with pytest.raises(RuntimeError, match="100 mechanistic pairs"):
+        module.validate_prepared_dataset_contracts(**smoke, profile="all")
+
+    full = {
+        "counting": {
+            "counts": {
+                "mechanistic_pairs": 100,
+                "mechanistic_repeat_pairs_each": 100,
+                "mechanistic_repeat_seeds": [11, 12],
+            }
+        },
+        "point": {
+            "counts": {"point_search_train": 2000},
+            "waldo_pair_split_group_counts": {
+                family: {
+                    "prototype": 300,
+                    "validation": 100,
+                    "locked_test": 100,
+                }
+                for family in ("search", "verification", "distractor")
+            },
+        },
+        "vlmbias": {
+            "semantic_source_rows": 400,
+            "context_detail_source_rows": 114,
+            "counts_by_contrast": {"semantic_prior": 400},
+            "split_group_counts": {
+                "prototype": 1,
+                "validation": 1,
+                "locked_test": 1,
+            },
+        },
+        "mmmc": {
+            "split_pair_counts": {
+                "prototype": 256,
+                "validation": 512,
+                "locked_test": 500,
+            }
+        },
+    }
+    module.validate_prepared_dataset_contracts(**full, profile="smoke")
+    module.validate_prepared_dataset_contracts(**full, profile="all")
+    with pytest.raises(ValueError, match="unsupported prepared-data profile"):
+        module.validate_prepared_dataset_contracts(**full, profile="invalid")
+
+
+def test_resume_passes_requested_profile_to_prepared_data_validator() -> None:
+    source = (ROOT / "scripts/submit_neuronic_mechanistic_overnight.py").read_text(
+        encoding="utf-8"
+    )
+    assert "require_valid_prepared_data(args.repo, profile=args.profile)" in source
+
+
 def test_smoke_dag_exercises_every_downstream_consumer(tmp_path: Path) -> None:
     module = load_script("submit_neuronic_mechanistic_overnight.py")
     submitter = module.Submitter(repo=tmp_path, dry_run=True)

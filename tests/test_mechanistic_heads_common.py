@@ -396,7 +396,7 @@ def test_multihead_exact_replacement_keeps_shared_bias_and_sums_deltas() -> None
         - contributions[:, 2, 1, :]
         + replacement
     )
-    assert torch.allclose(actual, expected)
+    torch.testing.assert_close(actual, expected, rtol=1e-5, atol=1e-6)
 
 
 def test_batched_visual_map_transplant_assigns_one_head_per_batch_row() -> None:

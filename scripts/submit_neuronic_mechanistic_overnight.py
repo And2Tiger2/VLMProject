@@ -488,7 +488,7 @@ def main() -> None:
     submitter = Submitter(repo=args.repo, dry_run=args.dry_run)
     prepare_dependencies: list[str] = []
     if args.reuse_prepared:
-        require_valid_prepared_data(args.repo)
+        require_valid_prepared_data(args.repo, profile=args.profile)
     else:
         prepare = submitter.submit(
             "prepare_data",
@@ -533,7 +533,9 @@ def main() -> None:
     print(json.dumps(receipt, indent=2))
 
 
-def require_valid_prepared_data(repo: Path) -> None:
+def require_valid_prepared_data(repo: Path, *, profile: str = "all") -> None:
+    if profile not in {"smoke", "all"}:
+        raise ValueError(f"unsupported prepared-data profile: {profile}")
     groups = {
         "segments/mechanistic_heads_qwen3_8b/data/generated/counting": (
             "mechanistic_pairs.jsonl", "mechanistic_pairs_repeat1.jsonl",
@@ -627,47 +629,13 @@ def require_valid_prepared_data(repo: Path) -> None:
     point = json.loads((repo / "segments/mechanistic_heads_qwen3_8b/data/generated/point_search/dataset_manifest.json").read_text(encoding="utf-8"))
     vlmbias = json.loads((repo / "segments/mechanistic_heads_qwen3_8b/data/generated/vlmbias_contrasts/audit.json").read_text(encoding="utf-8"))
     mmmc = json.loads(audit_path.read_text(encoding="utf-8"))
-    if counting.get("counts", {}).get("mechanistic_pairs") != 100:
-        raise RuntimeError("prepared counting data does not contain the required 100 mechanistic pairs")
-    if counting.get("counts", {}).get("mechanistic_repeat_pairs_each") != 100 or len(
-        counting.get("counts", {}).get("mechanistic_repeat_seeds", [])
-    ) < 2:
-        raise RuntimeError(
-            "prepared counting data does not contain two 100-pair cross-seed repeats"
-        )
-    if point.get("counts", {}).get("point_search_train") != 2000:
-        raise RuntimeError("prepared point-search data does not contain the required 2,000 training scenes")
-    if (
-        vlmbias.get("semantic_source_rows") != 400
-        or vlmbias.get("counts_by_contrast", {}).get("semantic_prior") != 400
-    ):
-        raise RuntimeError(
-            "prepared VLMBias contrasts do not contain all 400 semantic-prior rows"
-        )
-    if vlmbias.get("context_detail_source_rows") != 114:
-        raise RuntimeError(
-            "prepared VLMBias context/detail contrasts do not use the 114 reviewed-mask rows"
-        )
-    split_groups = vlmbias.get("split_group_counts", {})
-    if set(split_groups) != {"prototype", "validation", "locked_test"} or any(
-        int(split_groups.get(name, 0)) <= 0
-        for name in ("prototype", "validation", "locked_test")
-    ):
-        raise RuntimeError(
-            "prepared VLMBias contrasts lack a complete subject-grouped three-way split"
-        )
-    expected_pair_splits = {"prototype": 300, "validation": 100, "locked_test": 100}
-    pair_split_counts = point.get("waldo_pair_split_group_counts")
-    if not isinstance(pair_split_counts, dict) or any(
-        family_counts != expected_pair_splits
-        for family_counts in pair_split_counts.values()
-    ) or set(pair_split_counts) != {"search", "verification", "distractor"}:
-        raise RuntimeError(
-            "prepared Waldo-like head pairs do not have the required disjoint "
-            "300/100/100 prototype/validation/locked split; rerun preparation"
-        )
-    if int(mmmc.get("split_pair_counts", {}).get("locked_test", 0)) < 500:
-        raise RuntimeError("prepared MMMC data does not contain at least 500 locked examples")
+    validate_prepared_dataset_contracts(
+        counting=counting,
+        point=point,
+        vlmbias=vlmbias,
+        mmmc=mmmc,
+        profile=profile,
+    )
     if not isinstance(mmmc.get("dataset_fingerprints"), dict) or not mmmc[
         "dataset_fingerprints"
     ]:
@@ -696,6 +664,99 @@ def require_valid_prepared_data(repo: Path) -> None:
         raise RuntimeError(
             "prepared four-candidate task does not contain four distinct cells per scene"
         )
+
+
+def validate_prepared_dataset_contracts(
+    *,
+    counting: dict,
+    point: dict,
+    vlmbias: dict,
+    mmmc: dict,
+    profile: str,
+) -> None:
+    """Apply profile-appropriate size/split gates to reusable data.
+
+    Smoke preparation intentionally emits only a few examples. It must be
+    reusable by another smoke at a new Git SHA when generator hashes still
+    match, but it must never satisfy a full-run request.
+    """
+
+    if profile not in {"smoke", "all"}:
+        raise ValueError(f"unsupported prepared-data profile: {profile}")
+    counts = counting.get("counts", {})
+    point_counts = point.get("counts", {})
+    split_groups = vlmbias.get("split_group_counts", {})
+    pair_split_counts = point.get("waldo_pair_split_group_counts")
+    mmmc_splits = mmmc.get("split_pair_counts", {})
+    if profile == "smoke":
+        if int(counts.get("mechanistic_pairs", 0)) < 4:
+            raise RuntimeError("prepared counting data lacks four smoke mechanistic pairs")
+        if int(counts.get("mechanistic_repeat_pairs_each", 0)) < 4 or len(
+            counts.get("mechanistic_repeat_seeds", [])
+        ) < 2:
+            raise RuntimeError("prepared counting data lacks two smoke cross-seed repeats")
+        if int(point_counts.get("point_search_train", 0)) < 2:
+            raise RuntimeError("prepared point-search data lacks two smoke training scenes")
+        if int(vlmbias.get("semantic_source_rows", 0)) < 1 or int(
+            vlmbias.get("counts_by_contrast", {}).get("semantic_prior", 0)
+        ) < 1:
+            raise RuntimeError("prepared VLMBias data lacks a smoke semantic-prior pair")
+        if int(vlmbias.get("context_detail_source_rows", 0)) < 1:
+            raise RuntimeError("prepared VLMBias data lacks a reviewed-mask smoke row")
+        if int(split_groups.get("prototype", 0)) < 1:
+            raise RuntimeError("prepared VLMBias smoke data lacks a prototype group")
+        if (
+            not isinstance(pair_split_counts, dict)
+            or set(pair_split_counts) != {"search", "verification", "distractor"}
+            or any(
+                int(family.get("prototype", 0)) < 1
+                for family in pair_split_counts.values()
+            )
+        ):
+            raise RuntimeError("prepared Waldo-like smoke data lacks prototype causal pairs")
+        if int(mmmc_splits.get("prototype", 0)) < 1:
+            raise RuntimeError("prepared MMMC smoke data lacks a prototype pair")
+        return
+
+    if counts.get("mechanistic_pairs") != 100:
+        raise RuntimeError("prepared counting data does not contain the required 100 mechanistic pairs")
+    if counts.get("mechanistic_repeat_pairs_each") != 100 or len(
+        counts.get("mechanistic_repeat_seeds", [])
+    ) < 2:
+        raise RuntimeError(
+            "prepared counting data does not contain two 100-pair cross-seed repeats"
+        )
+    if point_counts.get("point_search_train") != 2000:
+        raise RuntimeError("prepared point-search data does not contain the required 2,000 training scenes")
+    if (
+        vlmbias.get("semantic_source_rows") != 400
+        or vlmbias.get("counts_by_contrast", {}).get("semantic_prior") != 400
+    ):
+        raise RuntimeError(
+            "prepared VLMBias contrasts do not contain all 400 semantic-prior rows"
+        )
+    if vlmbias.get("context_detail_source_rows") != 114:
+        raise RuntimeError(
+            "prepared VLMBias context/detail contrasts do not use the 114 reviewed-mask rows"
+        )
+    if set(split_groups) != {"prototype", "validation", "locked_test"} or any(
+        int(split_groups.get(name, 0)) <= 0
+        for name in ("prototype", "validation", "locked_test")
+    ):
+        raise RuntimeError(
+            "prepared VLMBias contrasts lack a complete subject-grouped three-way split"
+        )
+    expected_pair_splits = {"prototype": 300, "validation": 100, "locked_test": 100}
+    if not isinstance(pair_split_counts, dict) or any(
+        family_counts != expected_pair_splits
+        for family_counts in pair_split_counts.values()
+    ) or set(pair_split_counts) != {"search", "verification", "distractor"}:
+        raise RuntimeError(
+            "prepared Waldo-like head pairs do not have the required disjoint "
+            "300/100/100 prototype/validation/locked split; rerun preparation"
+        )
+    if int(mmmc_splits.get("locked_test", 0)) < 500:
+        raise RuntimeError("prepared MMMC data does not contain at least 500 locked examples")
 
 
 def _require_manifest_sources(manifest: dict, source_paths: Iterable[Path]) -> None:

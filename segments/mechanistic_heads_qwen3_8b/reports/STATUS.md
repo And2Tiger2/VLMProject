@@ -94,7 +94,7 @@
 
 ## Passed
 
-- The complete CPU unit/integration suite passes in the audited checkout (266
+- The complete CPU unit/integration suite passes in the audited checkout (268
   tests in the final local audit).
 - Both synthetic generator smokes write real schemas, images, masks, pairs,
   grouped splits, manifests, input/output hashes, and resume markers.
@@ -123,6 +123,8 @@
   intervention alone.
 - Smoke-only submissions now prepare bounded smoke datasets; full/resume
   submission still refuses undersized counting, point-search, or MMMC data.
+- Resume validation is profile-aware: smoke resumes accept hash-valid bounded
+  smoke manifests, while full resumes retain every full-size dataset gate.
 - The old Slurm DAG is not resumable: its VAP, MACI, VLMBias, and point-training
   smoke failures correctly prevented all dependent scientific jobs.
 - No scientific calibration result exists yet; no replication success is

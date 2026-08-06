@@ -80,6 +80,10 @@ family has been found.
   removal of `TrainingArguments.overwrite_output_dir`. Repository preflight
   already owns overwrite cleanup; the unsupported duplicate keyword is removed
   and the complete argument set is instantiated in a locked-version test.
+- The first retry exposed a resume-only orchestration mismatch: the smoke resume
+  path validated bounded smoke manifests against full-run cardinalities. Resume
+  validation now receives the requested profile, accepts valid smoke-sized data
+  only for smoke jobs, and continues to reject it for full scientific runs.
 - The launcher is the sole frozen dependency-sync owner. Preparation, GPU,
   aggregation, and report jobs run frozen/no-sync, preventing concurrent
   processes from racing to change the shared virtual environment.
