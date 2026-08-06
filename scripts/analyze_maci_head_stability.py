@@ -35,8 +35,14 @@ def compare(left,right,*,name,k):
     if not common:raise RuntimeError(f"MACI stability comparison {name} has no common heads")
     lr=ranks([left[head] for head in common]);rr=ranks([right[head] for head in common]);rho=correlation(lr,rr);sign=sum((left[head]>=0)==(right[head]>=0) for head in common)/len(common);ld=set(sorted(common,key=lambda head:left[head],reverse=True)[:k]);rd=set(sorted(common,key=lambda head:right[head],reverse=True)[:k]);lrset=set(sorted(common,key=lambda head:left[head])[:k]);rrset=set(sorted(common,key=lambda head:right[head])[:k]);return {"comparison":name,"n_heads":len(common),"spearman_rho":rho,"sign_agreement":sign,"driving_top_k_overlap":len(ld&rd),"resisting_top_k_overlap":len(lrset&rrset),"k":k}
 def ranks(values):
-    order=sorted(range(len(values)),key=lambda idx:values[idx]);result=[0]*len(values)
-    for rank,index in enumerate(order):result[index]=rank
+    order=sorted(range(len(values)),key=lambda idx:values[idx]);result=[0.0]*len(values)
+    start=0
+    while start < len(order):
+        end=start+1
+        while end < len(order) and values[order[end]] == values[order[start]]:end+=1
+        average=(start+end-1)/2
+        for index in order[start:end]:result[index]=average
+        start=end
     return result
 def correlation(left,right):
     import math

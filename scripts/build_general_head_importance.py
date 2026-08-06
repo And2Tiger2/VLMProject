@@ -61,7 +61,22 @@ def aggregate(path:Path,column:str,contrast:str|None)->dict[tuple[int,int],float
 
 
 def percentile_abs(values:dict[tuple[int,int],float],universe:list[tuple[int,int]])->dict[tuple[int,int],float]:
-    ordered=sorted(universe,key=lambda head:(abs(values[head]),head));denominator=max(1,len(ordered)-1);return {head:index/denominator for index,head in enumerate(ordered)}
+    """Return absolute-score percentiles using average ranks for exact ties."""
+
+    ordered = sorted(universe, key=lambda head: (abs(values[head]), head))
+    denominator = max(1, len(ordered) - 1)
+    result: dict[tuple[int, int], float] = {}
+    start = 0
+    while start < len(ordered):
+        score = abs(values[ordered[start]])
+        end = start + 1
+        while end < len(ordered) and abs(values[ordered[end]]) == score:
+            end += 1
+        percentile = ((start + end - 1) / 2) / denominator
+        for head in ordered[start:end]:
+            result[head] = percentile
+        start = end
+    return result
 def write_tsv(path:Path,rows:list[dict[str,Any]])->None:
     with path.open("w",encoding="utf-8",newline="") as handle:writer=csv.DictWriter(handle,fieldnames=sorted({key for row in rows for key in row}) or ["layer"],delimiter="\t");writer.writeheader();writer.writerows(rows)
 if __name__=="__main__":main()

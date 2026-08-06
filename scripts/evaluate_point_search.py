@@ -17,7 +17,7 @@ from vlm_eval.mechanistic_heads.config import add_standard_run_arguments, effect
 from vlm_eval.mechanistic_heads.preflight import require_scientific_validation, validation_path_from_config
 from vlm_eval.mechanistic_heads.qwen3_runtime import checkpoint_manifest_inputs, runtime_from_config
 from vlm_eval.mechanistic_heads.reproducibility import referenced_image_paths, seed_everything, write_run_manifest
-from vlm_eval.mechanistic_heads.synthetic import length_matched_nonspatial_answer
+from vlm_eval.mechanistic_heads.synthetic import length_matched_nonspatial_answer, point_condition_prompt
 
 
 CONDITION_KEYS = {"base": "base", "direct_answer": "direct", "direct_length_matched": "direct_length_matched", "point_answer": "point", "shuffled_point_answer": "shuffled_point"}
@@ -45,7 +45,7 @@ def main() -> None:
     answer_key = CONDITION_KEYS[args.condition]
     records = []
     for row in rows:
-        inputs = runtime.prepare(Image.open(row["image_path"]).convert("RGB"), str(row["prompt"]), prompt_mode="raw")
+        inputs = runtime.prepare(Image.open(row["image_path"]).convert("RGB"), point_condition_prompt(row, args.condition), prompt_mode="raw")
         with runtime.torch.no_grad():
             generated = runtime.model.generate(**inputs, do_sample=False, max_new_tokens=int(config.get("max_new_tokens", 256)))
         text = runtime.processor.batch_decode(generated[:, inputs.input_ids.shape[1]:], skip_special_tokens=True, clean_up_tokenization_spaces=False)[0].strip()

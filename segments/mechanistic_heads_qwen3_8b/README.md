@@ -132,9 +132,9 @@ bash scripts/run_neuronic_mechanistic_heads.sh overnight-smoke-resume
 This avoids replacing the full prepared datasets with smoke-sized generator
 outputs and skips the multi-hour MMMC preparation stage.
 
-After a synthetic-renderer fix, refresh only the generated counting/search
-manifests and point/Waldo images while retaining the already-audited MMMC and
-VLMBias preparations:
+After a generator or contrast-preparation fix, refresh the generated
+counting/search manifests, point/Waldo images, and compact VLMBias contrast
+metadata while retaining the already-audited MMMC download/cache:
 
 ```bash
 bash scripts/run_neuronic_mechanistic_heads.sh refresh-generated-data
@@ -233,6 +233,11 @@ bash scripts/run_neuronic_mechanistic_heads.sh vlmbias-validation full
 Matched conditions are `base`, `direct_answer`, `direct_length_matched`,
 `point_answer`, and `shuffled_point_answer`. A LoRA pilot is always labeled a
 modified replication:
+
+The base/direct conditions ask for a number only, the length-matched condition
+asks for non-spatial filler and explicitly forbids coordinates, and the two
+Point-Answer conditions request the deterministic coordinate syntax. They use
+the same rendered scenes and targets; only the output protocol changes.
 
 ```bash
 uv run python scripts/train_point_search.py \

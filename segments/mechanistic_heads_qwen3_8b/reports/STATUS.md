@@ -45,6 +45,14 @@
 - MACI clean/conflict prompt pairs hold the exact conflict image fixed. The
   paired clean-row image is retained only as audited metadata, so the signed
   head scan changes wording rather than image content.
+- Point-search conditions now use distinct matched instructions: direct and
+  base conditions request only a count, the length control explicitly forbids
+  coordinates, and Point-Answer conditions request the deterministic point
+  syntax. This avoids teaching the direct controls a point-output task.
+- VLMBias semantic-prior contrasts cover all 400 source rows because they do
+  not require a mask. Context and detail contrasts remain restricted to the
+  114 manually reviewed mask rows, with one subject-grouped split shared by
+  every emitted contrast.
 
 ## Run
 
@@ -64,7 +72,7 @@
 
 ## Passed
 
-- The complete CPU unit/integration suite passes in the audited checkout (245
+- The complete CPU unit/integration suite passes in the audited checkout (259
   tests in the final local audit).
 - Both synthetic generator smokes write real schemas, images, masks, pairs,
   grouped splits, manifests, input/output hashes, and resume markers.

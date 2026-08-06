@@ -49,7 +49,7 @@ def main() -> None:
         args.output_dir,
         resume=args.resume,
         overwrite=args.overwrite,
-        known_outputs=(output.name,),
+        known_outputs=(output.name, checkpoint_path.name),
     )
     seed_everything(args.seed)
     runtime = Qwen3MechanisticRuntime(

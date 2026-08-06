@@ -437,6 +437,43 @@ def test_layer_parser_and_safe_output_default(tmp_path: Path) -> None:
         prepare_output_directory(output, resume=False, overwrite=False, known_outputs=("rows.tsv",))
 
 
+def test_explicit_overwrite_removes_declared_outputs_and_checkpoint_metadata(
+    tmp_path: Path,
+) -> None:
+    output = tmp_path / "run"
+    output.mkdir()
+    rows = output / "rows.checkpoint.jsonl"
+    sidecar = output / "rows.checkpoint.jsonl.meta.json"
+    manifest = output / "run_manifest.json"
+    marker = output / "resume.marker.json"
+    retained = output / "user-note.txt"
+    for path in (rows, sidecar, manifest, marker, retained):
+        path.write_text("old", encoding="utf-8")
+    prepare_output_directory(
+        output,
+        resume=False,
+        overwrite=True,
+        known_outputs=(rows.name,),
+    )
+    assert not rows.exists()
+    assert not sidecar.exists()
+    assert not manifest.exists()
+    assert not marker.exists()
+    assert retained.read_text(encoding="utf-8") == "old"
+
+
+def test_resume_and_overwrite_are_mutually_exclusive_even_for_empty_directory(
+    tmp_path: Path,
+) -> None:
+    with pytest.raises(ValueError, match="mutually exclusive"):
+        prepare_output_directory(
+            tmp_path / "empty",
+            resume=True,
+            overwrite=True,
+            known_outputs=("rows.tsv",),
+        )
+
+
 def test_point_runtime_refuses_missing_local_adapter_before_model_load() -> None:
     with pytest.raises(FileNotFoundError, match="training calibration first"):
         runtime_from_config(

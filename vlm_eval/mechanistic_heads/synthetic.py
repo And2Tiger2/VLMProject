@@ -219,6 +219,24 @@ def length_matched_nonspatial_answer(tokenizer: Any, *, direct_answer: str, poin
     )
 
 
+def point_condition_prompt(row: dict[str, Any], condition: str) -> str:
+    """Select the declared output-format prompt for a matched search scene."""
+
+    prompts = row.get("prompts")
+    if not isinstance(prompts, dict):
+        return str(row["prompt"])
+    key = {
+        "base": "direct",
+        "direct_answer": "direct",
+        "direct_length_matched": "direct_length_matched",
+        "point_answer": "point",
+        "shuffled_point_answer": "point",
+    }.get(condition)
+    if key is None or key not in prompts:
+        raise ValueError(f"unknown or undeclared point-search condition: {condition}")
+    return str(prompts[key])
+
+
 def render_waldo_like_scene(
     *,
     seed: int,

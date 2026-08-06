@@ -10,6 +10,7 @@ import sys
 import types
 
 import pytest
+from PIL import Image
 
 from vlm_eval.mechanistic_heads.io import write_tsv
 from vlm_eval.mechanistic_heads.config import enforce_smoke_layer_limit, partitioned_limit
@@ -117,6 +118,38 @@ def test_functional_head_rankings_preserve_expected_causal_sign() -> None:
     assert 'row.get("bidirectional_positive", 0)' in count_validation
     assert "key=lambda head: ranking[head], reverse=True" in point_validation
     assert "key=lambda head: abs(ranking[head]), reverse=True" not in point_validation
+
+
+def test_count_stability_uses_average_ranks_for_ties() -> None:
+    module = load_script("analyze_count_head_controls.py")
+    assert module.ranks([2.0, 1.0, 1.0, 3.0]) == [2.0, 0.5, 0.5, 3.0]
+
+
+def test_maci_stability_uses_average_ranks_for_ties() -> None:
+    module = load_script("analyze_maci_head_stability.py")
+    assert module.ranks([2.0, 1.0, 1.0, 3.0]) == [2.0, 0.5, 0.5, 3.0]
+
+
+def test_general_importance_uses_average_percentiles_for_ties() -> None:
+    module = load_script("build_general_head_importance.py")
+    values = {(0, 0): 1.0, (0, 1): -1.0, (0, 2): 3.0}
+    percentiles = module.percentile_abs(values, list(values))
+    assert percentiles[(0, 0)] == percentiles[(0, 1)] == 0.25
+    assert percentiles[(0, 2)] == 1.0
+
+
+def test_vlmbias_controls_use_selection_contrast_diagnostics() -> None:
+    source = (ROOT / "scripts/run_vlmbias_head_validation.py").read_text(
+        encoding="utf-8"
+    )
+    assert "build_conditions(driving,resisting,selected_rows" in source
+
+
+def test_point_report_refuses_failed_locked_ablation() -> None:
+    source = (ROOT / "scripts/render_point_search_reports.py").read_text(
+        encoding="utf-8"
+    )
+    assert "require_calibration_report(ablation_summary)" in source
 
 
 def test_point_head_selection_requires_bidirectional_effects() -> None:
@@ -935,6 +968,16 @@ def test_preparation_regenerates_outputs_after_generator_changes() -> None:
     assert 'prepare_mode_args+=(--smoke)' in source
 
 
+def test_refresh_generated_data_rebuilds_every_source_bound_changed_dataset() -> None:
+    source = (ROOT / "scripts/run_neuronic_mechanistic_heads.sh").read_text(
+        encoding="utf-8"
+    )
+    refresh = source.split("refresh-generated-data)", 1)[1].split(";;", 1)[0]
+    assert "generate_counting_data.py" in refresh
+    assert "generate_point_search_data.py" in refresh
+    assert "prepare_vlmbias_signed_contrasts.py" in refresh
+
+
 def test_smoke_profile_submits_bounded_preparation(tmp_path: Path) -> None:
     module = load_script("submit_neuronic_mechanistic_overnight.py")
     source = (ROOT / "scripts/submit_neuronic_mechanistic_overnight.py").read_text(
@@ -1137,6 +1180,7 @@ def test_waldo_four_candidate_target_position_is_not_constant(tmp_path: Path) ->
         resume=False,
     )
     assert result["valid"]
+    assert result["four_candidate_sets_valid"] is True
     rows = [
         json.loads(line)
         for line in (tmp_path / "waldo_like.jsonl").read_text(encoding="utf-8").splitlines()
@@ -1146,7 +1190,126 @@ def test_waldo_four_candidate_target_position_is_not_constant(tmp_path: Path) ->
         int(row["tasks"]["four_candidate_selection"].split("=")[1]) for row in present
     }
     assert len(candidate_indices) > 1
+    assert all(len(row["metadata"]["four_candidate_cells"]) == 4 for row in rows)
+    assert all(
+        len(set(row["metadata"]["four_candidate_cells"])) == 4 for row in rows
+    )
     assert all(len(row["masks"]) == len(row["objects"]) + 1 for row in rows)
+
+
+def test_generated_point_search_rows_declare_condition_specific_prompts(
+    tmp_path: Path,
+) -> None:
+    module = load_script("generate_point_search_data.py")
+    module.generate_point_search_datasets(
+        tmp_path,
+        config={"training_scenes": 2, "ood_scenes_per_condition": 1, "waldo_like_scenes": 4},
+        seed=23,
+        smoke=True,
+        limit=None,
+        resume=False,
+    )
+    row = json.loads(
+        (tmp_path / "point_search.jsonl").read_text(encoding="utf-8").splitlines()[0]
+    )
+    assert row["prompt"] == row["prompts"]["direct"]
+    assert "number only" in row["prompts"]["direct"]
+    assert "do not give coordinates" in row["prompts"]["direct_length_matched"]
+    assert "points=[" in row["prompts"]["point"]
+    assert len(set(row["prompts"].values())) == 3
+
+
+def test_point_behavior_budget_can_emit_fifty_coordinates() -> None:
+    config = json.loads(
+        (ROOT / "segments/mechanistic_heads_qwen3_8b/configs/point_search_behavior.json")
+        .read_text(encoding="utf-8")
+    )
+    assert int(config["max_new_tokens"]) >= 512
+
+
+def test_vlmbias_semantic_contrast_uses_all_rows_without_requiring_masks(
+    tmp_path: Path,
+) -> None:
+    module = load_script("prepare_vlmbias_signed_contrasts.py")
+    image_dir = tmp_path / "images"
+    image_dir.mkdir()
+    dataset_rows = []
+    for index in range(3):
+        image = image_dir / f"subject_{index}_px384_Q1.png"
+        Image.new("RGB", (16, 16), (index * 20, 0, 0)).save(image)
+        dataset_rows.append(
+            {
+                "id": f"subject_{index}_px384_Q1",
+                "prompt": "What is shown?",
+                "ground_truth": "correct",
+                "expected_bias": "bias",
+                "topic": "Synthetic",
+                "image_path": str(image.relative_to(tmp_path)),
+            }
+        )
+    dataset = tmp_path / "vlmbias.jsonl"
+    dataset.write_text(
+        "".join(json.dumps(row) + "\n" for row in dataset_rows), encoding="utf-8"
+    )
+    mask_dir = tmp_path / "masks"
+    mask_dir.mkdir()
+    tight = mask_dir / "tight.png"
+    Image.new("L", (16, 16), 255).save(tight)
+    accepted = tmp_path / "accepted.jsonl"
+    accepted.write_text(
+        json.dumps(
+            {
+                "id": dataset_rows[0]["id"],
+                "group_id": "subject_0",
+                "artifacts": {"tight_mask": str(tight.relative_to(tmp_path))},
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    pairs, audit = module.prepare_contrasts(
+        config={
+            "vlmbias_dataset": str(dataset),
+            "accepted_masks": str(accepted),
+            "candidate_root": str(tmp_path / "candidates"),
+            "context_removal": "whiten",
+        },
+        output_dir=tmp_path / "out",
+        seed=7,
+        limit=None,
+        smoke=False,
+    )
+    semantic = [pair for pair in pairs if pair.metadata["contrast"] == "semantic_prior"]
+    context = [pair for pair in pairs if pair.metadata["contrast"] == "context"]
+    assert len(semantic) == 3
+    assert len(context) == 1
+    assert audit["semantic_source_rows"] == 3
+    assert audit["context_detail_source_rows"] == 1
+    assert audit["n_groups"] == 3
+    assert sum(audit["split_group_counts"].values()) == 3
+    assert all(pair.metadata["mask_required"] is False for pair in semantic)
+
+
+def test_point_training_overwrite_removes_only_numeric_checkpoint_dirs(
+    tmp_path: Path,
+) -> None:
+    module = load_script("train_point_search.py")
+    removable = tmp_path / "checkpoint-12"
+    removable.mkdir()
+    (removable / "state.json").write_text("{}", encoding="utf-8")
+    retained = tmp_path / "checkpoint-notes"
+    retained.mkdir()
+    module.remove_declared_training_checkpoints(tmp_path)
+    assert not removable.exists()
+    assert retained.is_dir()
+
+
+def test_point_training_resume_uses_highest_numeric_checkpoint(tmp_path: Path) -> None:
+    module = load_script("train_point_search.py")
+    for name in ("checkpoint-9", "checkpoint-100", "checkpoint-20"):
+        (tmp_path / name).mkdir()
+    (tmp_path / "checkpoint-notes").mkdir()
+    assert module.args_resume_checkpoint(tmp_path) == str(tmp_path / "checkpoint-100")
 
 
 def test_mmmc_prompt_contrast_holds_image_fixed() -> None:

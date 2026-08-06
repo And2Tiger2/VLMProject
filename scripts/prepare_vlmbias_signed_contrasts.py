@@ -17,6 +17,7 @@ from vlm_eval.mechanistic_heads.config import (
 from vlm_eval.mechanistic_heads.reproducibility import referenced_image_paths, seed_everything, write_run_manifest
 from vlm_eval.mechanistic_heads.schema import PairedExample, assert_no_group_leakage, write_paired_jsonl
 from vlm_eval.mechanistic_heads.splits import group_split
+from vlm_eval.qwen3_high_bias_roi_attention import canonical_group_id
 
 
 def main() -> None:
@@ -71,7 +72,8 @@ def prepare_contrasts(
     smoke: bool,
 ) -> tuple[list[PairedExample], dict[str, Any]]:
     dataset_path = Path(config["vlmbias_dataset"])
-    dataset_rows = {str(row["id"]): row for row in _read_jsonl(dataset_path)}
+    dataset_list = _read_jsonl(dataset_path)
+    dataset_rows = {str(row["id"]): row for row in dataset_list}
     accepted_path = Path(config["accepted_masks"])
     accepted = _read_jsonl(accepted_path)
     if smoke:
@@ -81,8 +83,27 @@ def prepare_contrasts(
         accepted = accepted[: min(int(limit or 8), 2)]
     elif limit is not None:
         accepted = accepted[:limit]
+    accepted_by_id = {str(row["id"]): row for row in accepted}
+    # Semantic-prior prompting needs no mask, so it uses the complete VLMBias
+    # source. Context/detail retain the manually reviewed mask subset. Smoke
+    # deliberately uses reviewed rows so all implemented contrast paths are
+    # exercised within its tiny budget.
+    semantic_source_rows = (
+        [dataset_rows[str(row["id"])] for row in accepted]
+        if smoke
+        else dataset_list
+    )
+    split_subjects = [
+        {
+            "group_id": str(
+                accepted_by_id.get(str(row["id"]), {}).get("group_id")
+                or canonical_group_id(str(row["id"]))
+            )
+        }
+        for row in semantic_source_rows
+    ]
     split_rows = group_split(
-        accepted,
+        split_subjects,
         group_key=lambda row: str(row["group_id"]),
         fractions={"prototype": 0.25, "validation": 0.25, "locked_test": 0.5},
         seed=seed,
@@ -99,7 +120,9 @@ def prepare_contrasts(
         # its first source group a deterministic prototype while preserving
         # group integrity.
         smoke_splits = ("prototype", "validation", "locked_test")
-        smoke_groups = list(dict.fromkeys(str(row["group_id"]) for row in accepted))
+        smoke_groups = list(
+            dict.fromkeys(str(row["group_id"]) for row in split_subjects)
+        )
         split_by_group = {
             group_id: smoke_splits[index % len(smoke_splits)]
             for index, group_id in enumerate(smoke_groups)
@@ -108,6 +131,46 @@ def prepare_contrasts(
     exclusions: list[dict[str, str]] = []
     mask_root = accepted_path.parent
     candidates_root = Path(config["candidate_root"])
+    # Emit semantic-prior pairs for source rows that do not have reviewed
+    # masks. Reviewed rows are emitted in the loop below together with their
+    # context/detail siblings so all contrast metadata stays co-located.
+    for row in semantic_source_rows:
+        example_id = str(row["id"])
+        if example_id in accepted_by_id:
+            continue
+        group_id = canonical_group_id(example_id)
+        source_image = Path(row["image_path"])
+        if not source_image.is_absolute():
+            source_image = dataset_path.parent / source_image
+        correct = str(row["ground_truth"])
+        bias = str(row["expected_bias"])
+        loaded_prompt = str(row["prompt"])
+        neutral_prompt = (
+            "Treat this as an unfamiliar synthetic image with no standard real-world convention. "
+            "Use only the visible pixels. " + loaded_prompt
+        )
+        pairs.append(
+            PairedExample(
+                pair_id=f"semantic-{example_id}",
+                group_id=group_id,
+                donor_image=str(source_image.resolve()),
+                recipient_image=str(source_image.resolve()),
+                donor_prompt=neutral_prompt,
+                recipient_prompt=loaded_prompt,
+                donor_answer=correct,
+                recipient_answer=bias,
+                correct_answer=correct,
+                bias_answer=bias,
+                metadata={
+                    "contrast": "semantic_prior",
+                    "prompt_rule": "neutral synthetic-image prefix",
+                    "mask_required": False,
+                },
+                split=split_by_group[group_id],
+                generator_seed=seed,
+                source_id=group_id,
+            )
+        )
     for accepted_row in accepted:
         example_id = str(accepted_row["id"])
         row = dataset_rows.get(example_id)
@@ -138,7 +201,11 @@ def prepare_contrasts(
                 recipient_answer=bias,
                 correct_answer=correct,
                 bias_answer=bias,
-                metadata={"contrast": "semantic_prior", "prompt_rule": "neutral synthetic-image prefix"},
+                metadata={
+                    "contrast": "semantic_prior",
+                    "prompt_rule": "neutral synthetic-image prefix",
+                    "mask_required": False,
+                },
                 split=split,
                 generator_seed=seed,
                 source_id=group_id,
@@ -222,10 +289,17 @@ def prepare_contrasts(
         "label": "instrumentation smoke test" if smoke else "exploratory transfer dataset preparation",
         "n_pairs": len(pairs),
         "counts_by_contrast": counts,
+        "semantic_source_rows": len(semantic_source_rows),
+        "context_detail_source_rows": len(accepted),
         "counts_by_split": {
             split: sum(pair.split == split for pair in pairs)
             for split in ("prototype", "validation", "locked_test")
         },
+        "split_group_counts": {
+            split: len({pair.group_id for pair in pairs if pair.split == split})
+            for split in ("prototype", "validation", "locked_test")
+        },
+        "n_groups": len({pair.group_id for pair in pairs}),
         "exclusions": exclusions,
         "detail_status": (
             "available"

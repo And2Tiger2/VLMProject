@@ -203,9 +203,20 @@ def render(ranking: list[dict], stability: list[dict], output: Path, *, n_layers
     return [heatmap, scatter,stability_path]
 
 
-def ranks(values: list[float]) -> list[int]:
-    order = sorted(range(len(values)), key=lambda index: values[index]); result = [0] * len(values)
-    for rank, index in enumerate(order): result[index] = rank
+def ranks(values: list[float]) -> list[float]:
+    """Return average ranks so tied head scores do not get arbitrary order."""
+
+    order = sorted(range(len(values)), key=lambda index: values[index])
+    result = [0.0] * len(values)
+    start = 0
+    while start < len(order):
+        end = start + 1
+        while end < len(order) and values[order[end]] == values[order[start]]:
+            end += 1
+        rank = (start + end - 1) / 2
+        for index in order[start:end]:
+            result[index] = rank
+        start = end
     return result
 
 

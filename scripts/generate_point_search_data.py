@@ -192,8 +192,28 @@ def generate_point_search_datasets(
         target_objects = [row for row in scene.objects if row["class"] == "target"]
         target_cell = target_objects[0]["cell"] if target_objects else None
         target_center = target_objects[0]["center"] if target_objects else None
-        decoy_cells = [obj["cell"] for obj in scene.objects if obj["class"].startswith("distractor")][:3]
+        # Object spacing is smaller than a 10x10 grid cell, so distinct
+        # distractors can still quantize to the same cell.  De-duplicate after
+        # quantization and keep this a genuine four-way task even when the
+        # target is absent.
+        unique_decoy_cells = list(
+            dict.fromkeys(
+                int(obj["cell"])
+                for obj in scene.objects
+                if obj["class"].startswith("distractor")
+                and obj["cell"] != target_cell
+            )
+        )
+        required_decoys = 3 if target_cell is not None else 4
+        if len(unique_decoy_cells) < required_decoys:
+            raise RuntimeError(
+                f"{scene_id} has only {len(unique_decoy_cells)} distinct decoy cells; "
+                f"need {required_decoys} for the four-candidate task"
+            )
+        decoy_cells = unique_decoy_cells[:required_decoys]
         candidate_cells = ([target_cell] if target_cell is not None else []) + decoy_cells
+        if len(candidate_cells) != 4 or len(set(candidate_cells)) != 4:
+            raise RuntimeError(f"invalid four-candidate cells for {scene_id}: {candidate_cells}")
         candidate_rng = random.Random(stable_seed(seed, scene_id, "candidate-order"))
         candidate_rng.shuffle(candidate_cells)
         target_candidate = (
@@ -306,6 +326,11 @@ def generate_point_search_datasets(
                 for row in waldo_rows
                 if row["target_present"]
             }
+        ),
+        "four_candidate_sets_valid": all(
+            len(row["metadata"]["four_candidate_cells"]) == 4
+            and len(set(row["metadata"]["four_candidate_cells"])) == 4
+            for row in waldo_rows
         ),
         "artifacts": [
             str(point_path),
@@ -492,14 +517,30 @@ def _write_search_scene(
         + ",".join(f"({x:03d},{y:03d})" for x, y in shuffled)
         + f"]; answer={len(shuffled)}"
     )
-    prompt = (
-        f"Find every {target_color} {target_shape} in the image and report its center."
+    direct_prompt = (
+        f"How many {target_color} {target_shape} objects are in the image? "
+        "Answer with the number only."
+    )
+    length_prompt = (
+        f"How many {target_color} {target_shape} objects are in the image? "
+        "Give the count first, then non-spatial filler words; do not give coordinates."
+    )
+    point_prompt = (
+        f"Find every {target_color} {target_shape} in the image and report all centers. "
+        "Use points=[(xxx,yyy),...]; answer=N."
     )
     return {
         "id": scene_id,
         "group_id": scene_id,
         "image_path": str(image_path.resolve()),
-        "prompt": prompt,
+        # ``prompt`` remains the base/direct prompt for schema compatibility;
+        # training/evaluation select the declared condition-specific prompt.
+        "prompt": direct_prompt,
+        "prompts": {
+            "direct": direct_prompt,
+            "direct_length_matched": length_prompt,
+            "point": point_prompt,
+        },
         "target": {"color": target_color, "shape": target_shape},
         "target_count": target_count,
         "masks": mask_paths,

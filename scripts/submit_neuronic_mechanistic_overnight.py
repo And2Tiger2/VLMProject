@@ -625,6 +625,7 @@ def require_valid_prepared_data(repo: Path) -> None:
             )
     counting = json.loads((repo / "segments/mechanistic_heads_qwen3_8b/data/generated/counting/dataset_manifest.json").read_text(encoding="utf-8"))
     point = json.loads((repo / "segments/mechanistic_heads_qwen3_8b/data/generated/point_search/dataset_manifest.json").read_text(encoding="utf-8"))
+    vlmbias = json.loads((repo / "segments/mechanistic_heads_qwen3_8b/data/generated/vlmbias_contrasts/audit.json").read_text(encoding="utf-8"))
     mmmc = json.loads(audit_path.read_text(encoding="utf-8"))
     if counting.get("counts", {}).get("mechanistic_pairs") != 100:
         raise RuntimeError("prepared counting data does not contain the required 100 mechanistic pairs")
@@ -636,6 +637,25 @@ def require_valid_prepared_data(repo: Path) -> None:
         )
     if point.get("counts", {}).get("point_search_train") != 2000:
         raise RuntimeError("prepared point-search data does not contain the required 2,000 training scenes")
+    if (
+        vlmbias.get("semantic_source_rows") != 400
+        or vlmbias.get("counts_by_contrast", {}).get("semantic_prior") != 400
+    ):
+        raise RuntimeError(
+            "prepared VLMBias contrasts do not contain all 400 semantic-prior rows"
+        )
+    if vlmbias.get("context_detail_source_rows") != 114:
+        raise RuntimeError(
+            "prepared VLMBias context/detail contrasts do not use the 114 reviewed-mask rows"
+        )
+    split_groups = vlmbias.get("split_group_counts", {})
+    if set(split_groups) != {"prototype", "validation", "locked_test"} or any(
+        int(split_groups.get(name, 0)) <= 0
+        for name in ("prototype", "validation", "locked_test")
+    ):
+        raise RuntimeError(
+            "prepared VLMBias contrasts lack a complete subject-grouped three-way split"
+        )
     expected_pair_splits = {"prototype": 300, "validation": 100, "locked_test": 100}
     pair_split_counts = point.get("waldo_pair_split_group_counts")
     if not isinstance(pair_split_counts, dict) or any(
@@ -672,6 +692,10 @@ def require_valid_prepared_data(repo: Path) -> None:
         raise RuntimeError("prepared Waldo-like relocation pairs do not hold distractors fixed")
     if len(point.get("four_candidate_target_indices", [])) < 2:
         raise RuntimeError("prepared four-candidate task has a constant target slot")
+    if point.get("four_candidate_sets_valid") is not True:
+        raise RuntimeError(
+            "prepared four-candidate task does not contain four distinct cells per scene"
+        )
 
 
 def _require_manifest_sources(manifest: dict, source_paths: Iterable[Path]) -> None:

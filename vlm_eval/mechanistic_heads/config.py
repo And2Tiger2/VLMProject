@@ -31,14 +31,32 @@ def load_json_config(path: Path) -> dict[str, Any]:
 def prepare_output_directory(
     path: Path, *, resume: bool, overwrite: bool, known_outputs: tuple[str, ...]
 ) -> None:
+    if resume and overwrite:
+        raise ValueError("--resume and --overwrite are mutually exclusive")
     existing = [path / name for name in known_outputs if (path / name).exists()]
     if existing and not resume and not overwrite:
         raise FileExistsError(
             "output artifacts already exist; use --resume or explicit --overwrite: "
             + ", ".join(map(str, existing))
         )
-    if resume and overwrite:
-        raise ValueError("--resume and --overwrite are mutually exclusive")
+    if overwrite:
+        # ``--overwrite`` must be operational, not merely suppress the safety
+        # error. Scan runners maintain append-only checkpoints whose
+        # constructors correctly refuse pre-existing rows in non-resume mode;
+        # remove only declared artifacts and their sidecar metadata here.
+        # Generated image trees are deliberately retained unless the generator
+        # itself rewrites them, so this never recursively deletes user data.
+        for name in known_outputs:
+            output = path / name
+            if output.is_file() or output.is_symlink():
+                output.unlink()
+            metadata = output.with_suffix(output.suffix + ".meta.json")
+            if metadata.is_file() or metadata.is_symlink():
+                metadata.unlink()
+        for name in ("run_manifest.json", "resume.marker.json"):
+            metadata = path / name
+            if metadata.is_file() or metadata.is_symlink():
+                metadata.unlink()
     path.mkdir(parents=True, exist_ok=True)
 
 

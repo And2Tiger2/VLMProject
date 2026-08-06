@@ -86,6 +86,13 @@ case "$ACTION" in
       --config segments/mechanistic_heads_qwen3_8b/configs/point_search_data.json \
       --output-dir segments/mechanistic_heads_qwen3_8b/data/generated/point_search \
       --seed 260525427 --overwrite
+    # Semantic-prior coverage and its group split are source-bound just like
+    # the synthetic renderers. Rebuild this compact derived dataset whenever
+    # the contrast preparer changes; MMMC itself remains reusable.
+    uv run python scripts/prepare_vlmbias_signed_contrasts.py \
+      --config segments/mechanistic_heads_qwen3_8b/configs/vlmbias_contrasts.json \
+      --output-dir segments/mechanistic_heads_qwen3_8b/data/generated/vlmbias_contrasts \
+      --seed 260519250 --overwrite
     ;;
   atlas)
     uv run python scripts/render_mechanistic_head_reports.py \

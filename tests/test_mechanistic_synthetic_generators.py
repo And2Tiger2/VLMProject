@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import hashlib
 
+import pytest
+
 from vlm_eval.mechanistic_heads.synthetic import (
     SEARCH_COLORS,
     SEARCH_SHAPES,
@@ -14,6 +16,7 @@ from vlm_eval.mechanistic_heads.synthetic import (
     syndot_positions,
     waldo_distractor_centers,
     length_matched_nonspatial_answer,
+    point_condition_prompt,
 )
 
 
@@ -113,6 +116,32 @@ def test_point_search_uses_exact_paper_colors_shapes_and_conjunctions() -> None:
             target_count=1,
         )
         assert scene.masks["target"].getbbox() is not None
+
+
+def test_point_conditions_use_distinct_declared_output_prompts() -> None:
+    row = {
+        "prompt": "legacy",
+        "prompts": {
+            "direct": "Count only. Answer with the number only.",
+            "direct_length_matched": "Count, then use non-spatial filler. Do not give coordinates.",
+            "point": "Report every center as points=[...]; answer=N.",
+        },
+    }
+    assert point_condition_prompt(row, "base") == row["prompts"]["direct"]
+    assert point_condition_prompt(row, "direct_answer") == row["prompts"]["direct"]
+    assert (
+        point_condition_prompt(row, "direct_length_matched")
+        == row["prompts"]["direct_length_matched"]
+    )
+    assert point_condition_prompt(row, "point_answer") == row["prompts"]["point"]
+    assert (
+        point_condition_prompt(row, "shuffled_point_answer")
+        == row["prompts"]["point"]
+    )
+    assert "center" not in point_condition_prompt(row, "direct_answer").lower()
+    assert "points=" not in point_condition_prompt(row, "direct_length_matched")
+    with pytest.raises(ValueError, match="unknown or undeclared"):
+        point_condition_prompt(row, "not-a-condition")
 
 
 def test_waldo_like_generator_is_original_deterministic_and_masked() -> None:

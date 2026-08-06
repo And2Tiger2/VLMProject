@@ -42,7 +42,7 @@ family has been found.
 | Requirement | Status | Evidence / limitation |
 |---|---|---|
 | Six colors × six shapes; 50 objects; disjoint conjunctions; 2,000 train; six OOD counts × 50 | Implemented | Uses the paper's exact color names, glyph set, six train conjunctions, and ten test conjunctions; generator stores centers, boxes, classes, masks, template IDs, and grouped splits. |
-| Base/direct/length-matched/point/shuffled-point training | Implemented; PEFT smoke pending | LoRA is labeled modified replication; optional full-weight AdamW/cosine/200-warmup config is documented and not auto-launched. |
+| Base/direct/length-matched/point/shuffled-point training | Implemented; PEFT smoke pending | Matched scenes use condition-specific instructions: direct asks only for a count, the length control forbids coordinates, and Point-Answer requests coordinates. LoRA is labeled modified replication; optional full-weight AdamW/cosine/200-warmup config is documented and not auto-launched. |
 | Coordinate-token centroid tracing | Implemented; GPU pending | Per-layer denoised centroids and point RMSE. |
 | Per-head attention transplantation and top/bottom/random validation | Implemented; GPU pending | Uses complete emitted localization-sequence likelihood and explicit visual-slice normalization. |
 | Non-copyright four-feature target and strong distractors | Implemented | Position, scale, full-scene zoom, clutter, similarity, occlusion, background, presence, and prompt wording vary; images, masks, centers, boxes, and cells remain aligned. |
@@ -64,7 +64,7 @@ family has been found.
 | Top-30 driving, top-40 resisting, joint-30, five random seeds, k sweep | Implemented; GPU pending | Full validation refuses to run unless the requested number of correctly signed heads exists. |
 | Sign/rank stability and locked causal directions | Implemented; GPU pending | Failed gates produce `failed calibration`, not a head-family claim. |
 | L1 conflict detector and gating comparisons | Implemented; GPU pending | Threshold selected on validation F1; AUROC/AUPRC/F1 and never/always/confidence/random-budget policies are reported. The locked gate requires detector benefit over never and an exactly budget-matched random policy. |
-| VLMBias semantic-prior/context/detail contrasts | Semantic/context implemented; detail data pending | Detail is emitted only when external factual originals exist and processed visual spans align exactly. Rankings stay contrast-specific. |
+| VLMBias semantic-prior/context/detail contrasts | Semantic/context implemented; detail data pending | Semantic-prior covers all 400 source rows without masks; context/detail use the 114 reviewed-mask rows and share a subject-grouped split. Detail is emitted only when external factual originals exist and processed visual spans align exactly. Rankings stay contrast-specific. |
 | Locked role-aware VLMBias validation and NaturalBench retention | Implemented; GPU pending | Reports requested rates, likelihood margin, four transition types, intervention rate, matched controls, and NaturalBench metrics. A result is labeled failed calibration unless all role-aware directions, matched controls, bias-transition checks, and NaturalBench retention gates pass. |
 | 1,152-head atlas and plots | Implemented; rendering pending | Joins gaze, count, search, verification, distractor, MACI, three VLMBias scores, norm, and complete-sequence pre-final-norm direct attribution; missing families remain explicitly pending. |
 

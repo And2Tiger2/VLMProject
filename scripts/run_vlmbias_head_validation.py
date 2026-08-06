@@ -57,7 +57,10 @@ def main() -> None:
             f"sizes ({driving_k}, {resisting_k}); found ({len(driving)}, {len(resisting)})"
         )
     detector = json.loads(detector_path.read_text(encoding="utf-8")) if detector_path is not None and detector_path.is_file() else None
-    conditions=build_conditions(driving,resisting,score_rows,config,args.seed,runtime.architecture.n_layers,runtime.architecture.n_heads,have_detector=detector is not None,include_controls=not args.smoke,require_external_general=not args.smoke)
+    # Match controls on diagnostics from the same discovery contrast used to
+    # select the functional heads.  Averaging semantic/context/detail rows here
+    # would make the advertised attention/norm/entropy matching ill-defined.
+    conditions=build_conditions(driving,resisting,selected_rows,config,args.seed,runtime.architecture.n_layers,runtime.architecture.n_heads,have_detector=detector is not None,include_controls=not args.smoke,require_external_general=not args.smoke)
     if args.smoke: conditions={key:value for key,value in conditions.items() if key in {"baseline","driving_suppress","resisting_amplify","joint_role_aware","conflict_gated"}}
     locked_ids={pair.pair_id.split("-",1)[1] for pair in read_paired_jsonl(Path(config["paired_contrasts"])) if pair.split==str(config.get("split","locked_test")) and pair.metadata["contrast"]==contrast}
     examples=[example for example in load_examples(str(config["vlmbias_dataset"])) if example.id in locked_ids]; limit=effective_limit(args)

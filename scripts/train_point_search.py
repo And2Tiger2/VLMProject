@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse
 import json
 from pathlib import Path
+import shutil
 from typing import Any
 
 from PIL import Image
@@ -18,7 +19,7 @@ from vlm_eval.mechanistic_heads.config import (
 from vlm_eval.mechanistic_heads.reproducibility import git_sha, hash_paths, referenced_image_paths, seed_everything, write_run_manifest
 from vlm_eval.mechanistic_heads.preflight import require_scientific_validation, validation_path_from_config
 from vlm_eval.mechanistic_heads.qwen3_runtime import checkpoint_manifest_inputs
-from vlm_eval.mechanistic_heads.synthetic import length_matched_nonspatial_answer
+from vlm_eval.mechanistic_heads.synthetic import length_matched_nonspatial_answer, point_condition_prompt
 
 
 CONDITIONS = {
@@ -43,8 +44,18 @@ def main() -> None:
         args.output_dir,
         resume=args.resume,
         overwrite=args.overwrite,
-        known_outputs=("trainer_state.json", "adapter_config.json", "config.json"),
+        known_outputs=(
+            "trainer_state.json",
+            "adapter_config.json",
+            "adapter_model.safetensors",
+            "adapter_model.bin",
+            "config.json",
+            "training_context.json",
+            "training_summary.json",
+        ),
     )
+    if args.overwrite:
+        remove_declared_training_checkpoints(args.output_dir)
     seed_everything(args.seed)
     rows = _read_jsonl(Path(config["dataset"]))
     rows = [row for row in rows if row.get("split") == "train"]
@@ -178,7 +189,7 @@ def train_condition(
                         "role": "user",
                         "content": [
                             {"type": "image", "image": Image.open(row["image_path"]).convert("RGB")},
-                            {"type": "text", "text": str(row["prompt"])},
+                            {"type": "text", "text": point_condition_prompt(row, condition)},
                         ],
                     },
                     {"role": "assistant", "content": [{"type": "text", "text": answer}]},
@@ -247,8 +258,26 @@ def train_condition(
 
 
 def args_resume_checkpoint(output_dir: Path) -> str | None:
-    checkpoints = sorted(output_dir.glob("checkpoint-*"))
-    return str(checkpoints[-1]) if checkpoints else None
+    checkpoints = [
+        path
+        for path in output_dir.glob("checkpoint-*")
+        if path.is_dir() and path.name.removeprefix("checkpoint-").isdigit()
+    ]
+    latest = max(
+        checkpoints,
+        key=lambda path: int(path.name.removeprefix("checkpoint-")),
+        default=None,
+    )
+    return str(latest) if latest is not None else None
+
+
+def remove_declared_training_checkpoints(output_dir: Path) -> None:
+    """Remove only numeric Transformers checkpoints for explicit overwrite."""
+
+    for checkpoint in output_dir.glob("checkpoint-*"):
+        if not checkpoint.is_dir() or not checkpoint.name.removeprefix("checkpoint-").isdigit():
+            continue
+        shutil.rmtree(checkpoint)
 
 
 def validate_or_write_training_context(path: Path, expected: dict[str, Any], *, resume: bool) -> None:
