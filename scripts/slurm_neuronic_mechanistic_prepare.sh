@@ -13,7 +13,16 @@ set -euo pipefail
 REPO="${REPO:-$SLURM_SUBMIT_DIR}"
 CACHE_ROOT="${CACHE_ROOT:-$REPO/.cache/vlmproject}"
 SEED="${SEED:-260318523}"
+MODE="${MODE:-full}"
 JOB_STARTED_AT="$(date +%s)"
+
+prepare_mode_args=()
+if [[ "$MODE" == "smoke" ]]; then
+  prepare_mode_args+=(--smoke)
+elif [[ "$MODE" != "full" ]]; then
+  echo "MODE must be smoke or full" >&2
+  exit 2
+fi
 
 mkdir -p "$CACHE_ROOT/uv" "$CACHE_ROOT/huggingface" "$CACHE_ROOT/torch" \
   "$REPO/segments/mechanistic_heads_qwen3_8b/runs/slurm"
@@ -30,17 +39,17 @@ export HF_HUB_DOWNLOAD_TIMEOUT="${HF_HUB_DOWNLOAD_TIMEOUT:-120}"
 uv run python scripts/generate_counting_data.py \
   --config segments/mechanistic_heads_qwen3_8b/configs/counting_data.json \
   --output-dir segments/mechanistic_heads_qwen3_8b/data/generated/counting \
-  --seed "$SEED" --overwrite
+  --seed "$SEED" --overwrite "${prepare_mode_args[@]}"
 
 uv run python scripts/generate_point_search_data.py \
   --config segments/mechanistic_heads_qwen3_8b/configs/point_search_data.json \
   --output-dir segments/mechanistic_heads_qwen3_8b/data/generated/point_search \
-  --seed "$SEED" --overwrite
+  --seed "$SEED" --overwrite "${prepare_mode_args[@]}"
 
 uv run python scripts/prepare_vlmbias_signed_contrasts.py \
   --config segments/mechanistic_heads_qwen3_8b/configs/vlmbias_contrasts.json \
   --output-dir segments/mechanistic_heads_qwen3_8b/data/generated/vlmbias_contrasts \
-  --seed "$SEED" --overwrite
+  --seed "$SEED" --overwrite "${prepare_mode_args[@]}"
 
 # This is the exact required Hub loader. The cache and all images remain
 # ignored by Git. Tokenization is included in the overnight audit.
@@ -48,7 +57,7 @@ HF_HUB_OFFLINE=0 uv run python scripts/prepare_mmmc.py \
   --config segments/mechanistic_heads_qwen3_8b/configs/mmmc.json \
   --output-dir segments/mechanistic_heads_qwen3_8b/data/mmmc/prepared \
   --cache-dir segments/mechanistic_heads_qwen3_8b/data/mmmc_cache \
-  --seed "$SEED" --overwrite
+  --seed "$SEED" --overwrite "${prepare_mode_args[@]}"
 
 for RUN_DIR in \
   segments/mechanistic_heads_qwen3_8b/data/generated/counting \

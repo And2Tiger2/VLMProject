@@ -61,7 +61,7 @@
 
 ## Passed
 
-- The complete CPU unit/integration suite passes in the audited checkout (224
+- The complete CPU unit/integration suite passes in the audited checkout (231
   tests in the final local audit).
 - Both synthetic generator smokes write real schemas, images, masks, pairs,
   grouped splits, manifests, input/output hashes, and resume markers.
@@ -83,6 +83,10 @@
   teacher-forcing length mismatch, custom causal-mask registration, eager
   backend comparison, dense projected-head OOMs, missing PEFT installation,
   mixed-row TSV output, and validation jobs scheduled before their inputs.
+- Long-prompt signed scans now offload captures to CPU and lazily project only
+  selected heads/positions back onto the active device.
+- Smoke-only submissions now prepare bounded smoke datasets; full/resume
+  submission still refuses undersized counting, point-search, or MMMC data.
 - The old Slurm DAG is not resumable: its VAP, MACI, VLMBias, and point-training
   smoke failures correctly prevented all dependent scientific jobs.
 - No scientific calibration result exists yet; no replication success is

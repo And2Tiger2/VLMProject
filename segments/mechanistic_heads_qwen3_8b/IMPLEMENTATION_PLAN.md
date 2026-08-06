@@ -133,6 +133,11 @@ names under `scripts/` and delegate to the shared library.
 - Full answer-sequence likelihood costs one teacher-forced pass per candidate
   sequence (or a padded candidate batch). It is more expensive but required;
   first-token logits are diagnostic only.
+- Atlas direct attribution sums each head's projected contribution dotted with
+  the corresponding candidate-token unembedding over the complete
+  teacher-forced correct and bias sequences. Because Qwen's final norm is
+  nonlinear, this is labeled pre-final-norm direct attribution and is kept
+  separate from the exact causal patching score.
 - Attention-map transplantation requires eager probabilities. It will be
   limited to aligned prefill positions and selected layers/heads.
 - Full LoRA or full-weight search training is never part of smoke mode. The

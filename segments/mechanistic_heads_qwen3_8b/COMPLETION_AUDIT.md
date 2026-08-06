@@ -27,7 +27,7 @@ family has been found.
 | Requirement | Status | Evidence / limitation |
 |---|---|---|
 | SynDot 336×336, 28×28 grid, radius-4 dots, counts 1–10, 4,000/2,000 | Implemented; data generated once | `generate_counting_data.py`; manifest/count gates. |
-| Baseline accuracy, MAE, RMSE, off-by-one | Implemented; full GPU pending | `run_counting_behavior.py`. |
+| Baseline accuracy, MAE, RMSE, off-by-one | Implemented; full GPU pending | `run_counting_behavior.py`; full VAP/head scans require its current-SHA calibration report to meet the configured accuracy and output-validity thresholds. |
 | 100 controlled bidirectional mechanistic pairs | Implemented | Paired manifest with grouped split and exact images. |
 | Layerwise VAP scopes and attention/MLP/residual modules | Implemented; smoke rerun pending | `run_counting_vap.py`; missing-system rows use a union TSV schema instead of crashing. |
 | All-head exact post-`W_O` causal scan and diagnostics | Implemented; GPU pending | Symmetric bidirectional full-sequence margin score plus attention, norm, entropy, and gaze diagnostics. |
@@ -41,7 +41,7 @@ family has been found.
 
 | Requirement | Status | Evidence / limitation |
 |---|---|---|
-| Six colors × six shapes; 50 objects; disjoint conjunctions; 2,000 train; six OOD counts × 50 | Implemented | Generator stores centers, boxes, classes, masks, template IDs, and grouped splits. |
+| Six colors × six shapes; 50 objects; disjoint conjunctions; 2,000 train; six OOD counts × 50 | Implemented | Uses the paper's exact color names, glyph set, six train conjunctions, and ten test conjunctions; generator stores centers, boxes, classes, masks, template IDs, and grouped splits. |
 | Base/direct/length-matched/point/shuffled-point training | Implemented; PEFT smoke pending | LoRA is labeled modified replication; optional full-weight AdamW/cosine/200-warmup config is documented and not auto-launched. |
 | Coordinate-token centroid tracing | Implemented; GPU pending | Per-layer denoised centroids and point RMSE. |
 | Per-head attention transplantation and top/bottom/random validation | Implemented; GPU pending | Uses complete emitted localization-sequence likelihood and explicit visual-slice normalization. |
@@ -66,7 +66,7 @@ family has been found.
 | L1 conflict detector and gating comparisons | Implemented; GPU pending | Threshold selected on validation F1; AUROC/AUPRC/F1 and never/always/confidence/random-budget policies are reported. The locked gate requires detector benefit over never and an exactly budget-matched random policy. |
 | VLMBias semantic-prior/context/detail contrasts | Semantic/context implemented; detail data pending | Detail is emitted only when external factual originals exist and processed visual spans align exactly. Rankings stay contrast-specific. |
 | Locked role-aware VLMBias validation and NaturalBench retention | Implemented; GPU pending | Reports requested rates, likelihood margin, four transition types, intervention rate, matched controls, and NaturalBench metrics. A result is labeled failed calibration unless all role-aware directions, matched controls, bias-transition checks, and NaturalBench retention gates pass. |
-| 1,152-head atlas and plots | Implemented; rendering pending | Joins gaze, count, search, verification, distractor, MACI, three VLMBias scores, norm, and direct attribution; missing families remain explicitly pending. |
+| 1,152-head atlas and plots | Implemented; rendering pending | Joins gaze, count, search, verification, distractor, MACI, three VLMBias scores, norm, and complete-sequence pre-final-norm direct attribution; missing families remain explicitly pending. |
 
 ## Operational audit findings
 

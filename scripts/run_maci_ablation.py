@@ -134,7 +134,17 @@ def main() -> None:
     )
     summary={
         "valid":True,
-        "label":"instrumentation smoke test" if args.smoke else ("locked confirmation" if str(config.get("split"))=="locked_test" else "methods-based reproduction"),
+        "label":(
+            "instrumentation smoke test"
+            if args.smoke
+            else (
+                "failed calibration"
+                if not claim_checks["all_pass"]
+                else "locked confirmation"
+                if str(config.get("split")) == "locked_test"
+                else "methods-based reproduction"
+            )
+        ),
         "calibration_result":"not assessed in smoke" if args.smoke else ("passed" if claim_checks["all_pass"] else "failed calibration"),
         "rows":len(rows),
         "conditions":len(conditions),

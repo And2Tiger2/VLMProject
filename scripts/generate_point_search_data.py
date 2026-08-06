@@ -20,6 +20,8 @@ from vlm_eval.mechanistic_heads.schema import PairedExample, write_paired_jsonl
 from vlm_eval.mechanistic_heads.synthetic import (
     SEARCH_COLORS,
     SEARCH_SHAPES,
+    SEARCH_TEST_CONJUNCTIONS,
+    SEARCH_TRAIN_CONJUNCTIONS,
     render_search_scene,
     render_waldo_like_scene,
     stable_seed,
@@ -92,13 +94,14 @@ def generate_point_search_datasets(
         ood_per_condition = min(ood_per_condition, limit)
         waldo_n = min(waldo_n, limit)
 
-    conjunctions = [
-        (color, shape) for color in SEARCH_COLORS for shape in SEARCH_SHAPES
-    ]
-    train_conjunctions = [pair for idx, pair in enumerate(conjunctions) if idx % 2 == 0]
-    test_conjunctions = [pair for idx, pair in enumerate(conjunctions) if idx % 2 == 1]
+    train_conjunctions = list(SEARCH_TRAIN_CONJUNCTIONS)
+    test_conjunctions = list(SEARCH_TEST_CONJUNCTIONS)
     if set(train_conjunctions) & set(test_conjunctions):
         raise RuntimeError("target conjunction leakage")
+    if set(SEARCH_COLORS) != {"red", "green", "blue", "purple", "gray", "black"}:
+        raise RuntimeError("point-search colors drifted from the paper specification")
+    if set(SEARCH_SHAPES) != {"L", "T", "H", "E", "F", "Γ"}:
+        raise RuntimeError("point-search shapes drifted from the paper specification")
 
     point_rows: list[dict[str, Any]] = []
     for index in range(train_n):

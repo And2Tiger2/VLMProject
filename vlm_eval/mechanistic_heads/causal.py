@@ -80,6 +80,7 @@ def capture_teacher_forced(
     prompt: str,
     answer: str,
     layers: list[int],
+    to_cpu: bool = False,
 ) -> CapturedPrefill:
     image = image_path.convert("RGB") if hasattr(image_path, "convert") else Image.open(image_path).convert("RGB")
     inputs = runtime.prepare(image, prompt, prompt_mode="raw")
@@ -87,7 +88,9 @@ def capture_teacher_forced(
     kwargs, answer_ids, prompt_length = append_answer_tokens(inputs, answer_ids)
     image_token_id = int(runtime.model.config.image_token_id)
     image_positions = inputs.input_ids[0].eq(image_token_id).nonzero().flatten().tolist()
-    with runtime.torch.no_grad(), Qwen3CaptureHooks(runtime.model, layers=layers, to_cpu=False) as store:
+    with runtime.torch.no_grad(), Qwen3CaptureHooks(
+        runtime.model, layers=layers, to_cpu=to_cpu
+    ) as store:
         runtime.model(**kwargs, use_cache=False, return_dict=True)
     return CapturedPrefill(inputs=inputs, store=store, image_positions=[int(value) for value in image_positions], prompt_length=prompt_length, spans=runtime.trace_spans(inputs, prompt, answer_length=int(answer_ids.shape[1])), answer_length=int(answer_ids.shape[1]))
 
@@ -196,13 +199,19 @@ def projected_head_patch(
         donor = donor_projected[0].index_select(0, donor_index)[:, head_idx, :]
         recipient = recipient_projected[0].index_select(0, recipient_index)[:, head_idx, :]
         delta = float(scale) * (donor - recipient)
+        # Captures used by the locked validation paths are intentionally
+        # offloaded to CPU.  Move only the selected positions/head back to the
+        # active model device instead of retaining every captured layer on the
+        # GPU or relying on implicit cross-device indexing.
+        current_index = recipient_index.to(device=current.device)
+        delta = delta.to(device=current.device, dtype=current.dtype)
         # A serial head intervention may still score a microbatch. Apply the
         # same candidate-head patch independently to every row; this lets the
         # instrumentation compare serial and all-head-batched hooks under the
         # exact same model batch and vision-encoder numerical path.
         for batch_idx in range(current.shape[0]):
-            patched[batch_idx, recipient_index, :] = (
-                current[batch_idx, recipient_index, :] + delta
+            patched[batch_idx, current_index, :] = (
+                current[batch_idx, current_index, :] + delta
             )
         return (patched, *rest) if isinstance(output, tuple) else patched
 
@@ -247,11 +256,13 @@ def batched_projected_head_patch(
                 f"patch batch {len(head_indices)} != model batch {current.shape[0]}"
             )
         patched = current.clone()
+        current_index = recipient_index.to(device=current.device)
         for batch_idx, head_idx in enumerate(head_indices):
             donor = donor_projected[0].index_select(0, donor_index)[:, head_idx, :]
             recipient = recipient_projected[0].index_select(0, recipient_index)[:, head_idx, :]
-            patched[batch_idx, recipient_index, :] = (
-                current[batch_idx, recipient_index, :] + donor - recipient
+            delta = (donor - recipient).to(device=current.device, dtype=current.dtype)
+            patched[batch_idx, current_index, :] = (
+                current[batch_idx, current_index, :] + delta
             )
         return (patched, *rest) if isinstance(output, tuple) else patched
 
@@ -286,7 +297,11 @@ def module_activation_patch(
     def hook(target: Any, args: tuple[Any, ...], output: Any) -> Any:
         current, *rest = output if isinstance(output, tuple) else (output,)
         patched = current.clone()
-        patched[0, index, :] = donor_activation[0].index_select(0, index)
+        current_index = index.to(device=current.device)
+        replacement = donor_activation[0].index_select(0, index).to(
+            device=current.device, dtype=current.dtype
+        )
+        patched[0, current_index, :] = replacement
         return (patched, *rest) if isinstance(output, tuple) else patched
 
     handle = module.register_forward_hook(hook)
@@ -391,6 +406,7 @@ def projected_head_set_replacement(
             if current.shape[0] != 1:
                 raise RuntimeError("projected head-set replacement expects batch size one")
             patched = current.clone()
+            current_index = position_index.to(device=current.device)
             delta = torch.zeros(
                 (position_index.numel(), current.shape[-1]),
                 dtype=current.dtype,
@@ -410,7 +426,7 @@ def projected_head_set_replacement(
                             f"replacement shape {tuple(new.shape)} != {tuple(old.shape)}"
                         )
                 delta = delta + new - old.to(device=current.device, dtype=current.dtype)
-            patched[0, position_index, :] = current[0, position_index, :] + delta
+            patched[0, current_index, :] = current[0, current_index, :] + delta
             return (patched, *rest) if isinstance(output, tuple) else patched
 
         handles.append(layers[layer_idx].self_attn.register_forward_hook(hook))

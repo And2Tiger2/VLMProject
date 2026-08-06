@@ -70,6 +70,8 @@ def main() -> None:
     summary_path = args.output_dir / "summary.json"; summary_path.write_text(json.dumps(summary, indent=2), encoding="utf-8")
     write_run_manifest(args.output_dir, config={**config, "condition": args.condition, "smoke": args.smoke, "architecture": vars(runtime.architecture)}, seeds={"global": args.seed}, inputs=[args.config, Path(config["dataset"]), *referenced_image_paths(rows), *checkpoint_manifest_inputs(config, checkpoint_override=args.checkpoint)], outputs=[output, summary_path], status="complete", repo_root=Path.cwd())
     print(json.dumps(summary, indent=2))
+    if not args.smoke and not calibration_passed:
+        raise SystemExit("Point-Answer behavioral calibration failed; causal scans are blocked")
 
 
 def point_rmse(predicted: list[tuple[int, int]], expected: list[tuple[int, int]]) -> float | None:

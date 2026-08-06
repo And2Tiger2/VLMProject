@@ -22,7 +22,7 @@ from vlm_eval.mechanistic_heads.config import (
 )
 from vlm_eval.mechanistic_heads.checkpoint import JsonlCheckpoint
 from vlm_eval.mechanistic_heads.qwen3_runtime import Qwen3MechanisticRuntime
-from vlm_eval.mechanistic_heads.preflight import require_scientific_validation, validation_path_from_config
+from vlm_eval.mechanistic_heads.preflight import require_calibration_report, require_scientific_validation, validation_path_from_config
 from vlm_eval.mechanistic_heads.io import write_tsv
 from vlm_eval.mechanistic_heads.reproducibility import hash_paths, referenced_image_paths, seed_everything, write_run_manifest
 from vlm_eval.mechanistic_heads.schema import read_paired_jsonl
@@ -37,6 +37,7 @@ def main() -> None:
     config = load_json_config(args.config)
     if not args.smoke:
         require_scientific_validation(validation_path_from_config(config))
+        require_calibration_report(Path(config["counting_calibration"]))
     output = args.output_dir / "layerwise_vap.tsv"
     checkpoint_path = args.output_dir / "layerwise_vap.checkpoint.jsonl"
     prepare_output_directory(
@@ -68,6 +69,8 @@ def main() -> None:
         Path(config["paired_dataset"]),
         *referenced_image_paths(pairs),
     ]
+    if not args.smoke:
+        run_inputs.append(Path(config["counting_calibration"]))
     checkpoint = JsonlCheckpoint(
         checkpoint_path,
         key=lambda row: (

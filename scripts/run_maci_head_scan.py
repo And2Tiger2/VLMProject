@@ -123,12 +123,14 @@ def run_maci_scan(
             image_path=images.resolve(pair.donor_image),
             prompt=pair.donor_prompt,
             layers=layers,
+            to_cpu=True,
         )
         conflict = capture_prefill(
             runtime,
             image_path=images.resolve(pair.recipient_image),
             prompt=pair.recipient_prompt,
             layers=layers,
+            to_cpu=True,
         )
         baseline_l, _ = candidate_margin(
             runtime,

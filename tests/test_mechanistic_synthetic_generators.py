@@ -3,6 +3,10 @@ from __future__ import annotations
 import hashlib
 
 from vlm_eval.mechanistic_heads.synthetic import (
+    SEARCH_COLORS,
+    SEARCH_SHAPES,
+    SEARCH_TEST_CONJUNCTIONS,
+    SEARCH_TRAIN_CONJUNCTIONS,
     fixed_eight_scene,
     render_search_scene,
     render_syndot,
@@ -35,25 +39,80 @@ def test_constant_complexity_has_fixed_total_and_exact_masks() -> None:
     assert _digest(four.image) != _digest(five.image)
 
 
+def test_constant_complexity_relocation_moves_the_category_edit() -> None:
+    standard = fixed_eight_scene(
+        seed=9, scene_id="relocation", red_count=4, variant="color", relocate=False
+    )
+    relocated = fixed_eight_scene(
+        seed=9, scene_id="relocation", red_count=4, variant="color", relocate=True
+    )
+    assert standard.objects[4]["center"] != relocated.objects[4]["center"]
+    assert [row["center"] for row in standard.objects[:4]] == [
+        row["center"] for row in relocated.objects[:4]
+    ]
+
+
 def test_point_search_is_deterministic_with_exact_target_count() -> None:
     first = render_search_scene(
         seed=4,
         scene_id="s",
         target_color="green",
-        target_shape="triangle",
+        target_shape="T",
         target_count=2,
     )
     second = render_search_scene(
         seed=4,
         scene_id="s",
         target_color="green",
-        target_shape="triangle",
+        target_shape="T",
         target_count=2,
     )
     assert _digest(first.image) == _digest(second.image)
     assert sum(row["class"] == "target" for row in first.objects) == 2
     assert len(first.objects) == 50
     assert first.masks["target"].getbbox() is not None
+
+
+def test_point_search_uses_exact_paper_colors_shapes_and_conjunctions() -> None:
+    assert tuple(SEARCH_COLORS) == (
+        "red",
+        "green",
+        "blue",
+        "purple",
+        "gray",
+        "black",
+    )
+    assert SEARCH_SHAPES == ("L", "T", "H", "E", "F", "Γ")
+    assert SEARCH_TRAIN_CONJUNCTIONS == (
+        ("red", "L"),
+        ("green", "T"),
+        ("blue", "H"),
+        ("purple", "E"),
+        ("gray", "F"),
+        ("black", "Γ"),
+    )
+    assert SEARCH_TEST_CONJUNCTIONS == (
+        ("gray", "L"),
+        ("green", "E"),
+        ("green", "L"),
+        ("red", "E"),
+        ("red", "F"),
+        ("gray", "T"),
+        ("blue", "F"),
+        ("black", "H"),
+        ("blue", "E"),
+        ("red", "H"),
+    )
+    assert set(SEARCH_TRAIN_CONJUNCTIONS).isdisjoint(SEARCH_TEST_CONJUNCTIONS)
+    for shape in SEARCH_SHAPES:
+        scene = render_search_scene(
+            seed=4,
+            scene_id=f"paper-shape-{shape}",
+            target_color="red",
+            target_shape=shape,
+            target_count=1,
+        )
+        assert scene.masks["target"].getbbox() is not None
 
 
 def test_waldo_like_generator_is_original_deterministic_and_masked() -> None:

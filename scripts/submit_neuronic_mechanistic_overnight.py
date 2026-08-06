@@ -187,13 +187,13 @@ def submit_full_suite(
     count_vap = submitter.scan(
         "counting_vap",
         "counting-vap",
-        dependencies=smoke_barrier,
+        dependencies=[*smoke_barrier, counting_behavior],
         afterany_dependencies=[point_train],
     )
     count_heads = submitter.scan(
         "counting_heads",
         "counting-heads",
-        dependencies=smoke_barrier,
+        dependencies=[*smoke_barrier, counting_behavior],
         afterany_dependencies=[count_vap],
     )
     count_heads_repeat1 = submitter.scan(
@@ -358,7 +358,12 @@ def main() -> None:
     if args.reuse_prepared:
         require_valid_prepared_data(args.repo)
     else:
-        prepare = submitter.submit("prepare_data", PREP_SCRIPT, exports={}, dependencies=[])
+        prepare = submitter.submit(
+            "prepare_data",
+            PREP_SCRIPT,
+            exports={"MODE": "smoke" if args.profile == "smoke" else "full"},
+            dependencies=[],
+        )
         prepare_dependencies = [prepare]
     instrumentation = submitter.gpu(
         "instrumentation",

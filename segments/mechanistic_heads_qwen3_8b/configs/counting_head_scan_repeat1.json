@@ -3,5 +3,6 @@
   "model_id": "Qwen/Qwen3-VL-8B-Instruct",
   "paired_dataset": "segments/mechanistic_heads_qwen3_8b/data/generated/counting/mechanistic_pairs_repeat1.jsonl",
   "patch_scope": "final_prompt_token",
-  "repeat_seed_index": 1
+  "repeat_seed_index": 1,
+  "counting_calibration": "segments/mechanistic_heads_qwen3_8b/runs/counting_behavior/full/summary.json"
 }

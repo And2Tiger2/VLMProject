@@ -15,11 +15,31 @@ SEARCH_COLORS = {
     "red": (220, 45, 45),
     "green": (45, 165, 80),
     "blue": (45, 100, 220),
-    "yellow": (235, 200, 45),
     "purple": (145, 70, 190),
-    "orange": (235, 130, 35),
+    "gray": (125, 125, 125),
+    "black": (25, 25, 25),
 }
-SEARCH_SHAPES = ("circle", "square", "triangle", "diamond", "cross", "pentagon")
+SEARCH_SHAPES = ("L", "T", "H", "E", "F", "Γ")
+SEARCH_TRAIN_CONJUNCTIONS = (
+    ("red", "L"),
+    ("green", "T"),
+    ("blue", "H"),
+    ("purple", "E"),
+    ("gray", "F"),
+    ("black", "Γ"),
+)
+SEARCH_TEST_CONJUNCTIONS = (
+    ("gray", "L"),
+    ("green", "E"),
+    ("green", "L"),
+    ("red", "E"),
+    ("red", "F"),
+    ("gray", "T"),
+    ("blue", "F"),
+    ("black", "H"),
+    ("blue", "E"),
+    ("red", "H"),
+)
 
 
 def stable_seed(seed: int, *parts: Any) -> int:
@@ -76,7 +96,11 @@ def fixed_eight_scene(
         [(42 + 42 * x, 42 + 42 * y) for y in range(7) for x in range(7)], 8
     )
     if relocate:
-        positions[0] = next(
+        # Index four is the only object whose category differs between the
+        # 4-target and 5-target scenes. Relocate that causal edit—not an
+        # unrelated already-target object—so the position-transfer control
+        # actually moves the count-changing evidence.
+        positions[4] = next(
             point
             for point in reversed([(42 + 42 * x, 42 + 42 * y) for y in range(7) for x in range(7)])
             if point not in positions
@@ -422,6 +446,45 @@ def _draw_shape(
             for index in range(5)
         ]
         draw.polygon(points, fill=fill)
+    elif shape in SEARCH_SHAPES:
+        # Paper-style visual-search glyphs. Drawing these from rectangles keeps
+        # the renderer deterministic and avoids font/version dependencies.
+        stroke = max(2, radius // 3)
+
+        def vertical(x_center: int, y0: int, y1: int) -> None:
+            draw.rectangle(
+                (x_center - stroke, y0, x_center + stroke, y1), fill=fill
+            )
+
+        def horizontal(y_center: int, x0: int, x1: int) -> None:
+            draw.rectangle(
+                (x0, y_center - stroke, x1, y_center + stroke), fill=fill
+            )
+
+        left, right = x - radius, x + radius
+        top, bottom = y - radius, y + radius
+        if shape == "L":
+            vertical(left + stroke, top, bottom)
+            horizontal(bottom - stroke, left, right)
+        elif shape == "T":
+            horizontal(top + stroke, left, right)
+            vertical(x, top, bottom)
+        elif shape == "H":
+            vertical(left + stroke, top, bottom)
+            vertical(right - stroke, top, bottom)
+            horizontal(y, left, right)
+        elif shape == "E":
+            vertical(left + stroke, top, bottom)
+            horizontal(top + stroke, left, right)
+            horizontal(y, left, right - stroke)
+            horizontal(bottom - stroke, left, right)
+        elif shape == "F":
+            vertical(left + stroke, top, bottom)
+            horizontal(top + stroke, left, right)
+            horizontal(y, left, right - stroke)
+        elif shape == "Γ":
+            horizontal(top + stroke, left, right)
+            vertical(left + stroke, top, bottom)
     else:
         raise ValueError(f"unknown shape: {shape}")
 

@@ -2,5 +2,6 @@
   "schema_version": 1,
   "model_id": "Qwen/Qwen3-VL-8B-Instruct",
   "paired_dataset": "segments/mechanistic_heads_qwen3_8b/data/generated/counting/mechanistic_pairs.jsonl",
-  "patch_scope": "final_prompt_token"
+  "patch_scope": "final_prompt_token",
+  "counting_calibration": "segments/mechanistic_heads_qwen3_8b/runs/counting_behavior/full/summary.json"
 }

@@ -1,10 +1,11 @@
 # Point-by-Point Search
 
-The paper-style generator uses 50 objects, six colors, six shapes, disjoint
-target conjunctions, 2,000 training scenes, and OOD target counts
-1/2/10/30/40/50. Point output is deterministic text; the length-matched direct
-condition is token-matched at runtime, and shuffled supervision uses wrong
-distractor points even for singleton targets.
+The paper-style generator uses 50 objects; colors red, green, blue, purple,
+gray, and black; glyphs L, T, H, E, F, and Γ; the paper's explicit six
+training and ten held-out target conjunctions; 2,000 training scenes; and OOD
+target counts 1/2/10/30/40/50. Point output is deterministic text; the
+length-matched direct condition is token-matched at runtime, and shuffled
+supervision uses wrong distractor points even for singleton targets.
 
 The original non-copyright Waldo-like character has four independently
 controlled features. Exact masks cover targets and strong distractors; tasks

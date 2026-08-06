@@ -57,9 +57,33 @@ def main() -> None:
         "off_by_one_accuracy": sum(row["off_by_one"] for row in records) / len(records) if records else 0,
         "architecture": vars(runtime.architecture),
     }
+    minimum_accuracy = float(config.get("minimum_calibration_accuracy", 0.5))
+    maximum_invalid = float(config.get("maximum_calibration_invalid_rate", 0.1))
+    calibration_passed = bool(records) and (
+        float(summary["accuracy"]) >= minimum_accuracy
+        and float(summary["invalid_rate"]) <= maximum_invalid
+    )
+    summary.update(
+        {
+            "calibration_passed": calibration_passed,
+            "calibration_result": (
+                "not assessed in smoke"
+                if args.smoke
+                else "passed" if calibration_passed else "failed calibration"
+            ),
+            "calibration_thresholds": {
+                "minimum_accuracy": minimum_accuracy,
+                "maximum_invalid_rate": maximum_invalid,
+            },
+        }
+    )
+    if not args.smoke and not calibration_passed:
+        summary["label"] = "failed calibration"
     summary_path = args.output_dir / "summary.json"; summary_path.write_text(json.dumps(summary, indent=2), encoding="utf-8")
     write_run_manifest(args.output_dir, config={**config, "smoke": args.smoke, "architecture": vars(runtime.architecture)}, seeds={"global": args.seed}, inputs=[args.config, Path(config["dataset"]), *referenced_image_paths(rows)], outputs=[output, summary_path], status="complete", repo_root=Path.cwd())
     print(json.dumps(summary, indent=2))
+    if not args.smoke and not calibration_passed:
+        raise SystemExit("counting behavioral calibration failed; causal scans are blocked")
 
 
 def read_jsonl(path: Path) -> list[dict]:

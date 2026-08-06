@@ -80,6 +80,24 @@ def test_direct_smoke_paths_use_total_example_budgets() -> None:
     assert 'smoke_splits = ("prototype", "validation", "locked_test")' in mmmc
 
 
+def test_long_prompt_signed_scans_offload_captures_to_cpu() -> None:
+    for script_name in ("run_maci_head_scan.py", "run_vlmbias_signed_head_scan.py"):
+        source = (ROOT / "scripts" / script_name).read_text(encoding="utf-8")
+        assert source.count("to_cpu=True") >= 2
+
+
+def test_failed_behavioral_calibrations_fail_slurm_prerequisites() -> None:
+    expectations = {
+        "run_counting_behavior.py": "counting behavioral calibration failed",
+        "evaluate_point_search.py": "Point-Answer behavioral calibration failed",
+        "run_waldo_behavior.py": "Waldo-like behavioral calibration failed",
+    }
+    for script_name, message in expectations.items():
+        source = (ROOT / "scripts" / script_name).read_text(encoding="utf-8")
+        assert "if not args.smoke and not calibration_passed:" in source
+        assert message in source
+
+
 def load_script(name: str):
     path = ROOT / "scripts" / name
     spec = importlib.util.spec_from_file_location(path.stem, path)
@@ -87,6 +105,80 @@ def load_script(name: str):
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
+
+
+def test_vlmbias_direct_attribution_uses_complete_answer_sequences(monkeypatch) -> None:
+    torch = pytest.importorskip("torch")
+    module = load_script("run_vlmbias_signed_head_scan.py")
+
+    class Materialized:
+        def __init__(self, value):
+            self.value = value
+
+        def materialize(self):
+            return self.value
+
+    class Projected:
+        def __init__(self, value):
+            self.value = value
+
+        def __getitem__(self, key):
+            _batch, positions, _heads, _width = key
+            return Materialized(self.value[positions])
+
+    class Capture:
+        def __init__(self, value, answer_length):
+            self.prompt_length = 3
+            self.store = types.SimpleNamespace(projected_heads={0: Projected(value)})
+            self.answer_length = answer_length
+
+    # Two heads, two-dimensional model width. Correct has two tokens and bias
+    # has one; the second correct token must affect the returned attribution.
+    correct_projected = torch.tensor(
+        [
+            [[0.0, 0.0], [0.0, 0.0]],
+            [[0.0, 0.0], [0.0, 0.0]],
+            [[1.0, 0.0], [0.0, 1.0]],
+            [[0.0, 2.0], [3.0, 0.0]],
+            [[0.0, 0.0], [0.0, 0.0]],
+        ]
+    )
+    bias_projected = torch.tensor(
+        [
+            [[0.0, 0.0], [0.0, 0.0]],
+            [[0.0, 0.0], [0.0, 0.0]],
+            [[2.0, 0.0], [0.0, 2.0]],
+            [[0.0, 0.0], [0.0, 0.0]],
+        ]
+    )
+    captures = {
+        "correct": Capture(correct_projected, 2),
+        "bias": Capture(bias_projected, 1),
+    }
+
+    monkeypatch.setattr(
+        module,
+        "capture_teacher_forced",
+        lambda runtime, **kwargs: captures["correct" if kwargs["answer"] == "correct" else "bias"],
+    )
+    runtime = types.SimpleNamespace(
+        torch=torch,
+        answer_token_ids=lambda answer: torch.tensor([[0, 1]]) if answer == "correct" else torch.tensor([[2]]),
+        model=types.SimpleNamespace(
+            lm_head=types.SimpleNamespace(
+                weight=torch.tensor([[1.0, 0.0], [0.0, 1.0], [1.0, 1.0]])
+            )
+        ),
+    )
+    result = module.full_sequence_direct_attributions(
+        runtime,
+        image_path="unused",
+        prompt="prompt",
+        correct_answer="correct",
+        bias_answer="bias",
+        layers=[0],
+    )
+    assert result[0] == pytest.approx([1.0, -2.0])
 
 
 def test_union_tsv_schema_accepts_normal_and_exclusion_rows(tmp_path: Path) -> None:
@@ -147,6 +239,12 @@ def test_full_dag_orders_general_importance_before_matched_validations(tmp_path:
     assert submitter.jobs["maci_stability"] in dependency_ids("maci_detector")
     assert submitter.jobs["maci_ablation"] in dependency_ids("maci_detector")
     assert submitter.jobs["full_point_behavior"] in dependency_ids("point_centroids_layers")
+    assert submitter.jobs["full_counting_behavior"] in dependency_ids(
+        "counting_vap_layers"
+    )
+    assert submitter.jobs["full_counting_behavior"] in dependency_ids(
+        "counting_heads_layers"
+    )
     assert submitter.jobs["maci_heads_aggregate"] in dependencies_by_mode(
         "vlmbias_heads_layers"
     )["afterany"]
@@ -266,6 +364,11 @@ def test_paper_style_maci_sets_require_signed_head_counts() -> None:
     )
     assert len(conditions["driving_top30"]) == 30
     assert len(conditions["resisting_top40"]) == 40
+
+
+def test_maci_ablation_report_cannot_label_failed_gate_as_reproduction() -> None:
+    source = (ROOT / "scripts/run_maci_ablation.py").read_text(encoding="utf-8")
+    assert '"failed calibration"\n                if not claim_checks["all_pass"]' in source
 
 
 def test_detector_refuses_unsigned_resisting_heads(tmp_path: Path) -> None:
@@ -677,6 +780,25 @@ def test_preparation_regenerates_outputs_after_generator_changes() -> None:
     ).read_text(encoding="utf-8")
     assert source.count("--overwrite") == 4
     assert "--resume" not in source
+    assert 'MODE="${MODE:-full}"' in source
+    assert 'prepare_mode_args+=(--smoke)' in source
+
+
+def test_smoke_profile_submits_bounded_preparation(tmp_path: Path) -> None:
+    module = load_script("submit_neuronic_mechanistic_overnight.py")
+    source = (ROOT / "scripts/submit_neuronic_mechanistic_overnight.py").read_text(
+        encoding="utf-8"
+    )
+    assert 'exports={"MODE": "smoke" if args.profile == "smoke" else "full"}' in source
+    submitter = module.Submitter(repo=tmp_path, dry_run=True)
+    submitter.submit(
+        "prepare_data",
+        module.PREP_SCRIPT,
+        exports={"MODE": "smoke"},
+    )
+    command = submitter.commands[0]
+    export_arg = next(value for value in command if value.startswith("--export="))
+    assert "MODE=smoke" in export_arg
 
 
 def test_optional_real_waldo_hashes_source_and_derived_images() -> None:

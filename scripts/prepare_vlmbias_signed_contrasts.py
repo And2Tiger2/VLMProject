@@ -92,6 +92,18 @@ def prepare_contrasts(
         for split, rows in split_rows.items()
         for row in rows
     }
+    if smoke:
+        # A tiny hashed split can otherwise contain no prototype row, causing
+        # the signed-head smoke to emit an empty table. Smoke is an
+        # instrumentation exercise, not a scientific split estimate, so make
+        # its first source group a deterministic prototype while preserving
+        # group integrity.
+        smoke_splits = ("prototype", "validation", "locked_test")
+        smoke_groups = list(dict.fromkeys(str(row["group_id"]) for row in accepted))
+        split_by_group = {
+            group_id: smoke_splits[index % len(smoke_splits)]
+            for index, group_id in enumerate(smoke_groups)
+        }
     pairs: list[PairedExample] = []
     exclusions: list[dict[str, str]] = []
     mask_root = accepted_path.parent

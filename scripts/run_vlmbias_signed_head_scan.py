@@ -8,7 +8,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-from vlm_eval.mechanistic_heads.causal import batched_candidate_margin, batched_projected_head_patch, bounded_head_microbatch, candidate_margin, capture_prefill, repeat_model_inputs
+from vlm_eval.mechanistic_heads.causal import batched_candidate_margin, batched_projected_head_patch, bounded_head_microbatch, candidate_margin, capture_prefill, capture_teacher_forced, repeat_model_inputs
 from vlm_eval.mechanistic_heads.config import add_standard_run_arguments, effective_limit, enforce_smoke_layer_limit, load_json_config, parse_layer_spec, prepare_output_directory
 from vlm_eval.mechanistic_heads.checkpoint import JsonlCheckpoint
 from vlm_eval.mechanistic_heads.qwen3_runtime import Qwen3MechanisticRuntime
@@ -73,15 +73,17 @@ def scan(runtime: Any, *, pairs: list[Any], layers: list[int], scope: str, head_
         if checkpoint and not checkpoint.missing((pair.pair_id,-1,-1,contrast)):continue
         expected=[(pair.pair_id,layer,head,contrast) for layer in layers for head in range(runtime.architecture.n_heads)]
         if checkpoint and all(not checkpoint.missing(key) for key in expected): continue
-        donor = capture_prefill(runtime, image_path=pair.donor_image, prompt=pair.donor_prompt, layers=layers)
-        recipient = capture_prefill(runtime, image_path=pair.recipient_image, prompt=pair.recipient_prompt, layers=layers)
+        donor = capture_prefill(runtime, image_path=pair.donor_image, prompt=pair.donor_prompt, layers=layers, to_cpu=True)
+        recipient = capture_prefill(runtime, image_path=pair.recipient_image, prompt=pair.recipient_prompt, layers=layers, to_cpu=True)
         baseline, _ = candidate_margin(runtime, recipient.inputs, positive_answer=pair.bias_answer, negative_answer=pair.correct_answer)
-        correct_ids = runtime.answer_token_ids(pair.correct_answer)
-        bias_ids = runtime.answer_token_ids(pair.bias_answer)
-        single_token_candidates = correct_ids.shape[1] == bias_ids.shape[1] == 1
-        unembedding_delta = None
-        if single_token_candidates:
-            unembedding_delta = runtime.model.lm_head.weight[int(correct_ids[0, 0])] - runtime.model.lm_head.weight[int(bias_ids[0, 0])]
+        direct_attributions = full_sequence_direct_attributions(
+            runtime,
+            image_path=pair.recipient_image,
+            prompt=pair.recipient_prompt,
+            correct_answer=pair.correct_answer,
+            bias_answer=pair.bias_answer,
+            layers=layers,
+        )
         if scope == "all_aligned_prefill" and donor.prompt_length != recipient.prompt_length:
             exclusion={"pair_id": pair.pair_id, "contrast": contrast, "layer":-1,"head":-1,"excluded": True, "reason": "unequal prefill lengths"};rows.append(exclusion)
             if checkpoint:checkpoint.append([exclusion])
@@ -111,14 +113,63 @@ def scan(runtime: Any, *, pairs: list[Any], layers: list[int], scope: str, head_
                     attention = recipient.store.attention_probabilities[layer][0, head, recipient_positions, :].float().clamp_min(1e-12)
                     projected = recipient.store.projected_heads[layer][0, recipient_positions, head, :]
                     image_index = runtime.torch.as_tensor(recipient.image_positions, dtype=runtime.torch.long, device=attention.device)
-                    direct = None
-                    if unembedding_delta is not None:
-                        contribution = recipient.store.projected_heads[layer][0, recipient.prompt_length - 1, head, :]
-                        direct = float((contribution.float() * unembedding_delta.float()).sum().detach().cpu())
-                    chunk_rows.append({"pair_id": pair.pair_id, "group_id": pair.group_id, "split": pair.split, "contrast": contrast, "layer": layer, "head": head, "baseline_bias_margin": baseline, "patched_bias_margin": patched, "signed_score": baseline - patched, "image_attention": float(attention.index_select(-1, image_index).sum(-1).mean().detach().cpu()), "projected_output_norm": float(projected.float().norm(dim=-1).mean().detach().cpu()), "attention_entropy": float((-(attention * attention.log()).sum(-1)).mean().detach().cpu()), "direct_correct_vs_bias_logit_attribution": direct, "attribution_definition": "pre-final-norm projected head dot (correct-first-token minus bias-first-token unembedding); single-token candidates only", "excluded": False})
+                    direct = float(direct_attributions[layer][head])
+                    chunk_rows.append({"pair_id": pair.pair_id, "group_id": pair.group_id, "split": pair.split, "contrast": contrast, "layer": layer, "head": head, "baseline_bias_margin": baseline, "patched_bias_margin": patched, "signed_score": baseline - patched, "image_attention": float(attention.index_select(-1, image_index).sum(-1).mean().detach().cpu()), "projected_output_norm": float(projected.float().norm(dim=-1).mean().detach().cpu()), "attention_entropy": float((-(attention * attention.log()).sum(-1)).mean().detach().cpu()), "direct_correct_vs_bias_logit_attribution": direct, "attribution_definition": "sum over complete teacher-forced answer tokens of pre-final-norm projected head dot candidate-token unembedding: correct minus bias", "excluded": False})
                 rows.extend(chunk_rows)
                 if checkpoint:checkpoint.append(chunk_rows)
     return rows
+
+
+def full_sequence_direct_attributions(
+    runtime: Any,
+    *,
+    image_path: Any,
+    prompt: str,
+    correct_answer: str,
+    bias_answer: str,
+    layers: list[int],
+) -> dict[int, Any]:
+    """Conventional direct logit attribution over both complete candidates.
+
+    This is deliberately reported separately from the causal patching score.
+    Qwen applies a nonlinear final norm after every layer, so a projected-head
+    dot unembedding is a useful direct attribution, not an exact decomposition
+    of the final log probability.
+    """
+
+    totals: dict[str, dict[int, Any]] = {"correct": {}, "bias": {}}
+    for name, answer in (("correct", correct_answer), ("bias", bias_answer)):
+        capture = capture_teacher_forced(
+            runtime,
+            image_path=image_path,
+            prompt=prompt,
+            answer=answer,
+            layers=layers,
+            to_cpu=True,
+        )
+        ids = runtime.answer_token_ids(answer)[0].detach().cpu().long()
+        positions = list(
+            range(capture.prompt_length - 1, capture.prompt_length - 1 + len(ids))
+        )
+        unembedding = (
+            runtime.model.lm_head.weight.detach()
+            .index_select(0, ids.to(runtime.model.lm_head.weight.device))
+            .float()
+            .cpu()
+        )
+        for layer in layers:
+            # [answer_tokens, heads, model_width] dotted with the unembedding
+            # row for the token predicted at each corresponding position.
+            projected = capture.store.projected_heads[
+                layer
+            ][0, positions, :, :].materialize().float()
+            totals[name][layer] = runtime.torch.einsum(
+                "thd,td->h", projected, unembedding
+            )
+    return {
+        layer: (totals["correct"][layer] - totals["bias"][layer]).tolist()
+        for layer in layers
+    }
 
 
 def _write_tsv(path: Path, rows: list[dict[str, Any]]) -> None:
