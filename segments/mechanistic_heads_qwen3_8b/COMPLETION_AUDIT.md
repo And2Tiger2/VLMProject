@@ -76,6 +76,10 @@ family has been found.
 - The current instrumentation revision passed all twelve checks on an L40.
 - Subsequent smoke jobs exposed three independent issues now fixed in code:
   union-field TSV output, dense post-`W_O` capture OOM, and missing PEFT setup.
+- The current-SHA point-training smoke subsequently exposed Transformers 5.10's
+  removal of `TrainingArguments.overwrite_output_dir`. Repository preflight
+  already owns overwrite cleanup; the unsupported duplicate keyword is removed
+  and the complete argument set is instantiated in a locked-version test.
 - The launcher is the sole frozen dependency-sync owner. Preparation, GPU,
   aggregation, and report jobs run frozen/no-sync, preventing concurrent
   processes from racing to change the shared virtual environment.

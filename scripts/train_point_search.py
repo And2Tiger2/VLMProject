@@ -92,7 +92,6 @@ def main() -> None:
             seed=args.seed,
             smoke=args.smoke,
             resume=args.resume,
-            overwrite=args.overwrite,
             device_map=args.device_map,
         )
     summary = args.output_dir / "training_summary.json"
@@ -121,7 +120,6 @@ def train_condition(
     seed: int,
     smoke: bool,
     resume: bool,
-    overwrite: bool,
     device_map: str,
 ) -> dict[str, Any]:
     try:
@@ -232,25 +230,13 @@ def train_condition(
         return encoded
 
     max_steps = 2 if smoke else int(config.get("max_steps", -1))
-    arguments = TrainingArguments(
+    arguments = make_training_arguments(
+        TrainingArguments,
         output_dir=str(output_dir),
-        overwrite_output_dir=overwrite,
-        learning_rate=float(config.get("learning_rate", 1e-5)),
-        lr_scheduler_type="cosine",
-        warmup_steps=min(1, int(config.get("warmup_steps", 200))) if smoke else int(config.get("warmup_steps", 200)),
-        per_device_train_batch_size=int(config.get("batch_size", 1)),
-        gradient_accumulation_steps=int(config.get("gradient_accumulation_steps", 8)),
-        num_train_epochs=float(config.get("epochs", 1)),
-        max_steps=max_steps,
-        save_strategy="no" if smoke else "steps",
-        save_steps=int(config.get("save_steps", 50)),
-        save_total_limit=int(config.get("save_total_limit", 2)),
-        logging_steps=1,
-        report_to=[],
         seed=seed,
-        remove_unused_columns=False,
-        gradient_checkpointing=True,
-        gradient_checkpointing_kwargs={"use_reentrant": False},
+        config=config,
+        smoke=smoke,
+        max_steps=max_steps,
         bf16=bool(torch.cuda.is_available() and torch.cuda.is_bf16_supported()),
     )
     trainer = Trainer(model=model, args=arguments, train_dataset=Dataset(), data_collator=collate)
@@ -276,6 +262,51 @@ def train_condition(
             else "deterministic text point format replaces paper HTML boxes"
         ),
     }
+
+
+def make_training_arguments(
+    training_arguments_cls: Any,
+    *,
+    output_dir: str,
+    seed: int,
+    config: dict[str, Any],
+    smoke: bool,
+    max_steps: int,
+    bf16: bool,
+) -> Any:
+    """Construct arguments supported by the locked Transformers release.
+
+    Output replacement is owned by ``prepare_output_directory`` and
+    ``remove_declared_training_checkpoints``. Transformers 5.10 removed its
+    older ``overwrite_output_dir`` argument, so passing it here both duplicated
+    that policy and caused every point-training condition to fail before the
+    first optimizer step.
+    """
+
+    return training_arguments_cls(
+        output_dir=output_dir,
+        learning_rate=float(config.get("learning_rate", 1e-5)),
+        lr_scheduler_type="cosine",
+        warmup_steps=(
+            min(1, int(config.get("warmup_steps", 200)))
+            if smoke
+            else int(config.get("warmup_steps", 200))
+        ),
+        per_device_train_batch_size=int(config.get("batch_size", 1)),
+        gradient_accumulation_steps=int(config.get("gradient_accumulation_steps", 8)),
+        num_train_epochs=float(config.get("epochs", 1)),
+        max_steps=max_steps,
+        save_strategy="no" if smoke else "steps",
+        save_steps=int(config.get("save_steps", 50)),
+        save_total_limit=int(config.get("save_total_limit", 2)),
+        logging_steps=1,
+        report_to=[],
+        seed=seed,
+        remove_unused_columns=False,
+        gradient_checkpointing=True,
+        gradient_checkpointing_kwargs={"use_reentrant": False},
+        bf16=bf16,
+    )
 
 
 def args_resume_checkpoint(output_dir: Path) -> str | None:

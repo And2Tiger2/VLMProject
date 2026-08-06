@@ -86,10 +86,15 @@
   `9dbf9d0`. The repaired final revision remains pending a new SHA-bound gate.
 - Smoke counting behavior and counting-head scan completed on the earlier DAG.
   Other smokes either failed safely or never ran; no full scientific stage ran.
+- The current-SHA smoke reached all independent discovery branches. Point LoRA
+  setup then exposed a Transformers 5.10 API incompatibility before its first
+  optimizer step: the removed `overwrite_output_dir` keyword. Output cleanup
+  was already owned by repository preflight, so the duplicate Trainer keyword
+  was removed and is now covered by a real locked-version construction test.
 
 ## Passed
 
-- The complete CPU unit/integration suite passes in the audited checkout (265
+- The complete CPU unit/integration suite passes in the audited checkout (266
   tests in the final local audit).
 - Both synthetic generator smokes write real schemas, images, masks, pairs,
   grouped splits, manifests, input/output hashes, and resume markers.

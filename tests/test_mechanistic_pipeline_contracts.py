@@ -1270,6 +1270,38 @@ def test_point_lora_training_uses_bounded_activation_memory() -> None:
     assert '"use_reentrant": False' in source
 
 
+def test_point_training_arguments_match_locked_transformers_api(
+    tmp_path: Path,
+) -> None:
+    from transformers import TrainingArguments
+
+    module = load_script("train_point_search.py")
+    arguments = module.make_training_arguments(
+        TrainingArguments,
+        output_dir=str(tmp_path),
+        seed=7,
+        config={
+            "learning_rate": 1e-5,
+            "warmup_steps": 200,
+            "batch_size": 1,
+            "gradient_accumulation_steps": 8,
+            "epochs": 1,
+            "save_steps": 50,
+            "save_total_limit": 2,
+        },
+        smoke=True,
+        max_steps=2,
+        bf16=False,
+    )
+    assert arguments.max_steps == 2
+    assert arguments.save_strategy.value == "no"
+    assert arguments.gradient_checkpointing
+    assert arguments.gradient_checkpointing_kwargs == {"use_reentrant": False}
+    assert "overwrite_output_dir=" not in (
+        ROOT / "scripts/train_point_search.py"
+    ).read_text(encoding="utf-8")
+
+
 def test_every_mechanistic_slurm_entrypoint_refuses_tracked_dirty_code() -> None:
     for name in (
         "slurm_neuronic_mechanistic_heads.sh",
