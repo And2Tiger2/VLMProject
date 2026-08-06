@@ -10,6 +10,7 @@ from typing import Any
 from vlm_eval.mechanistic_heads.causal import (
     batched_candidate_margin,
     batched_visual_attention_map_patch_many,
+    bounded_head_microbatch,
     candidate_margin,
     capture_teacher_forced,
     repeat_model_inputs,
@@ -62,11 +63,18 @@ def scan(runtime: Any, *, pairs: list[Any], layers: list[int], head_microbatch: 
             raise RuntimeError(f"unaligned coordinate-sequence token counts for {pair.pair_id}")
         donor_queries = list(range(donor.prompt_length - 1, donor.prompt_length + donor.answer_length - 1))
         recipient_queries = list(range(recipient.prompt_length - 1, recipient.prompt_length + recipient.answer_length - 1))
+        effective_head_microbatch = bounded_head_microbatch(
+            head_microbatch,
+            max(
+                donor.prompt_length + donor.answer_length,
+                recipient.prompt_length + recipient.answer_length,
+            ),
+        )
         base_forward, _ = candidate_margin(runtime, recipient.inputs, positive_answer=pair.donor_answer, negative_answer=pair.recipient_answer)
         base_reverse, _ = candidate_margin(runtime, donor.inputs, positive_answer=pair.recipient_answer, negative_answer=pair.donor_answer)
         for layer in layers:
-            for start in range(0, runtime.architecture.n_heads, head_microbatch):
-                heads = list(range(start, min(start + head_microbatch, runtime.architecture.n_heads)))
+            for start in range(0, runtime.architecture.n_heads, effective_head_microbatch):
+                heads = list(range(start, min(start + effective_head_microbatch, runtime.architecture.n_heads)))
                 recipient_batch = repeat_model_inputs(recipient.inputs, len(heads))
                 with batched_visual_attention_map_patch_many(runtime.model, layer_idx=layer, head_indices=heads, donor_probabilities=donor.store.attention_probabilities[layer], donor_query_positions=donor_queries, recipient_query_positions=recipient_queries, donor_visual_positions=donor.image_positions, recipient_visual_positions=recipient.image_positions):
                     patched_forward, _ = batched_candidate_margin(runtime, recipient_batch, positive_answer=pair.donor_answer, negative_answer=pair.recipient_answer)

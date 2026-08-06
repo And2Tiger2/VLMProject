@@ -156,7 +156,10 @@ def run_vap(runtime: Any, *, pairs: list[Any], layers: list[int]) -> list[dict[s
 def _write_tsv(path: Path, rows: list[dict[str, Any]]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", encoding="utf-8", newline="") as handle:
-        writer = csv.DictWriter(handle, fieldnames=list(rows[0]) if rows else ["pair_id"], delimiter="\t")
+        fields = sorted({key for row in rows for key in row}) or ["pair_id"]
+        writer = csv.DictWriter(
+            handle, fieldnames=fields, delimiter="\t", extrasaction="ignore"
+        )
         writer.writeheader()
         writer.writerows(rows)
 

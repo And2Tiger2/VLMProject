@@ -24,6 +24,24 @@ class CapturedPrefill:
     answer_length: int = 0
 
 
+def bounded_head_microbatch(
+    requested: int,
+    sequence_length: int,
+    *,
+    token_budget: int = 8192,
+) -> int:
+    """Bound intervention batches for eager multimodal attention memory.
+
+    Candidate-head rows are independent, so reducing this batch changes only
+    execution time. The cap retains batches of 32 for short synthetic prompts,
+    while using four rows around 2k tokens and one row around 8k tokens.
+    """
+
+    if requested <= 0 or sequence_length <= 0 or token_budget <= 0:
+        raise ValueError("microbatch inputs and token budget must be positive")
+    return max(1, min(int(requested), int(token_budget) // int(sequence_length)))
+
+
 def capture_prefill(
     runtime: Any,
     *,

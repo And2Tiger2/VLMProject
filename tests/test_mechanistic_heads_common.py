@@ -18,6 +18,7 @@ from vlm_eval.mechanistic_heads.likelihood import (
     score_answer_from_logits,
 )
 from vlm_eval.mechanistic_heads.patching import (
+    LazyProjectedHeads,
     batched_single_head_patches,
     patch_projected_head,
     projected_head_contributions,
@@ -31,6 +32,7 @@ from vlm_eval.mechanistic_heads.token_spans import locate_subsequence
 from vlm_eval.mechanistic_heads.checkpoint import JsonlCheckpoint
 from vlm_eval.mechanistic_heads.causal import (
     batched_visual_attention_map_patch_many,
+    bounded_head_microbatch,
     projected_head_patch,
     projected_head_set_replacement,
     repeat_model_inputs,
@@ -53,6 +55,22 @@ def test_projected_heads_reconstruct_attention_output_including_bias() -> None:
     expected = torch.nn.functional.linear(raw.flatten(-2), weight, bias)
     actual = reconstruct_attention_output(projected, bias)
     assert torch.allclose(actual, expected, atol=1e-6)
+
+
+def test_lazy_projection_matches_dense_and_materializes_selected_head_only() -> None:
+    generator = torch.Generator().manual_seed(31)
+    raw = torch.randn(2, 7, 4, 3, generator=generator)
+    weight = torch.randn(9, 12, generator=generator)
+    dense = projected_head_contributions(raw, weight)
+    lazy = LazyProjectedHeads(raw, weight)
+    assert lazy.shape == dense.shape
+    assert torch.allclose(lazy[0, [1, 5], 2, :], dense[0, [1, 5], 2, :])
+    selected = torch.tensor([0, 6])
+    assert torch.allclose(
+        lazy[1].index_select(0, selected)[:, 3, :],
+        dense[1].index_select(0, selected)[:, 3, :],
+    )
+    assert torch.allclose(lazy.sum(dim=-2), dense.sum(dim=-2), atol=1e-6)
 
 
 def test_identity_and_self_subtraction_patches_are_noops() -> None:
@@ -295,6 +313,14 @@ def test_multimodal_inputs_repeat_with_qwen_position_layout() -> None:
     assert repeated["pixel_values"].shape == (8, 8)
     assert repeated["image_grid_thw"].shape == (2, 3)
     assert repeated["position_ids"].shape == (3, 2, 3)
+
+
+def test_head_microbatch_is_bounded_by_sequence_memory_policy() -> None:
+    assert bounded_head_microbatch(32, 128) == 32
+    assert bounded_head_microbatch(32, 2048) == 4
+    assert bounded_head_microbatch(32, 8192) == 1
+    with pytest.raises(ValueError):
+        bounded_head_microbatch(0, 128)
 
 
 def test_jsonl_checkpoint_is_resumable_and_deduplicated(tmp_path: Path) -> None:

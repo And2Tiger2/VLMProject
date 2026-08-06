@@ -8,7 +8,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-from vlm_eval.mechanistic_heads.causal import batched_candidate_margin, batched_projected_head_patch, candidate_margin, capture_prefill, repeat_model_inputs
+from vlm_eval.mechanistic_heads.causal import batched_candidate_margin, batched_projected_head_patch, bounded_head_microbatch, candidate_margin, capture_prefill, repeat_model_inputs
 from vlm_eval.mechanistic_heads.config import add_standard_run_arguments, effective_limit, load_json_config, parse_layer_spec, prepare_output_directory
 from vlm_eval.mechanistic_heads.qwen3_runtime import Qwen3MechanisticRuntime
 from vlm_eval.mechanistic_heads.preflight import require_scientific_validation, validation_path_from_config
@@ -78,13 +78,17 @@ def scan(runtime: Any, *, pairs: list[Any], layers: list[int], scope: str, head_
             continue
         donor_positions = [donor.prompt_length - 1] if scope == "last_prefill" else list(range(donor.prompt_length))
         recipient_positions = [recipient.prompt_length - 1] if scope == "last_prefill" else list(range(recipient.prompt_length))
+        effective_head_microbatch = bounded_head_microbatch(
+            head_microbatch,
+            max(donor.prompt_length, recipient.prompt_length),
+        )
         # Detail contrasts require exact processed visual-token alignment.
         if pair.metadata["contrast"] == "detail" and donor.image_positions != recipient.image_positions:
             rows.append({"pair_id": pair.pair_id, "contrast": "detail", "excluded": True, "reason": "processed visual-token spans differ"})
             continue
         for layer in layers:
-            for start in range(0, runtime.architecture.n_heads, head_microbatch):
-                heads = list(range(start, min(start + head_microbatch, runtime.architecture.n_heads)))
+            for start in range(0, runtime.architecture.n_heads, effective_head_microbatch):
+                heads = list(range(start, min(start + effective_head_microbatch, runtime.architecture.n_heads)))
                 repeated = repeat_model_inputs(recipient.inputs, len(heads))
                 with batched_projected_head_patch(runtime.model, layer_idx=layer, head_indices=heads, donor_projected=donor.store.projected_heads[layer], recipient_projected=recipient.store.projected_heads[layer], positions=recipient_positions, donor_positions=donor_positions):
                     patched_values, _ = batched_candidate_margin(runtime, repeated, positive_answer=pair.bias_answer, negative_answer=pair.correct_answer)

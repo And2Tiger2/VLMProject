@@ -11,6 +11,7 @@ from typing import Any
 from vlm_eval.mechanistic_heads.causal import (
     batched_candidate_margin,
     batched_projected_head_patch,
+    bounded_head_microbatch,
     candidate_margin,
     capture_prefill,
     repeat_model_inputs,
@@ -135,9 +136,13 @@ def run_maci_scan(
                 continue
             recipient_positions = list(range(conflict.prompt_length))
             donor_positions = list(range(clean.prompt_length))
+        effective_head_microbatch = bounded_head_microbatch(
+            head_microbatch,
+            max(clean.prompt_length, conflict.prompt_length),
+        )
         for layer_idx in layers:
-            for start in range(0, runtime.architecture.n_heads, head_microbatch):
-                head_indices = list(range(start, min(start + head_microbatch, runtime.architecture.n_heads)))
+            for start in range(0, runtime.architecture.n_heads, effective_head_microbatch):
+                head_indices = list(range(start, min(start + effective_head_microbatch, runtime.architecture.n_heads)))
                 repeated = repeat_model_inputs(conflict.inputs, len(head_indices))
                 with batched_projected_head_patch(
                     runtime.model,

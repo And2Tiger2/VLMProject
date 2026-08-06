@@ -6,6 +6,12 @@ ACTION="${1:-help}"
 MODE="${2:-smoke}"
 cd "$REPO"
 
+if [[ "$ACTION" == "overnight-smoke" || "$ACTION" == "overnight-all" || "$ACTION" == "overnight-all-resume" ]]; then
+  # Resolve the shared environment once before submitting concurrent jobs.
+  # Point-search training requires PEFT from the mechanistic extra.
+  uv sync --extra qwen --extra mechanistic --extra dev
+fi
+
 case "$ACTION" in
   overnight-smoke)
     uv run python scripts/submit_neuronic_mechanistic_overnight.py \

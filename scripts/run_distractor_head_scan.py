@@ -8,7 +8,7 @@ from pathlib import Path
 
 from PIL import Image
 
-from vlm_eval.mechanistic_heads.causal import batched_candidate_margin, batched_head_scaling, candidate_margin, capture_prefill, repeat_model_inputs
+from vlm_eval.mechanistic_heads.causal import batched_candidate_margin, batched_head_scaling, bounded_head_microbatch, candidate_margin, capture_prefill, repeat_model_inputs
 from vlm_eval.mechanistic_heads.config import add_standard_run_arguments, effective_limit, load_json_config, parse_layer_spec, prepare_output_directory
 from vlm_eval.mechanistic_heads.preflight import require_scientific_validation, validation_path_from_config
 from vlm_eval.mechanistic_heads.qwen3_runtime import checkpoint_manifest_inputs, runtime_from_config
@@ -42,10 +42,13 @@ def main() -> None:
         image = Image.open(pair.recipient_image).convert("RGB")
         capture = capture_prefill(runtime, image_path=image, prompt=pair.recipient_prompt, layers=layers)
         inputs = capture.inputs
+        effective_head_microbatch = bounded_head_microbatch(
+            args.head_microbatch, capture.prompt_length
+        )
         baseline, _ = candidate_margin(runtime, inputs, positive_answer=pair.donor_answer, negative_answer=pair.recipient_answer)
         for layer in layers:
-            for start in range(0, runtime.architecture.n_heads, args.head_microbatch):
-                heads = list(range(start, min(start + args.head_microbatch, runtime.architecture.n_heads)))
+            for start in range(0, runtime.architecture.n_heads, effective_head_microbatch):
+                heads = list(range(start, min(start + effective_head_microbatch, runtime.architecture.n_heads)))
                 repeated = repeat_model_inputs(inputs, len(heads))
                 with batched_head_scaling(runtime.model, layer_idx=layer, head_indices=heads, scale=0.0):
                     ablated_values, _ = batched_candidate_margin(runtime, repeated, positive_answer=pair.donor_answer, negative_answer=pair.recipient_answer)

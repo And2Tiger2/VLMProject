@@ -10,6 +10,7 @@ from typing import Any
 from vlm_eval.mechanistic_heads.causal import (
     batched_candidate_margin,
     batched_projected_head_patch,
+    bounded_head_microbatch,
     candidate_margin,
     capture_prefill,
     repeat_model_inputs,
@@ -118,6 +119,10 @@ def run_head_scan(
         if donor.prompt_length != recipient.prompt_length:
             raise RuntimeError(f"unaligned sequences for {pair.pair_id}")
         positions = scope_positions(recipient, scope)
+        effective_head_microbatch = bounded_head_microbatch(
+            head_microbatch,
+            max(donor.prompt_length, recipient.prompt_length),
+        )
         recipient_margin, _ = candidate_margin(
             runtime,
             recipient.inputs,
@@ -131,11 +136,11 @@ def run_head_scan(
             negative_answer=pair.donor_answer,
         )
         for layer_idx in layers:
-            for start in range(0, runtime.architecture.n_heads, head_microbatch):
+            for start in range(0, runtime.architecture.n_heads, effective_head_microbatch):
                 head_indices = list(
                     range(
                         start,
-                        min(start + head_microbatch, runtime.architecture.n_heads),
+                        min(start + effective_head_microbatch, runtime.architecture.n_heads),
                     )
                 )
                 if checkpoint:

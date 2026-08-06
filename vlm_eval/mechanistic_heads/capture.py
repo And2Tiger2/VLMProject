@@ -4,7 +4,7 @@ from dataclasses import dataclass, field
 from typing import Any, Callable
 
 from adapters.qwen25_vl_gaze_attention import _repeat_kv
-from vlm_eval.mechanistic_heads.patching import projected_head_contributions
+from vlm_eval.mechanistic_heads.patching import LazyProjectedHeads
 
 
 MECHANISTIC_ATTENTION_IMPL = "vlm_mechanistic_capture"
@@ -166,8 +166,14 @@ def mechanistic_attention_forward(
         store.attention_probabilities[layer_idx] = _detach(
             probabilities, to_cpu=to_cpu
         )
-        projected = projected_head_contributions(raw, module.o_proj.weight)
-        store.projected_heads[layer_idx] = _detach(projected, to_cpu=to_cpu)
+        # Do not materialize [batch, sequence, heads, model_width] here: long
+        # multimodal prompts can turn that derived tensor into a 10–40 GiB
+        # allocation. Exact post-W_O contributions are projected lazily after
+        # callers select the required positions and heads.
+        stored_raw = store.raw_heads[layer_idx]
+        store.projected_heads[layer_idx] = LazyProjectedHeads(
+            stored_raw, module.o_proj.weight.detach()
+        )
     return raw, probabilities
 
 
