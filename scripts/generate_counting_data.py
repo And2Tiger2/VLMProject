@@ -54,7 +54,9 @@ def main() -> None:
         args.output_dir,
         config={**config, "smoke": args.smoke, "limit": effective_limit(args)},
         seeds={"generator": args.seed},
-        inputs=[args.config],
+        # Bind reusable prepared data to the exact generator implementation,
+        # not only to its JSON configuration.
+        inputs=[args.config, Path(__file__), Path(fixed_eight_scene.__code__.co_filename)],
         outputs=[
             manifest_path,
             *(Path(path) for path in result["artifacts"]),
@@ -166,11 +168,20 @@ def generate_counting_datasets(
     for index in range(constant_pairs):
         group_id = f"constant-eight-{index:04d}"
         split = "train" if index % 5 else "locked_test"
+        renderer_seed = stable_seed(seed, "constant-renderer", index) % (2**31)
+        code_rng = random.Random(stable_seed(seed, "answer-codebook", index))
+        code_words = code_rng.sample(
+            ("dax", "wug", "zorp", "kiv", "mep", "lorn", "siv", "tob"),
+            2,
+        )
+        if code_rng.randrange(2):
+            code_words.reverse()
+        answer_codes = {"4": code_words[0], "5": code_words[1]}
         for variant in ("color", "shape"):
             for position_variant in ("standard", "target_relocation"):
                 for role, red_count in (("recipient", 4), ("donor", 5)):
                     scene = fixed_eight_scene(
-                        seed=seed,
+                        seed=renderer_seed,
                         scene_id=f"{group_id}-{variant}",
                         red_count=red_count,
                         variant=variant,
@@ -214,9 +225,9 @@ def generate_counting_datasets(
                         "variant": variant,
                         "position_variant": position_variant,
                         "role": role,
-                        "answer_codes": {"4": "dax", "5": "wug"},
+                        "answer_codes": answer_codes,
                         "answer_code_prompt": (
-                            "Use the randomized codebook 4=dax and 5=wug. "
+                            f"Use this codebook: 4={answer_codes['4']} and 5={answer_codes['5']}. "
                             + ("How many red objects are in the image? Answer with the code only." if variant == "color" else "How many circles are in the image? Answer with the code only.")
                         ),
                         "sham_image_path": str(sham_image_path.resolve()),
@@ -225,6 +236,7 @@ def generate_counting_datasets(
                         "objects": scene.objects,
                         "split": split,
                         "generator_seed": seed,
+                        "renderer_seed": renderer_seed,
                         "source_id": group_id,
                         }
                     )
@@ -237,8 +249,9 @@ def generate_counting_datasets(
     for (group_id, variant, position_variant), roles in sorted(by_condition.items()):
         donor, recipient = roles["donor"], roles["recipient"]
         base = dict(group_id=group_id, donor_image=donor["image_path"], recipient_image=recipient["image_path"], donor_mask=donor["masks"]["changed_pixel"], recipient_mask=recipient["masks"]["changed_pixel"], split=donor["split"], generator_seed=seed, source_id=group_id)
-        constant_pairs_out.append(PairedExample(pair_id=f"constant-{group_id}-{variant}-{position_variant}", donor_prompt=donor["prompt"], recipient_prompt=recipient["prompt"], donor_answer="5", recipient_answer="4", metadata={"pair_type": "constant-complexity", "variant": variant, "position_variant": position_variant, "total_objects": 8, "sham_images": [donor["sham_image_path"], recipient["sham_image_path"]]}, **base))
-        constant_pairs_out.append(PairedExample(pair_id=f"constant-code-{group_id}-{variant}-{position_variant}", donor_prompt=donor["answer_code_prompt"], recipient_prompt=recipient["answer_code_prompt"], donor_answer="wug", recipient_answer="dax", metadata={"pair_type": "randomized-answer-code", "variant": variant, "position_variant": position_variant, "codebook": {"4": "dax", "5": "wug"}}, **base))
+        constant_pairs_out.append(PairedExample(pair_id=f"constant-{group_id}-{variant}-{position_variant}", donor_prompt=donor["prompt"], recipient_prompt=recipient["prompt"], donor_answer="5", recipient_answer="4", metadata={"pair_type": "constant-complexity", "variant": variant, "position_variant": position_variant, "total_objects": 8, "renderer_seed": donor["renderer_seed"], "sham_images": [donor["sham_image_path"], recipient["sham_image_path"]]}, **base))
+        codebook = donor["answer_codes"]
+        constant_pairs_out.append(PairedExample(pair_id=f"constant-code-{group_id}-{variant}-{position_variant}", donor_prompt=donor["answer_code_prompt"], recipient_prompt=recipient["answer_code_prompt"], donor_answer=codebook["5"], recipient_answer=codebook["4"], metadata={"pair_type": "randomized-answer-code", "variant": variant, "position_variant": position_variant, "renderer_seed": donor["renderer_seed"], "codebook": codebook}, **base))
     constant_pair_path = output_dir / "constant_complexity_pairs.jsonl"
     write_paired_jsonl(constant_pair_path, constant_pairs_out)
     return {

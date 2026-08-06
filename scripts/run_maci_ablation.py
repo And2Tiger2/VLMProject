@@ -55,6 +55,7 @@ def main() -> None:
         n_layers=runtime.architecture.n_layers,
         n_heads=runtime.architecture.n_heads,
         seed=args.seed,
+        require_full_sets=not args.smoke,
     )
     if not bool(config.get("include_validation_k_sweep", True)):
         conditions = {name: heads for name, heads in conditions.items() if not name.startswith("validation_sweep_")}
@@ -157,9 +158,15 @@ def make_conditions(
     n_layers: int,
     n_heads: int,
     seed: int,
+    require_full_sets: bool = False,
 ) -> dict[str, list[tuple[int, int]]]:
     driving = [head for head, score in ranking if score > 0][:30]
     resisting = [head for head, score in reversed(ranking) if score < 0][:40]
+    if require_full_sets and (len(driving) != 30 or len(resisting) != 40):
+        raise RuntimeError(
+            "paper-style MACI validation requires 30 positive driving heads and "
+            f"40 negative resisting heads; found {len(driving)} and {len(resisting)}"
+        )
     conditions = {
         "baseline": [],
         "driving_top30": driving,

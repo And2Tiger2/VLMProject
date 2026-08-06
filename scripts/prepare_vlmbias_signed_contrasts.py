@@ -54,7 +54,7 @@ def main() -> None:
         args.output_dir,
         config={**config, "smoke": args.smoke},
         seeds={"split": args.seed},
-        inputs=[args.config, Path(config["vlmbias_dataset"]), Path(config["accepted_masks"]), *source_inputs],
+        inputs=[args.config, Path(__file__), Path(config["vlmbias_dataset"]), Path(config["accepted_masks"]), *source_inputs],
         outputs=[output, audit_path, *derived_outputs],
         status="complete",
         repo_root=Path.cwd(),

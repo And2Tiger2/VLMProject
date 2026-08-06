@@ -58,7 +58,7 @@ def main() -> None:
             "skip_tokenization": args.skip_tokenization,
         },
         seeds={"split": args.seed},
-        inputs=[args.config],
+        inputs=[args.config, Path(__file__)],
         outputs=[audit_path, pair_path],
         status="complete" if audit["valid"] else "failed",
         repo_root=Path.cwd(),

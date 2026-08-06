@@ -208,6 +208,7 @@ def render_waldo_like_scene(
     target_scale: float = 1.0,
     background: tuple[int, int, int] = (225, 235, 220),
     distractor_centers: list[tuple[int, int]] | None = None,
+    similarity_overrides: dict[int, int] | None = None,
 ) -> RenderedScene:
     """Render an original four-feature conjunction-search character scene."""
 
@@ -238,13 +239,23 @@ def render_waldo_like_scene(
         if is_target:
             features = set(WALDO_FEATURES)
             class_name = "target"
-        elif index == 1 and similarity == 3:
+        else:
+            object_similarity = int((similarity_overrides or {}).get(index, similarity))
+            if object_similarity not in {1, 2, 3}:
+                raise ValueError("per-object similarity must be one, two, or three")
+            # Feature choice is keyed by object index, so changing whether the
+            # target is present cannot silently change every later distractor.
+            feature_rng = random.Random(
+                stable_seed(seed, "waldo-like", scene_id, "features", index)
+            )
+            feature_order = list(WALDO_FEATURES)
+            feature_rng.shuffle(feature_order)
+            features = set(feature_order[:object_similarity])
+            class_name = f"distractor-shared-{object_similarity}"
+        if not is_target and index == 1 and object_similarity == 3:
             features = set(WALDO_FEATURES)
             class_name = "distractor-incorrect-binding"
             incorrect_binding = True
-        else:
-            features = set(rng.sample(WALDO_FEATURES, similarity))
-            class_name = f"distractor-shared-{similarity}"
         mask = masks.setdefault(
             f"object_{index:03d}", Image.new("L", image.size, 0)
         )

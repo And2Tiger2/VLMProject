@@ -105,6 +105,22 @@ def test_submission_graph_refuses_duplicate_receipt_keys(tmp_path: Path) -> None
         submitter.submit("same", "job.sh", exports={})
 
 
+def test_prepared_reuse_requires_current_generator_source(tmp_path: Path) -> None:
+    module = load_script("submit_neuronic_mechanistic_overnight.py")
+    source = tmp_path / "generator.py"
+    source.write_text("version = 1\n", encoding="utf-8")
+    digest = hashlib.sha256(source.read_bytes()).hexdigest()
+    manifest = {"input_sha256": {str(source): digest}}
+    module._require_manifest_sources(manifest, (source,))
+
+    source.write_text("version = 2\n", encoding="utf-8")
+    with pytest.raises(RuntimeError, match="current generator/preparer source"):
+        module._require_manifest_sources(manifest, (source,))
+
+    with pytest.raises(RuntimeError, match="current generator/preparer source"):
+        module._require_manifest_sources({"input_sha256": {}}, (source,))
+
+
 def test_every_slurm_task_uses_an_existing_config_and_runner() -> None:
     source = (ROOT / "scripts/slurm_neuronic_mechanistic_heads.sh").read_text(
         encoding="utf-8"
@@ -129,6 +145,53 @@ def test_mechanistic_extras_and_frozen_sync_cover_training_runtime() -> None:
     )
     assert '"peft>=0.13.0"' in pyproject
     assert "uv sync --frozen --extra qwen --extra mechanistic --extra dev" in wrapper
+
+
+def test_paper_style_maci_sets_require_signed_head_counts() -> None:
+    module = load_script("run_maci_ablation.py")
+    incomplete = [((0, head), 1.0) for head in range(29)] + [
+        ((1, head), -1.0) for head in range(32)
+    ]
+    with pytest.raises(RuntimeError, match="30 positive driving heads"):
+        module.make_conditions(
+            incomplete,
+            n_layers=2,
+            n_heads=32,
+            seed=1,
+            require_full_sets=True,
+        )
+
+    complete = [((0, head), 1.0) for head in range(30)] + [
+        ((1, head), -1.0) for head in range(32)
+    ] + [((2, head), -1.0) for head in range(8)]
+    conditions = module.make_conditions(
+        complete,
+        n_layers=4,
+        n_heads=32,
+        seed=1,
+        require_full_sets=True,
+    )
+    assert len(conditions["driving_top30"]) == 30
+    assert len(conditions["resisting_top40"]) == 40
+
+
+def test_detector_refuses_unsigned_resisting_heads(tmp_path: Path) -> None:
+    module = load_script("train_maci_conflict_detector.py")
+    score_path = tmp_path / "scores.tsv"
+    write_tsv(
+        score_path,
+        [
+            {"layer": 0, "head": head, "mean_signed_intervention_score": -1.0}
+            for head in range(3)
+        ]
+        + [
+            {"layer": 1, "head": head, "mean_signed_intervention_score": 1.0}
+            for head in range(3)
+        ],
+    )
+    assert len(module.load_resisting_heads(score_path, k=3)) == 3
+    with pytest.raises(RuntimeError, match="4 negative resisting heads"):
+        module.load_resisting_heads(score_path, k=4)
 
 
 def test_mechanistic_shell_entrypoints_parse() -> None:
@@ -337,6 +400,46 @@ def test_waldo_head_discovery_and_locked_validation_families_are_disjoint(
         assert not (by_split["validation"] & by_split["locked_test"])
         assert all(Path(row.donor_mask).is_file() for row in family)
         assert all(Path(row.recipient_mask).is_file() for row in family)
+
+    verification_pair = verification[0]
+    true_row = next(row for row in search + verification + distractor if row.pair_id == verification_pair.pair_id)
+    assert true_row.metadata["matched_distractor_centers"] is True
+
+
+def test_counting_answer_codebooks_vary_and_shams_are_declared_controls(
+    tmp_path: Path,
+) -> None:
+    module = load_script("generate_counting_data.py")
+    result = module.generate_counting_datasets(
+        tmp_path,
+        config={
+            "syndot_train": 1,
+            "syndot_test": 1,
+            "mechanistic_pairs": 1,
+            "constant_complexity_pairs": 12,
+        },
+        seed=19,
+        smoke=False,
+        limit=None,
+        resume=False,
+    )
+    assert result["valid"]
+    rows = [
+        json.loads(line)
+        for line in (tmp_path / "constant_complexity_pairs.jsonl")
+        .read_text(encoding="utf-8")
+        .splitlines()
+    ]
+    codebooks = {
+        tuple(sorted(row["metadata"]["codebook"].items()))
+        for row in rows
+        if row["metadata"]["pair_type"] == "randomized-answer-code"
+    }
+    assert len(codebooks) > 1
+    standard = next(
+        row for row in rows if row["metadata"]["pair_type"] == "constant-complexity"
+    )
+    assert standard["metadata"]["renderer_seed"] != 19
 
 
 def test_waldo_four_candidate_target_position_is_not_constant(tmp_path: Path) -> None:

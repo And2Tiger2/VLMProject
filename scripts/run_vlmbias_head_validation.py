@@ -39,7 +39,12 @@ def main() -> None:
     output=args.output_dir/"vlmbias_predictions.jsonl"; prepare_output_directory(args.output_dir,resume=args.resume,overwrite=args.overwrite,known_outputs=(output.name,))
     seed_everything(args.seed); runtime=Qwen3MechanisticRuntime(model_id=str(config.get("model_id","Qwen/Qwen3-VL-8B-Instruct")),device_map=args.device_map)
     score_rows=read_tsv(Path(config["head_scores"])); contrast=str(config.get("selection_contrast","semantic_prior")); selected_rows=[row for row in score_rows if row["contrast"]==contrast]
-    selected_rows.sort(key=lambda row:float(row["mean_signed_score"]),reverse=True); driving=[(int(row["layer"]),int(row["head"])) for row in selected_rows if float(row["mean_signed_score"])>0][:int(config.get("driving_k",30))]; resisting=[(int(row["layer"]),int(row["head"])) for row in reversed(selected_rows) if float(row["mean_signed_score"])<0][:int(config.get("resisting_k",40))]
+    selected_rows.sort(key=lambda row:float(row["mean_signed_score"]),reverse=True); driving_k=int(config.get("driving_k",30));resisting_k=int(config.get("resisting_k",40));driving=[(int(row["layer"]),int(row["head"])) for row in selected_rows if float(row["mean_signed_score"])>0][:driving_k]; resisting=[(int(row["layer"]),int(row["head"])) for row in reversed(selected_rows) if float(row["mean_signed_score"])<0][:resisting_k]
+    if not args.smoke and (len(driving) != driving_k or len(resisting) != resisting_k):
+        raise RuntimeError(
+            "VLMBias role-aware validation requires signed head sets of the configured "
+            f"sizes ({driving_k}, {resisting_k}); found ({len(driving)}, {len(resisting)})"
+        )
     detector = json.loads(detector_path.read_text(encoding="utf-8")) if detector_path is not None and detector_path.is_file() else None
     conditions=build_conditions(driving,resisting,score_rows,config,args.seed,runtime.architecture.n_layers,runtime.architecture.n_heads,have_detector=detector is not None,include_controls=not args.smoke,require_external_general=not args.smoke)
     if args.smoke: conditions={key:value for key,value in conditions.items() if key in {"baseline","driving_suppress","resisting_amplify","joint_role_aware","conflict_gated"}}

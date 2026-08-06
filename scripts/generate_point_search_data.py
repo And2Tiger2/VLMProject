@@ -56,7 +56,8 @@ def main() -> None:
         args.output_dir,
         config={**config, "smoke": args.smoke, "limit": effective_limit(args)},
         seeds={"generator": args.seed},
-        inputs=[args.config],
+        # Reuse is safe only while both orchestration and renderer bytes match.
+        inputs=[args.config, Path(__file__), Path(render_waldo_like_scene.__code__.co_filename)],
         outputs=[
             manifest,
             *(Path(path) for path in result["artifacts"]),
@@ -321,10 +322,12 @@ def _write_waldo_pairs(
         scenes = {
             "location_a": render_waldo_like_scene(seed=seed, scene_id=group_id, target_present=True, target_cell=cell_a, similarity=2, distractor_centers=distractor_centers),
             "location_b": render_waldo_like_scene(seed=seed, scene_id=group_id, target_present=True, target_cell=cell_b, similarity=2, distractor_centers=distractor_centers),
-            "true": render_waldo_like_scene(seed=seed, scene_id=group_id, target_present=True, target_cell=cell_a, similarity=3),
-            "impostor": render_waldo_like_scene(seed=seed, scene_id=group_id, target_present=False, target_cell=cell_a, similarity=3),
-            "low_decoy": render_waldo_like_scene(seed=seed, scene_id=group_id, target_present=True, target_cell=cell_a, similarity=1),
-            "high_decoy": render_waldo_like_scene(seed=seed, scene_id=group_id, target_present=True, target_cell=cell_a, similarity=3),
+            "true": render_waldo_like_scene(seed=seed, scene_id=group_id, target_present=True, target_cell=cell_a, similarity=3, distractor_centers=distractor_centers),
+            "impostor": render_waldo_like_scene(seed=seed, scene_id=group_id, target_present=False, target_cell=cell_a, similarity=3, distractor_centers=distractor_centers),
+            "low_decoy": render_waldo_like_scene(seed=seed, scene_id=group_id, target_present=True, target_cell=cell_a, similarity=1, distractor_centers=distractor_centers),
+            # Matched high-decoy scene: only object 1 changes from a weak
+            # distractor into an incorrect-binding four-feature impostor.
+            "high_decoy": render_waldo_like_scene(seed=seed, scene_id=group_id, target_present=True, target_cell=cell_a, similarity=1, similarity_overrides={1: 3}, distractor_centers=distractor_centers),
         }
         paths: dict[str, Path] = {}
         mask_paths: dict[str, dict[str, Path]] = {}
@@ -356,7 +359,11 @@ def _write_waldo_pairs(
         )
         common = {
             "group_id": group_id,
-            "metadata": {"template_id": group_id, "synthetic": True},
+            "metadata": {
+                "template_id": group_id,
+                "synthetic": True,
+                "matched_distractor_centers": True,
+            },
             "split": split,
             "generator_seed": seed,
             "source_id": group_id,

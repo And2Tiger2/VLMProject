@@ -1,5 +1,9 @@
 # Qwen3-VL-8B Mechanistic Head Suite
 
+See [`COMPLETION_AUDIT.md`](COMPLETION_AUDIT.md) for the requirement-by-
+requirement distinction between implemented machinery and GPU-pending
+scientific evidence.
+
 This additive workstream distinguishes count-carrying, visual-search,
 fine-detail verification, distractor-suppression, hallucination-driving, and
 hallucination-resisting heads. It reuses the repository's exact Qwen3 loader,

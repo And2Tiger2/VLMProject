@@ -72,7 +72,25 @@ def main() -> None:
     for pair in base_pairs:
         sham_images = pair.metadata.get("sham_images")
         if sham_images:
-            pairs.append(replace(pair, pair_id=f"{pair.pair_id}-matched-sham", donor_image=sham_images[1], donor_answer=pair.donor_answer, metadata={**pair.metadata, "pair_type": "matched-sham"}))
+            pairs.append(
+                replace(
+                    pair,
+                    pair_id=f"{pair.pair_id}-matched-sham",
+                    donor_image=sham_images[1],
+                    donor_prompt=pair.recipient_prompt,
+                    metadata={
+                        **pair.metadata,
+                        "pair_type": "matched-sham",
+                        "same_semantic_count": True,
+                        "donor_visual_answer": pair.recipient_answer,
+                        "candidate_contrast_answer": pair.donor_answer,
+                        "sham_definition": (
+                            "patch a non-task pixel edit of the recipient while retaining "
+                            "the original donor answer only as the candidate-margin contrast"
+                        ),
+                    },
+                )
+            )
     all_layers = sorted({layer for heads in head_sets.values() for layer, _ in heads})
     reference_count = min(len(pairs), int(config.get("mean_reference_examples", 16)))
     mean_replacements = build_mean_replacements(runtime, pairs[:reference_count], all_layers, scope=str(config.get("patch_scope", "final_prompt_token")))

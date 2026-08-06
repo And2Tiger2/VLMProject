@@ -92,8 +92,20 @@ def fit_detector(x: np.ndarray, y: np.ndarray, splits: list[str], *, seed: int) 
 
 def load_resisting_heads(path: Path, *, k: int) -> list[tuple[int, int]]:
     with path.open("r", encoding="utf-8") as handle: rows = list(csv.DictReader(handle, delimiter="\t"))
-    ranked = sorted(rows, key=lambda row: float(row["mean_signed_intervention_score"]))
-    return [(int(row["layer"]), int(row["head"])) for row in ranked[:k]]
+    ranked = sorted(
+        (
+            row
+            for row in rows
+            if float(row["mean_signed_intervention_score"]) < 0
+        ),
+        key=lambda row: float(row["mean_signed_intervention_score"]),
+    )
+    heads = [(int(row["layer"]), int(row["head"])) for row in ranked[:k]]
+    if len(heads) != k:
+        raise RuntimeError(
+            f"conflict detector requires {k} negative resisting heads; found {len(heads)}"
+        )
+    return heads
 
 
 if __name__ == "__main__": main()

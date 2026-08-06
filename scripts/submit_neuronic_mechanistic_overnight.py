@@ -9,6 +9,7 @@ import subprocess
 from typing import Iterable
 
 from vlm_eval.mechanistic_heads.preflight import require_completed_manifest
+from vlm_eval.mechanistic_heads.reproducibility import sha256_file
 
 
 REPO_DEFAULT = "/n/fs/pvl-memory/at7979/VLMProject"
@@ -362,6 +363,28 @@ def require_valid_prepared_data(repo: Path) -> None:
         raise FileNotFoundError(
             "cannot reuse preparation; missing required artifacts: " + ", ".join(missing)
         )
+    # Prepared datasets may intentionally survive a Git revision, but only if
+    # the exact generator/preparer implementation that produced them is still
+    # current. Older manifests did not bind source files and must be rebuilt
+    # instead of silently reusing scientifically different controls.
+    expected_sources = {
+        "segments/mechanistic_heads_qwen3_8b/data/generated/counting": (
+            repo / "scripts/generate_counting_data.py",
+            repo / "vlm_eval/mechanistic_heads/synthetic.py",
+        ),
+        "segments/mechanistic_heads_qwen3_8b/data/generated/point_search": (
+            repo / "scripts/generate_point_search_data.py",
+            repo / "vlm_eval/mechanistic_heads/synthetic.py",
+        ),
+        "segments/mechanistic_heads_qwen3_8b/data/generated/vlmbias_contrasts": (
+            repo / "scripts/prepare_vlmbias_signed_contrasts.py",
+        ),
+        "segments/mechanistic_heads_qwen3_8b/data/mmmc/prepared": (
+            repo / "scripts/prepare_mmmc.py",
+        ),
+    }
+    for root_value, source_paths in expected_sources.items():
+        _require_manifest_sources(manifests[root_value], source_paths)
     for root_value in (
         "segments/mechanistic_heads_qwen3_8b/data/generated/counting",
         "segments/mechanistic_heads_qwen3_8b/data/generated/point_search",
@@ -438,6 +461,24 @@ def require_valid_prepared_data(repo: Path) -> None:
         raise RuntimeError("prepared Waldo-like relocation pairs do not hold distractors fixed")
     if len(point.get("four_candidate_target_indices", [])) < 2:
         raise RuntimeError("prepared four-candidate task has a constant target slot")
+
+
+def _require_manifest_sources(manifest: dict, source_paths: Iterable[Path]) -> None:
+    declared = {
+        str(Path(path).resolve()): digest
+        for path, digest in manifest.get("input_sha256", {}).items()
+    }
+    stale = []
+    for source in source_paths:
+        resolved = source.resolve()
+        expected = declared.get(str(resolved))
+        if expected is None or not resolved.is_file() or sha256_file(resolved) != expected:
+            stale.append(str(source))
+    if stale:
+        raise RuntimeError(
+            "prepared data is not bound to the current generator/preparer source; "
+            "rerun preparation: " + ", ".join(stale)
+        )
 
 
 if __name__ == "__main__":

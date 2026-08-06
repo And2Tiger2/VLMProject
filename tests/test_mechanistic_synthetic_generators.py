@@ -105,6 +105,62 @@ def test_waldo_relocation_keeps_distractors_identical() -> None:
     ]
 
 
+def test_waldo_verification_changes_only_target_slot() -> None:
+    centers = waldo_distractor_centers(
+        seed=12, scene_id="verify", clutter=8, forbidden_cells=[44]
+    )
+    true = render_waldo_like_scene(
+        seed=12,
+        scene_id="verify",
+        target_present=True,
+        target_cell=44,
+        clutter=8,
+        similarity=3,
+        distractor_centers=centers,
+    )
+    impostor = render_waldo_like_scene(
+        seed=12,
+        scene_id="verify",
+        target_present=False,
+        target_cell=44,
+        clutter=8,
+        similarity=3,
+        distractor_centers=centers,
+    )
+    assert true.objects[0]["center"] == impostor.objects[0]["center"]
+    assert len(set(true.objects[0]["features"]) - set(impostor.objects[0]["features"])) == 1
+    assert true.objects[1:] == impostor.objects[1:]
+
+
+def test_waldo_decoy_pair_changes_only_one_distractor() -> None:
+    centers = waldo_distractor_centers(
+        seed=13, scene_id="decoy", clutter=8, forbidden_cells=[22]
+    )
+    low = render_waldo_like_scene(
+        seed=13,
+        scene_id="decoy",
+        target_present=True,
+        target_cell=22,
+        clutter=8,
+        similarity=1,
+        distractor_centers=centers,
+    )
+    high = render_waldo_like_scene(
+        seed=13,
+        scene_id="decoy",
+        target_present=True,
+        target_cell=22,
+        clutter=8,
+        similarity=1,
+        similarity_overrides={1: 3},
+        distractor_centers=centers,
+    )
+    assert low.objects[0] == high.objects[0]
+    assert low.objects[1] != high.objects[1]
+    assert low.objects[2:] == high.objects[2:]
+    assert high.objects[1]["class"] == "distractor-incorrect-binding"
+
+
 def test_length_matched_direct_answer_is_exact_and_nonspatial() -> None:
     class Tokenizer:
         def __call__(self, text, add_special_tokens=False):

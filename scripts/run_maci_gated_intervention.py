@@ -33,7 +33,9 @@ def main() -> None:
     limit = effective_limit(args)
     if limit is None and config.get("max_examples") is not None: limit=int(config["max_examples"])
     if limit is not None: pairs = pairs[:limit]
-    detector = json.loads(Path(config["detector"]).read_text(encoding="utf-8")); ranking = read_tsv(Path(config["head_scores"])); driving = [(int(row["layer"]), int(row["head"])) for row in sorted(ranking, key=lambda row: float(row["mean_signed_intervention_score"]), reverse=True)[:int(config.get("driving_heads", 30))]]; resisting = [tuple(head) for head in detector["resisting_heads"]]
+    detector = json.loads(Path(config["detector"]).read_text(encoding="utf-8")); ranking = read_tsv(Path(config["head_scores"])); driving_k=int(config.get("driving_heads",30)); driving_rows=[row for row in sorted(ranking,key=lambda row:float(row["mean_signed_intervention_score"]),reverse=True) if float(row["mean_signed_intervention_score"])>0][:driving_k]; driving=[(int(row["layer"]),int(row["head"])) for row in driving_rows]; resisting=[tuple(head) for head in detector["resisting_heads"]]
+    if len(driving) != driving_k:
+        raise RuntimeError(f"gated intervention requires {driving_k} positive driving heads; found {len(driving)}")
     audit_path = Path(config["paired_dataset"]).with_name("audit.json")
     images = MMMCImages(args.cache_dir, audit_path=audit_path); prepared = []
     for pair in pairs:

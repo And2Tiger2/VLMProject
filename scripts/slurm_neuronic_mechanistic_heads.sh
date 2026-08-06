@@ -28,6 +28,10 @@ export HUGGINGFACE_HUB_CACHE="$CACHE_ROOT/huggingface/hub"
 export TORCH_HOME="$CACHE_ROOT/torch"
 export TOKENIZERS_PARALLELISM=false
 export HF_HUB_OFFLINE="${HF_HUB_OFFLINE:-1}"
+# Long multimodal prefills have variable allocation sizes. Expandable CUDA
+# segments reduce allocator fragmentation after the dense projected-head
+# capture was replaced by lazy per-head projection.
+export PYTORCH_CUDA_ALLOC_CONF="${PYTORCH_CUDA_ALLOC_CONF:-expandable_segments:True}"
 
 uv run python scripts/check_neuronic_gpu.py --min-memory-gb "${MIN_GPU_MEMORY_GB:-20}"
 

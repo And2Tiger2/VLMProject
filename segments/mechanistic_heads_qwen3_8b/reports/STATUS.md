@@ -13,6 +13,10 @@
 - Waldo-like relocation pairs now keep every distractor fixed, causal pairs
   carry exact target/decoy masks, and the four-candidate target slot is
   randomized deterministically instead of leaking through candidate order.
+- Verification pairs hold every distractor fixed while changing one target
+  feature; distractor-suppression pairs change exactly one decoy. Counting
+  answer-code controls use per-group randomized codebooks and record distinct
+  renderer seeds.
 - Counting VAP/head scan/controls/locked validation; point training, behavior,
   centroid/search/verification/distractor scans and ablations; MMMC preparation,
   MACI scan/ablation/detector/gating; signed VLMBias contrasts/validation and
@@ -48,7 +52,7 @@
 
 ## Passed
 
-- The complete CPU unit/integration suite passes in the audited checkout (206
+- The complete CPU unit/integration suite passes in the audited checkout (212
   tests in the final local audit).
 - Both synthetic generator smokes write real schemas, images, masks, pairs,
   grouped splits, manifests, input/output hashes, and resume markers.
@@ -71,6 +75,8 @@
   smoke failures correctly prevented all dependent scientific jobs.
 - No scientific calibration result exists yet; no replication success is
   claimed.
+- The requirement-by-requirement distinction between implemented code and
+  pending empirical evidence is recorded in `../COMPLETION_AUDIT.md`.
 
 ## Computationally pending
 
