@@ -48,8 +48,16 @@ def main() -> None:
     seed_everything(args.seed)
     runtime = Qwen3MechanisticRuntime(model_id=str(config.get("model_id", "Qwen/Qwen3-VL-8B-Instruct")), device_map=args.device_map)
 
-    ranking = read_tsv(Path(config["count_ranking"]))
-    ranking.sort(key=lambda row: abs(float(row["count_causal_score"])), reverse=True)
+    all_ranking = read_tsv(Path(config["count_ranking"]))
+    ranking = [
+        row
+        for row in all_ranking
+        if int(row.get("bidirectional_positive", 0)) == 1
+        and float(row["count_causal_score"]) > 0
+    ]
+    if args.smoke and len(ranking) < 2:
+        ranking = all_ranking
+    ranking.sort(key=lambda row: float(row["count_causal_score"]), reverse=True)
     gaze_rows = json.loads(Path(config["gaze_ranking"]).read_text(encoding="utf-8"))
     gaze_heads = [(int(row["layer"]), int(row["head"])) for row in gaze_rows]
     controls = read_tsv(Path(config["controls"]))

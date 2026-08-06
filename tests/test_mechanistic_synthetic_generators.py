@@ -140,6 +140,7 @@ def test_waldo_relocation_keeps_distractors_identical() -> None:
     centers = waldo_distractor_centers(
         seed=9, scene_id="relocate", clutter=8, forbidden_cells=[11, 88]
     )
+    assert all(((y // 40) * 10 + x // 40) not in {11, 88} for x, y in centers)
     left = render_waldo_like_scene(
         seed=9,
         scene_id="relocate",

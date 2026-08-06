@@ -282,6 +282,13 @@ def transplant_attention_map(
         result[..., recipient_key_indices] = donor_slice / denom * old_mass
         rule = "visual slice shape replacement preserving recipient visual mass"
     sums = result.float().sum(dim=-1)
-    if not torch.allclose(sums, torch.ones_like(sums), atol=atol, rtol=0):
-        raise RuntimeError("transplanted attention does not sum to one")
+    tolerance = float(atol)
+    if result.dtype.is_floating_point:
+        tolerance = max(tolerance, float(torch.finfo(result.dtype).eps))
+    if not torch.allclose(sums, torch.ones_like(sums), atol=tolerance, rtol=0):
+        maximum = float((sums - 1).abs().max().detach().cpu())
+        raise RuntimeError(
+            "transplanted attention does not sum to one: "
+            f"max_abs={maximum:.6g}, tolerance={tolerance:.6g}"
+        )
     return AttentionTransplant(result, rule)

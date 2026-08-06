@@ -22,6 +22,20 @@ SCORE_SOURCES = {
     "mmmc_signed_score": ("mmmc_scores", "mean_signed_intervention_score"),
 }
 
+POSITIVE_FUNCTION_COLUMNS = {
+    "count_causal_score",
+    "search_causal_score",
+    "verification_causal_score",
+    "distractor_suppression_score",
+}
+SIGNED_ROLE_COLUMNS = {
+    "mmmc_signed_score",
+    "vlmbias_semantic_prior_score",
+    "vlmbias_context_score",
+    "vlmbias_detail_score",
+    "correct_vs_bias_logit_attribution",
+}
+
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Render the unified mechanistic head atlas and reports.")
@@ -274,7 +288,7 @@ def _write_correlations(rows: list[dict[str, Any]], path: Path) -> None:
 
 def _write_double_dissociation(rows: list[dict[str, Any]], path: Path, *, k: int) -> None:
     columns = [column for column in ATLAS_COLUMNS[2:] if any(row.get(column) is not None for row in rows)]
-    sets = {column: sorted([row for row in rows if row.get(column) is not None], key=lambda row: abs(float(row[column])), reverse=True)[:k] for column in columns}
+    sets = _functional_head_sets(rows, columns=columns, k=k)
     output = []
     for head_set, selected in sets.items():
         for measured in columns:
@@ -292,7 +306,11 @@ def _write_table(path: Path, rows: list[dict[str, Any]], fields: list[str]) -> N
 
 def _write_overlaps(rows: list[dict[str, Any]], path: Path, *, k: int) -> None:
     columns = [column for column in ATLAS_COLUMNS[2:] if any(row.get(column) is not None for row in rows)]
-    sets = {column: {(row["layer"], row["head"]) for row in sorted([item for item in rows if item.get(column) is not None], key=lambda item: abs(float(item[column])), reverse=True)[:k]} for column in columns}
+    ranked = _functional_head_sets(rows, columns=columns, k=k)
+    sets = {
+        name: {(row["layer"], row["head"]) for row in selected}
+        for name, selected in ranked.items()
+    }
     with path.open("w", encoding="utf-8", newline="") as handle:
         writer = csv.DictWriter(handle, fieldnames=["left", "right", "k", "intersection", "jaccard"], delimiter="\t"); writer.writeheader()
         wrote = False
@@ -303,6 +321,35 @@ def _write_overlaps(rows: list[dict[str, Any]], path: Path, *, k: int) -> None:
                 wrote = True
         if not wrote:
             writer.writerow({"left": "pending", "right": "pending", "k": k, "intersection": 0, "jaccard": ""})
+
+
+def _functional_head_sets(
+    rows: list[dict[str, Any]], *, columns: list[str], k: int
+) -> dict[str, list[dict[str, Any]]]:
+    """Build direction-aware sets instead of conflating opposite causal roles."""
+
+    sets: dict[str, list[dict[str, Any]]] = {}
+    for column in columns:
+        measured = [row for row in rows if row.get(column) is not None]
+        if column in SIGNED_ROLE_COLUMNS:
+            positive = [row for row in measured if float(row[column]) > 0]
+            negative = [row for row in measured if float(row[column]) < 0]
+            sets[f"{column}_positive"] = sorted(
+                positive, key=lambda row: float(row[column]), reverse=True
+            )[:k]
+            sets[f"{column}_negative"] = sorted(
+                negative, key=lambda row: float(row[column])
+            )[:k]
+        elif column in POSITIVE_FUNCTION_COLUMNS:
+            positive = [row for row in measured if float(row[column]) > 0]
+            sets[column] = sorted(
+                positive, key=lambda row: float(row[column]), reverse=True
+            )[:k]
+        else:
+            sets[column] = sorted(
+                measured, key=lambda row: float(row[column]), reverse=True
+            )[:k]
+    return sets
 
 
 def load_validation_statuses(config: dict[str, Any], inputs: list[Path]) -> dict[str, dict[str, Any]]:

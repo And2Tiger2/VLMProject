@@ -41,14 +41,21 @@ def main() -> None:
     rows: list[dict[str, Any]] = []
     inputs: list[Path] = [args.config, *checkpoint_manifest_inputs(config, checkpoint_override=args.checkpoint)]
     cross_task_sets: dict[str, list[tuple[int, int]]] = {}
+    required_head_counts: dict[str, int] = {}
     for study in config["studies"]:
         score_path = Path(study["scores"])
         require_current_artifact(score_path)
         source_rows = read_tsv(score_path)
         ranking = aggregate_scores(source_rows, str(study["score_column"]))
-        ordered = sorted(ranking, key=lambda head: abs(ranking[head]), reverse=True)
-        k = min(2 if args.smoke else int(study.get("k", 30)), len(ordered))
-        cross_task_sets[f"{study['name']}_top"] = ordered[:k]
+        bidirectional = bidirectional_positive_heads(source_rows)
+        requested_k = 2 if args.smoke else int(study.get("k", 30))
+        cross_task_sets[f"{study['name']}_top"] = select_positive_function_heads(
+            ranking,
+            requested_k=requested_k,
+            allow_unsigned_fallback=args.smoke,
+            eligible_heads=bidirectional,
+        )
+        required_head_counts[str(study["name"])] = requested_k
     studies = config["studies"]
     total_smoke_limit = effective_limit(args) if args.smoke else None
     for study_index, study in enumerate(studies):
@@ -56,8 +63,10 @@ def main() -> None:
         require_current_artifact(score_path)
         source_rows = read_tsv(score_path)
         ranking = aggregate_scores(source_rows, str(study["score_column"]))
-        ordered = sorted(ranking, key=lambda head: abs(ranking[head]), reverse=True)
-        k = min(2 if args.smoke else int(study.get("k", 30)), len(ordered)); selected = ordered[:k]; low = list(reversed(ordered))[:k]
+        ordered = sorted(ranking, key=lambda head: ranking[head], reverse=True)
+        selected = cross_task_sets[f"{study['name']}_top"]
+        k = len(selected)
+        low = list(reversed(ordered))[:k]
         # Apply every discovered functional set to every task. This is the
         # causal task-by-head-set matrix needed for a real double dissociation.
         sets = dict(cross_task_sets)
@@ -121,7 +130,10 @@ def main() -> None:
                 rows.append({"study": study["name"], "pair_id": pair.pair_id, "head_set": set_name, "n_heads": len(heads), "baseline_margin": baseline, "ablated_margin": ablated, "margin_change": ablated - baseline, "preference_flip": int(baseline >= 0 and ablated < 0), **generation})
     write_tsv(output, rows)
     aggregate = summarize(rows)
-    claim_checks = point_claim_checks(aggregate)
+    claim_checks = point_claim_checks(
+        aggregate,
+        required_head_counts=None if args.smoke else required_head_counts,
+    )
     summary = {
         "valid": True,
         "label": (
@@ -138,6 +150,10 @@ def main() -> None:
         "aggregate": aggregate,
         "claim_checks": claim_checks,
         "cross_task_head_sets": sorted(cross_task_sets),
+        "required_head_counts": required_head_counts,
+        "selected_head_counts": {
+            name: len(heads) for name, heads in cross_task_sets.items()
+        },
         "control_policy": "Every discovered point-function set is ablated on every locked task; each task also uses 20 joint matches on layer, image attention, projected norm, entropy, gaze, and general causal importance in full mode",
         "claim_gate": "Each named head family must harm its own task under ablation, exceed bottom/cross-task/jointly matched controls, and distractor-head ablation must increase generated decoy selections.",
     }
@@ -150,6 +166,65 @@ def aggregate_scores(rows: list[dict[str, str]], column: str) -> dict[tuple[int,
     grouped: dict[tuple[int, int], list[float]] = defaultdict(list)
     for row in rows: grouped[(int(row["layer"]), int(row["head"]))].append(float(row[column]))
     return {head: sum(values) / len(values) for head, values in grouped.items()}
+
+
+def select_positive_function_heads(
+    ranking: dict[tuple[int, int], float],
+    *,
+    requested_k: int,
+    allow_unsigned_fallback: bool,
+    eligible_heads: set[tuple[int, int]] | None = None,
+) -> list[tuple[int, int]]:
+    """Select heads with the causal direction defined by each scan.
+
+    Negative scores represent an opposite role, not a stronger instance of
+    the named function. Smoke may fall back to measured heads so the hook path
+    is still exercised on a tiny, noisy sample; scientific runs may not.
+    """
+
+    if requested_k <= 0:
+        raise ValueError("requested functional-head count must be positive")
+    ordered = sorted(ranking, key=lambda head: ranking[head], reverse=True)
+    positive = [
+        head
+        for head in ordered
+        if ranking[head] > 0
+        and (eligible_heads is None or head in eligible_heads)
+    ]
+    if allow_unsigned_fallback and len(positive) < requested_k:
+        return ordered[:requested_k]
+    return positive[:requested_k]
+
+
+def bidirectional_positive_heads(
+    rows: list[dict[str, str]],
+) -> set[tuple[int, int]] | None:
+    """Return heads whose mean donor effects have both expected directions.
+
+    Search and verification scans emit forward and reverse shifts.  A positive
+    symmetric mean can otherwise conceal a strong effect in only one direction.
+    Distractor-suppression scans are matched ablations and have no such fields,
+    so ``None`` means that the direction filter is not applicable.
+    """
+
+    if not rows or not all(
+        "forward_margin_shift" in row and "reverse_margin_shift" in row
+        for row in rows
+    ):
+        return None
+    grouped: dict[tuple[int, int], dict[str, list[float]]] = defaultdict(
+        lambda: {"forward": [], "reverse": []}
+    )
+    for row in rows:
+        head = (int(row["layer"]), int(row["head"]))
+        grouped[head]["forward"].append(float(row["forward_margin_shift"]))
+        grouped[head]["reverse"].append(float(row["reverse_margin_shift"]))
+    return {
+        head
+        for head, values in grouped.items()
+        if sum(values["forward"]) / len(values["forward"]) > 0
+        and sum(values["reverse"]) / len(values["reverse"]) > 0
+    }
 
 
 def aggregate_diagnostics(rows,gaze,general):
@@ -166,7 +241,7 @@ def summarize(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
     for row in rows: grouped[(row["study"], row["head_set"])].append(row)
     output = []
     for (study, head_set), group in sorted(grouped.items()):
-        row = {"study": study, "head_set": head_set, "n": len(group), "mean_baseline_margin": sum(float(value["baseline_margin"]) for value in group)/len(group), "mean_ablated_margin": sum(float(value["ablated_margin"]) for value in group)/len(group), "mean_margin_change": sum(float(value["margin_change"]) for value in group)/len(group), "preference_flip_rate": sum(int(value["preference_flip"]) for value in group)/len(group)}
+        row = {"study": study, "head_set": head_set, "n": len(group), "n_heads": int(group[0].get("n_heads", 0)), "mean_baseline_margin": sum(float(value["baseline_margin"]) for value in group)/len(group), "mean_ablated_margin": sum(float(value["ablated_margin"]) for value in group)/len(group), "mean_margin_change": sum(float(value["margin_change"]) for value in group)/len(group), "preference_flip_rate": sum(int(value["preference_flip"]) for value in group)/len(group)}
         generated = [value for value in group if int(value.get("generation_scored", 0))]
         if generated:
             row.update(
@@ -180,7 +255,11 @@ def summarize(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return output
 
 
-def point_claim_checks(aggregate: list[dict[str, Any]]) -> dict[str, Any]:
+def point_claim_checks(
+    aggregate: list[dict[str, Any]],
+    *,
+    required_head_counts: dict[str, int] | None = None,
+) -> dict[str, Any]:
     """Conservative locked gate for the three proposed point-head functions."""
 
     lookup = {
@@ -208,6 +287,14 @@ def point_claim_checks(aggregate: list[dict[str, Any]]) -> dict[str, Any]:
         ]
         control_changes = [float(row["mean_margin_change"]) for row in controls]
         checks = {
+            "required_positive_head_count_available": (
+                required_head_counts is None
+                or (
+                    top is not None
+                    and int(top.get("n_heads", 0))
+                    == int(required_head_counts[study])
+                )
+            ),
             "own_top_harms_margin": top_change is not None and top_change < 0,
             "top_exceeds_bottom": (
                 top_change is not None

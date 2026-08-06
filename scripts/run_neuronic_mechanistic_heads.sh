@@ -6,7 +6,7 @@ ACTION="${1:-help}"
 MODE="${2:-smoke}"
 cd "$REPO"
 
-if [[ "$ACTION" == "overnight-smoke" || "$ACTION" == "overnight-smoke-resume" || "$ACTION" == "overnight-all" || "$ACTION" == "overnight-all-resume" ]]; then
+if [[ "$ACTION" == "overnight-smoke" || "$ACTION" == "overnight-smoke-resume" || "$ACTION" == "overnight-all" || "$ACTION" == "overnight-all-resume" || "$ACTION" == "refresh-generated-data" ]]; then
   # Resolve the shared environment once before submitting concurrent jobs.
   # Point-search training requires PEFT from the mechanistic extra.
   uv sync --frozen --extra qwen --extra mechanistic --extra dev
@@ -74,6 +74,19 @@ case "$ACTION" in
   archive-stale)
     uv run python scripts/archive_stale_mechanistic_runs.py --repo "$REPO" --execute
     ;;
+  refresh-generated-data)
+    # A shared renderer source change invalidates both synthetic manifests.
+    # Counting images are unchanged and can be rehashed in place; point/Waldo
+    # images are regenerated because their spatial exclusion rule changed.
+    uv run python scripts/generate_counting_data.py \
+      --config segments/mechanistic_heads_qwen3_8b/configs/counting_data.json \
+      --output-dir segments/mechanistic_heads_qwen3_8b/data/generated/counting \
+      --seed 260318523 --resume
+    uv run python scripts/generate_point_search_data.py \
+      --config segments/mechanistic_heads_qwen3_8b/configs/point_search_data.json \
+      --output-dir segments/mechanistic_heads_qwen3_8b/data/generated/point_search \
+      --seed 260525427 --overwrite
+    ;;
   atlas)
     uv run python scripts/render_mechanistic_head_reports.py \
       --config segments/mechanistic_heads_qwen3_8b/configs/head_atlas.json \
@@ -100,6 +113,6 @@ case "$ACTION" in
     fi
     ;;
   help|*)
-    echo "usage: $0 {archive-stale|overnight-smoke|overnight-smoke-resume|overnight-all|overnight-all-resume|prepare-synthetic|download-mmmc|instrumentation|counting-behavior|counting-vap|counting-heads|counting-heads-repeat1|counting-heads-repeat2|general-importance|counting-controls|counting-validation|waldo-behavior|point-centroids|search-heads|verification-heads|distractor-heads|point-ablation|maci-heads|maci-heads-aligned|maci-stability|maci-ablation|maci-confirm|maci-detector|maci-gated|vlmbias-heads|vlmbias-validation|atlas} [smoke|full]"
+    echo "usage: $0 {archive-stale|refresh-generated-data|overnight-smoke|overnight-smoke-resume|overnight-all|overnight-all-resume|prepare-synthetic|download-mmmc|instrumentation|counting-behavior|counting-vap|counting-heads|counting-heads-repeat1|counting-heads-repeat2|general-importance|counting-controls|counting-validation|waldo-behavior|point-centroids|search-heads|verification-heads|distractor-heads|point-ablation|maci-heads|maci-heads-aligned|maci-stability|maci-ablation|maci-confirm|maci-detector|maci-gated|vlmbias-heads|vlmbias-validation|atlas} [smoke|full]"
     ;;
 esac

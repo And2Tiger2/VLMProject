@@ -33,9 +33,26 @@ def main() -> None:
     for row in rows: grouped[(int(row["layer"]), int(row["head"]))].append(row)
     ranking = []
     for head, group in grouped.items():
-        ranking.append({"layer": head[0], "head": head[1], "n": len(group), "count_causal_score": mean(group, "symmetric_causal_score"), "image_attention": mean(group, "image_attention_ratio"), "projected_output_norm": mean(group, "projected_output_norm"), "attention_entropy": mean(group, "attention_entropy"), "gaze_score": gaze.get(head, 0.0)})
-    ranking.sort(key=lambda row: abs(row["count_causal_score"]), reverse=True)
+        forward = mean(group, "forward_margin_shift")
+        reverse = mean(group, "reverse_margin_shift")
+        ranking.append({"layer": head[0], "head": head[1], "n": len(group), "count_causal_score": mean(group, "symmetric_causal_score"), "mean_forward_margin_shift": forward, "mean_reverse_margin_shift": reverse, "bidirectional_positive": int(forward > 0 and reverse > 0), "image_attention": mean(group, "image_attention_ratio"), "projected_output_norm": mean(group, "projected_output_norm"), "attention_entropy": mean(group, "attention_entropy"), "gaze_score": gaze.get(head, 0.0)})
+    # A positive symmetric score means that donor-to-recipient patching moves
+    # the answer toward the donor in both directions.  Large negative scores
+    # are mechanistically interesting opposite-role heads, but they must not
+    # be labeled count-carrying heads merely because their magnitude is large.
+    ranking.sort(key=lambda row: row["count_causal_score"], reverse=True)
     write_tsv(outputs[0], ranking)
+    eligible_ranking = [
+        row
+        for row in ranking
+        if int(row["bidirectional_positive"]) == 1
+        and float(row["count_causal_score"]) > 0
+    ]
+    selection_ranking = (
+        ranking[:2]
+        if args.smoke and len(eligible_ranking) < 2
+        else eligible_ranking
+    )
     features = {(row["layer"], row["head"]): {key: float(row[key]) for key in ("image_attention", "projected_output_norm", "attention_entropy", "gaze_score")} for row in ranking}
     general_path = config.get("general_causal_importance")
     if general_path and not Path(general_path).is_file():
@@ -49,7 +66,9 @@ def main() -> None:
     gaze_ranked = sorted(gaze, key=lambda head: abs(gaze[head]), reverse=True)
     control_draws = max(20, int(config.get("control_draws", 20)))
     for k in ((2,) if args.smoke else (10, 25, 50)):
-        selected = [(row["layer"], row["head"]) for row in ranking[:k]]
+        if len(selection_ranking) < k:
+            continue
+        selected = [(row["layer"], row["head"]) for row in selection_ranking[:k]]
         gaze_set = set(gaze_ranked[:k]); selected_set = set(selected)
         overlap_rows.append({"k": k, "intersection": len(selected_set & gaze_set), "union": len(selected_set | gaze_set), "jaccard": len(selected_set & gaze_set) / len(selected_set | gaze_set)})
         families = {
@@ -102,8 +121,9 @@ def main() -> None:
         len(seed_rankings) >= 3
         and len(finite_stability) == len(stability)
         and all(value >= minimum_stability for value in finite_stability)
+        and len(eligible_ranking) >= 50
     )
-    status = {"valid": True, "label": "instrumentation smoke test" if args.smoke else ("methods-based reproduction" if passes_stability else "failed calibration"), "n_heads": len(ranking), "control_draws": control_draws, "cross_seed_runs": len(seed_rankings), "cross_seed_repeats": len(repeat_paths), "cross_seed_status": "computed" if len(seed_rankings) >= 3 else "computationally pending", "minimum_stability_spearman": minimum_stability, "passes_stability_gate": passes_stability, "general_causal_importance": "provided" if general_path and Path(general_path).is_file() else "unavailable; fully matched controls intentionally withheld", "figures": [str(path) for path in figures]}
+    status = {"valid": True, "label": "instrumentation smoke test" if args.smoke else ("methods-based reproduction" if passes_stability else "failed calibration"), "n_heads": len(ranking), "bidirectional_positive_heads": len(eligible_ranking), "required_top_k_available": len(eligible_ranking) >= 50, "control_draws": control_draws, "cross_seed_runs": len(seed_rankings), "cross_seed_repeats": len(repeat_paths), "cross_seed_status": "computed" if len(seed_rankings) >= 3 else "computationally pending", "minimum_stability_spearman": minimum_stability, "passes_stability_gate": passes_stability, "general_causal_importance": "provided" if general_path and Path(general_path).is_file() else "unavailable; fully matched controls intentionally withheld", "figures": [str(path) for path in figures]}
     status_path = args.output_dir / "summary.json"; status_path.write_text(json.dumps(status, indent=2), encoding="utf-8")
     report_path=args.output_dir/"report.md";report_path.write_text("\n".join(["# Counting-head discovery report","",f"- Label: {status['label']}","- Heads are ranked by symmetric bidirectional candidate-margin shift, not attention mass.",f"- Runtime-verified architecture: {n_layers} layers × {n_heads} heads.",f"- Matched-control draws per family: {control_draws}.",f"- Cross-seed rank status: {status['cross_seed_status']}.","- Do not declare count heads until locked necessity/sufficiency, constant-complexity, answer-code, sham, relocation, renderer-transfer, and matched-control gates pass.","","## PNG files","",*[f"- `{path.name}`" for path in figures]]),encoding="utf-8")
     manifest_inputs=[args.config, source, Path(config["gaze_ranking"])]
@@ -151,10 +171,9 @@ def stability_row(
         "n_pairs_half_1": n_pairs_left,
         "n_pairs_half_2": n_pairs_right,
         "n_heads": len(left),
-        # The discovery ranking is magnitude-based, so this is the primary
-        # stability statistic. Preserve signed stability separately to expose
-        # role reversals rather than hiding them.
-        "spearman_rho": magnitude,
+        # Functional discovery is direction-sensitive.  A head whose sign
+        # reverses across splits/seeds has not replicated its causal role.
+        "spearman_rho": signed,
         "spearman_rho_magnitude": magnitude,
         "spearman_rho_signed": signed,
     }

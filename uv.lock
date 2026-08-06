@@ -2952,6 +2952,9 @@ mechanistic = [
     { name = "peft" },
     { name = "scikit-learn", version = "1.7.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
     { name = "scikit-learn", version = "1.9.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
+    { name = "scipy", version = "1.15.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
+    { name = "scipy", version = "1.17.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.11.*'" },
+    { name = "scipy", version = "1.18.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
 ]
 paligemma = [
     { name = "accelerate" },
@@ -2981,6 +2984,7 @@ requires-dist = [
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.0.0" },
     { name = "qwen-vl-utils", marker = "extra == 'qwen'", specifier = ">=0.0.8" },
     { name = "scikit-learn", marker = "extra == 'mechanistic'", specifier = ">=1.5.0" },
+    { name = "scipy", marker = "extra == 'mechanistic'", specifier = ">=1.11.0" },
     { name = "torch", marker = "extra == 'paligemma'", specifier = ">=2.3.0" },
     { name = "torch", marker = "extra == 'qwen'", specifier = ">=2.4.0,<2.8.0" },
     { name = "torchvision", marker = "extra == 'paligemma'", specifier = ">=0.18.0" },

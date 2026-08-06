@@ -132,6 +132,15 @@ bash scripts/run_neuronic_mechanistic_heads.sh overnight-smoke-resume
 This avoids replacing the full prepared datasets with smoke-sized generator
 outputs and skips the multi-hour MMMC preparation stage.
 
+After a synthetic-renderer fix, refresh only the generated counting/search
+manifests and point/Waldo images while retaining the already-audited MMMC and
+VLMBias preparations:
+
+```bash
+bash scripts/run_neuronic_mechanistic_heads.sh refresh-generated-data
+bash scripts/run_neuronic_mechanistic_heads.sh overnight-smoke-resume
+```
+
 The explicit full-suite command first runs all of those gates and then submits
 the matched LoRA conditions, behavioral calibrations, all 36-layer discovery
 arrays, aggregations, matched controls, locked validations, detector/gated

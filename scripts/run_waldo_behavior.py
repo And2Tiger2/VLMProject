@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import csv
 import json
+import math
 import re
 from pathlib import Path
 from typing import Any
@@ -71,7 +72,13 @@ def parse_result(task:str,text:str,expected:str)->tuple[str,bool,float|str]:
         ax,ay=float(actual.group(1)),float(actual.group(2));tx,ty=float(truth.group(1)),float(truth.group(2));error=((ax-tx)**2+(ay-ty)**2)**.5;return f"point=({ax:.3f},{ay:.3f})",error<=.05,error
     actual=CELL_RE.search(text);truth=CELL_RE.search(expected)
     if not actual or not truth:return "",False,""
-    return actual.group(1),int(actual.group(1))==int(truth.group(1)),abs(int(actual.group(1))-int(truth.group(1)))
+    actual_index=int(actual.group(1));truth_index=int(truth.group(1))
+    correct=actual_index==truth_index
+    if task=="four_candidate_selection":
+        return actual.group(1),correct,""
+    actual_row,actual_column=divmod(actual_index,10);truth_row,truth_column=divmod(truth_index,10)
+    error=math.hypot(actual_column-truth_column,actual_row-truth_row)
+    return actual.group(1),correct,error
 
 
 def summarize(rows:list[dict[str,Any]])->dict[str,Any]:

@@ -64,7 +64,7 @@
 
 ## Passed
 
-- The complete CPU unit/integration suite passes in the audited checkout (235
+- The complete CPU unit/integration suite passes in the audited checkout (245
   tests in the final local audit).
 - Both synthetic generator smokes write real schemas, images, masks, pairs,
   grouped splits, manifests, input/output hashes, and resume markers.

@@ -215,6 +215,15 @@ def test_attention_transplant_and_knockout_are_normalized() -> None:
     assert knocked[..., 1].item() == 0.0
 
 
+def test_attention_transplant_accepts_bfloat16_rounding() -> None:
+    recipient = torch.tensor(
+        [[[[0.3359375, 0.3359375, 0.33203125]]]], dtype=torch.bfloat16
+    )
+    donor = recipient.clone()
+    result = transplant_attention_map(recipient, donor)
+    assert result.probabilities.dtype == torch.bfloat16
+
+
 def test_attention_normalization_guard_uses_model_dtype_precision() -> None:
     # This is representative of the small row-sum drift observed after Qwen's
     # float32 softmax is cast back to bfloat16.

@@ -100,6 +100,90 @@ def test_distractor_scan_uses_matched_low_decoy_difference() -> None:
     ) in source
 
 
+def test_functional_head_rankings_preserve_expected_causal_sign() -> None:
+    count_controls = (ROOT / "scripts/analyze_count_head_controls.py").read_text(
+        encoding="utf-8"
+    )
+    count_validation = (ROOT / "scripts/run_counting_head_validation.py").read_text(
+        encoding="utf-8"
+    )
+    point_validation = (ROOT / "scripts/run_point_head_ablation.py").read_text(
+        encoding="utf-8"
+    )
+    assert 'key=lambda row: row["count_causal_score"], reverse=True' in count_controls
+    assert '"spearman_rho": signed' in count_controls
+    assert '"bidirectional_positive": int(forward > 0 and reverse > 0)' in count_controls
+    assert 'key=lambda row: float(row["count_causal_score"]), reverse=True' in count_validation
+    assert 'row.get("bidirectional_positive", 0)' in count_validation
+    assert "key=lambda head: ranking[head], reverse=True" in point_validation
+    assert "key=lambda head: abs(ranking[head]), reverse=True" not in point_validation
+
+
+def test_point_head_selection_requires_bidirectional_effects() -> None:
+    module = load_script("run_point_head_ablation.py")
+    rows = [
+        {"layer": "0", "head": "0", "forward_margin_shift": "2", "reverse_margin_shift": "1"},
+        {"layer": "0", "head": "1", "forward_margin_shift": "4", "reverse_margin_shift": "-1"},
+    ]
+    eligible = module.bidirectional_positive_heads(rows)
+    assert eligible == {(0, 0)}
+    selected = module.select_positive_function_heads(
+        {(0, 0): 1.5, (0, 1): 3.0},
+        requested_k=2,
+        allow_unsigned_fallback=False,
+        eligible_heads=eligible,
+    )
+    assert selected == [(0, 0)]
+    assert module.bidirectional_positive_heads(
+        [{"layer": "0", "head": "0", "distractor_suppression_score": "1"}]
+    ) is None
+
+
+def test_point_rmse_uses_global_assignment_not_greedy_matching() -> None:
+    module = load_script("evaluate_point_search.py")
+    # Greedy matching assigns (1, 0) to (0, 0), leaving a very poor second
+    # match.  The globally optimal assignment has squared costs 4 and 1.
+    assert module.point_rmse([(1, 0), (-2, 0)], [(0, 0), (2, 0)]) == pytest.approx(
+        (5 / 2) ** 0.5
+    )
+
+
+def test_waldo_grid_error_is_spatial_and_candidate_labels_have_no_distance() -> None:
+    module = load_script("run_waldo_behavior.py")
+    _, correct, error = module.parse_result("invisible_grid", "cell=11", "cell=00")
+    assert not correct
+    assert error == pytest.approx(2**0.5)
+    _, correct, error = module.parse_result(
+        "four_candidate_selection", "candidate=3", "candidate=1"
+    )
+    assert not correct
+    assert error == ""
+
+
+def test_atlas_head_sets_do_not_merge_opposite_causal_roles() -> None:
+    module = load_script("render_mechanistic_head_reports.py")
+    rows = [
+        {"layer": 0, "head": 0, "count_causal_score": 2.0, "mmmc_signed_score": 3.0},
+        {"layer": 0, "head": 1, "count_causal_score": -9.0, "mmmc_signed_score": -4.0},
+        {"layer": 0, "head": 2, "count_causal_score": 1.0, "mmmc_signed_score": 0.5},
+    ]
+    sets = module._functional_head_sets(
+        rows,
+        columns=["count_causal_score", "mmmc_signed_score"],
+        k=2,
+    )
+    assert [row["head"] for row in sets["count_causal_score"]] == [0, 2]
+    assert [row["head"] for row in sets["mmmc_signed_score_positive"]] == [0, 2]
+    assert [row["head"] for row in sets["mmmc_signed_score_negative"]] == [1]
+
+
+def test_point_training_honors_requested_device_mapping() -> None:
+    source = (ROOT / "scripts/train_point_search.py").read_text(encoding="utf-8")
+    assert "device_map=args.device_map" in source
+    assert "device_map=_resolve_device_map(device_map, torch)" in source
+    assert 'device_map="auto"' not in source
+
+
 def test_failed_behavioral_calibrations_fail_slurm_prerequisites() -> None:
     expectations = {
         "run_counting_behavior.py": "counting behavioral calibration failed",
@@ -350,6 +434,21 @@ def test_mechanistic_extras_and_frozen_sync_cover_training_runtime() -> None:
     assert "uv sync --frozen --extra qwen --extra mechanistic --extra dev" in wrapper
     assert "overnight-smoke-resume" in wrapper
     assert "--profile smoke --reuse-prepared" in wrapper
+    assert "refresh-generated-data" in wrapper
+    assert "generate_counting_data.py" in wrapper
+    assert "--seed 260318523 --resume" in wrapper
+    assert "generate_point_search_data.py" in wrapper
+    assert "--seed 260525427 --overwrite" in wrapper
+
+
+def test_preparation_uses_study_specific_generator_seeds() -> None:
+    source = (ROOT / "scripts/slurm_neuronic_mechanistic_prepare.sh").read_text(
+        encoding="utf-8"
+    )
+    assert 'COUNT_SEED="${COUNT_SEED:-${SEED:-260318523}}"' in source
+    assert 'POINT_SEED="${POINT_SEED:-260525427}"' in source
+    assert 'VLMBIAS_SEED="${VLMBIAS_SEED:-260519250}"' in source
+    assert 'MMMC_SEED="${MMMC_SEED:-260519250}"' in source
 
 
 def test_paper_style_maci_sets_require_signed_head_counts() -> None:
@@ -573,6 +672,42 @@ def test_point_locked_claim_gate_requires_double_dissociation_and_decoy_effect()
         if row["study"] == "search" and row["head_set"] == "search_top"
     )["mean_margin_change"] = 0.1
     assert not module.point_claim_checks(failed)["all_pass"]
+
+
+def test_point_function_head_selection_requires_positive_scores() -> None:
+    module = load_script("run_point_head_ablation.py")
+    ranking = {(0, 0): 2.0, (0, 1): -8.0, (1, 0): 1.0}
+    assert module.select_positive_function_heads(
+        ranking, requested_k=3, allow_unsigned_fallback=False
+    ) == [(0, 0), (1, 0)]
+    assert module.select_positive_function_heads(
+        ranking, requested_k=3, allow_unsigned_fallback=True
+    ) == [(0, 0), (1, 0), (0, 1)]
+
+
+def test_point_claim_gate_requires_complete_positive_head_set() -> None:
+    module = load_script("run_point_head_ablation.py")
+    aggregate = [
+        {
+            "study": study,
+            "head_set": f"{study}_top",
+            "n_heads": 2,
+            "mean_margin_change": -1.0,
+        }
+        for study in ("search", "verification", "distractor_suppression")
+    ]
+    checks = module.point_claim_checks(
+        aggregate,
+        required_head_counts={
+            "search": 30,
+            "verification": 30,
+            "distractor_suppression": 30,
+        },
+    )
+    assert not checks["all_pass"]
+    assert not checks["per_study"]["search"][
+        "required_positive_head_count_available"
+    ]
 
 
 def test_vlmbias_locked_claim_gate_requires_direction_controls_and_retention() -> None:

@@ -8,7 +8,7 @@ from typing import Any
 
 from PIL import Image
 
-from adapters.qwen25_vl import _resolve_torch_dtype
+from adapters.qwen25_vl import _resolve_device_map, _resolve_torch_dtype
 from vlm_eval.mechanistic_heads.config import (
     add_standard_run_arguments,
     effective_limit,
@@ -82,6 +82,7 @@ def main() -> None:
             smoke=args.smoke,
             resume=args.resume,
             overwrite=args.overwrite,
+            device_map=args.device_map,
         )
     summary = args.output_dir / "training_summary.json"
     summary.write_text(json.dumps(result, indent=2), encoding="utf-8")
@@ -110,6 +111,7 @@ def train_condition(
     smoke: bool,
     resume: bool,
     overwrite: bool,
+    device_map: str,
 ) -> dict[str, Any]:
     try:
         import torch
@@ -125,7 +127,9 @@ def train_condition(
     model_id = str(config.get("model_id", "Qwen/Qwen3-VL-8B-Instruct"))
     processor = AutoProcessor.from_pretrained(model_id)
     model = Qwen3VLForConditionalGeneration.from_pretrained(
-        model_id, torch_dtype=_resolve_torch_dtype(torch), device_map="auto"
+        model_id,
+        torch_dtype=_resolve_torch_dtype(torch),
+        device_map=_resolve_device_map(device_map, torch),
     )
     training_mode = str(config.get("training_mode", "lora"))
     if training_mode == "lora":

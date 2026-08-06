@@ -8,6 +8,9 @@ import json
 import re
 from pathlib import Path
 
+import numpy as np
+from scipy.optimize import linear_sum_assignment
+
 from PIL import Image
 
 from vlm_eval.mechanistic_heads.config import add_standard_run_arguments, effective_limit, load_json_config, prepare_output_directory
@@ -76,11 +79,15 @@ def main() -> None:
 
 def point_rmse(predicted: list[tuple[int, int]], expected: list[tuple[int, int]]) -> float | None:
     if not expected or len(predicted) != len(expected): return None
-    remaining = list(predicted); squared = []
-    for ex, ey in expected:
-        best = min(range(len(remaining)), key=lambda idx: (remaining[idx][0]-ex)**2 + (remaining[idx][1]-ey)**2)
-        px, py = remaining.pop(best); squared.append((px-ex)**2 + (py-ey)**2)
-    return (sum(squared) / len(squared)) ** 0.5
+    predicted_array = np.asarray(predicted, dtype=np.float64)
+    expected_array = np.asarray(expected, dtype=np.float64)
+    squared_distances = (
+        (expected_array[:, None, :] - predicted_array[None, :, :]) ** 2
+    ).sum(axis=-1)
+    expected_indices, predicted_indices = linear_sum_assignment(squared_distances)
+    return float(
+        np.sqrt(squared_distances[expected_indices, predicted_indices].mean())
+    )
 
 
 def read_jsonl(path: Path) -> list[dict]:

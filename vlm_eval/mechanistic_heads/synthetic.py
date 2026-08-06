@@ -383,14 +383,23 @@ def waldo_distractor_centers(
 ) -> list[tuple[int, int]]:
     """Return deterministic distractor locations shared by matched scenes."""
     rng = random.Random(stable_seed(seed, "waldo-like", scene_id, "matched-centers"))
+    forbidden = set(int(cell) for cell in forbidden_cells)
+    if any(cell < 0 or cell >= 100 for cell in forbidden):
+        raise ValueError("forbidden Waldo cells must lie in 0..99")
     cell_size = size // 10
-    forbidden = [
-        ((cell % 10) * cell_size + cell_size // 2, (cell // 10) * cell_size + cell_size // 2)
-        for cell in forbidden_cells
-    ]
-    return _sample_centers(
-        rng, clutter, size=size, margin=18, min_distance=28, forbidden=forbidden
-    )
+    centers: list[tuple[int, int]] = []
+    attempts = 0
+    while len(centers) < clutter and attempts < clutter * 1000:
+        attempts += 1
+        point = (rng.randint(18, size - 18), rng.randint(18, size - 18))
+        cell = (point[1] // cell_size) * 10 + point[0] // cell_size
+        if cell in forbidden:
+            continue
+        if all(math.dist(point, previous) >= 28 for previous in centers):
+            centers.append(point)
+    if len(centers) != clutter:
+        raise RuntimeError(f"could place only {len(centers)}/{clutter} Waldo distractors")
+    return centers
 
 
 def _sample_centers(
