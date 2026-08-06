@@ -12,6 +12,7 @@ from vlm_eval.mechanistic_heads.config import add_standard_run_arguments, load_j
 from vlm_eval.mechanistic_heads.controls import layer_matched_control_draws, multivariate_matched_control_draws
 from vlm_eval.mechanistic_heads.reproducibility import write_run_manifest
 from vlm_eval.mechanistic_heads.io import write_tsv
+from vlm_eval.mechanistic_heads.preflight import require_current_artifact
 
 
 def main() -> None:
@@ -22,11 +23,9 @@ def main() -> None:
     outputs = [args.output_dir / name for name in ("count_head_ranking.tsv", "count_head_controls.tsv", "count_gaze_overlap.tsv", "count_head_stability.tsv")]
     prepare_output_directory(args.output_dir, resume=args.resume, overwrite=args.overwrite, known_outputs=tuple(path.name for path in outputs))
     source = Path(config["count_scores"])
+    source_manifest = require_current_artifact(source)
     rows = read_tsv(source)
-    run_manifest = source.parent / "run_manifest.json"
-    if not run_manifest.is_file():
-        raise RuntimeError("count score run_manifest.json is required to verify architecture")
-    architecture = json.loads(run_manifest.read_text(encoding="utf-8"))["config"]["architecture"]
+    architecture = source_manifest["config"]["architecture"]
     n_layers, n_heads = int(architecture["n_layers"]), int(architecture["n_heads"])
     if (n_layers, n_heads) != (36, 32): raise RuntimeError(f"unexpected Qwen3 architecture: {(n_layers, n_heads)}")
     gaze = {(int(row["layer"]), int(row["head"])): float(row.get("score", row.get("gaze_score", 0))) for row in json.loads(Path(config["gaze_ranking"]).read_text(encoding="utf-8"))}
@@ -39,7 +38,10 @@ def main() -> None:
     write_tsv(outputs[0], ranking)
     features = {(row["layer"], row["head"]): {key: float(row[key]) for key in ("image_attention", "projected_output_norm", "attention_entropy", "gaze_score")} for row in ranking}
     general_path = config.get("general_causal_importance")
+    if general_path and not Path(general_path).is_file():
+        raise RuntimeError(f"required general causal importance artifact is missing: {general_path}")
     if general_path and Path(general_path).is_file():
+        require_current_artifact(Path(general_path))
         for row in read_tsv(Path(general_path)):
             features[(int(row["layer"]), int(row["head"]))]["general_causal_importance"] = float(row["general_causal_importance"])
     control_rows = []
@@ -67,7 +69,12 @@ def main() -> None:
                 for layer, head in heads: control_rows.append({"selected_k": k, "control_family": family, "draw": draw, "layer": layer, "head": head})
     write_tsv(outputs[1], control_rows); write_tsv(outputs[2], overlap_rows)
     stability = split_half_stability(rows)
-    repeat_paths = [Path(value) for value in config.get("count_score_repeats", []) if Path(value).is_file()]
+    configured_repeats = [Path(value) for value in config.get("count_score_repeats", [])]
+    missing_repeats = [path for path in configured_repeats if not path.is_file()]
+    if missing_repeats:
+        raise RuntimeError(f"configured count-score repeats are missing: {missing_repeats}")
+    for path in configured_repeats: require_current_artifact(path)
+    repeat_paths = configured_repeats
     repeat_rankings = [aggregate_head_scores(read_tsv(path)) for path in repeat_paths]
     for left in range(len(repeat_rankings)):
         for right in range(left + 1, len(repeat_rankings)):
@@ -75,10 +82,12 @@ def main() -> None:
             stability.append({"comparison": f"cross_seed_{left}_{right}", "n_pairs_half_1": "", "n_pairs_half_2": "", "n_heads": len(common), "spearman_rho": correlation(ranks([repeat_rankings[left][head] for head in common]), ranks([repeat_rankings[right][head] for head in common])) if common else None})
     write_tsv(outputs[3], stability)
     figures = render(ranking, stability, args.output_dir, n_layers=n_layers, n_heads=n_heads)
-    status = {"valid": True, "label": "methods-based reproduction", "n_heads": len(ranking), "control_draws": control_draws, "cross_seed_repeats": len(repeat_rankings), "cross_seed_status": "computed" if len(repeat_rankings) >= 2 else "computationally pending", "general_causal_importance": "provided" if general_path else "unavailable; fully matched controls intentionally withheld", "figures": [str(path) for path in figures]}
+    status = {"valid": True, "label": "methods-based reproduction", "n_heads": len(ranking), "control_draws": control_draws, "cross_seed_repeats": len(repeat_rankings), "cross_seed_status": "computed" if len(repeat_rankings) >= 2 else "computationally pending", "general_causal_importance": "provided" if general_path and Path(general_path).is_file() else "unavailable; fully matched controls intentionally withheld", "figures": [str(path) for path in figures]}
     status_path = args.output_dir / "summary.json"; status_path.write_text(json.dumps(status, indent=2), encoding="utf-8")
     report_path=args.output_dir/"report.md";report_path.write_text("\n".join(["# Counting-head discovery report","","- Label: methods-based reproduction","- Heads are ranked by symmetric bidirectional candidate-margin shift, not attention mass.",f"- Runtime-verified architecture: {n_layers} layers × {n_heads} heads.",f"- Matched-control draws per family: {control_draws}.",f"- Cross-seed rank status: {status['cross_seed_status']}.","- Do not declare count heads until locked necessity/sufficiency, constant-complexity, answer-code, sham, relocation, renderer-transfer, and matched-control gates pass.","","## PNG files","",*[f"- `{path.name}`" for path in figures]]),encoding="utf-8")
-    write_run_manifest(args.output_dir, config=config, seeds={"controls": args.seed}, inputs=[args.config, source, Path(config["gaze_ranking"])], outputs=[*outputs, *figures, status_path,report_path], status="complete", repo_root=Path.cwd())
+    manifest_inputs=[args.config, source, Path(config["gaze_ranking"])]
+    if general_path and Path(general_path).is_file(): manifest_inputs.append(Path(general_path))
+    write_run_manifest(args.output_dir, config=config, seeds={"controls": args.seed}, inputs=manifest_inputs, outputs=[*outputs, *figures, status_path,report_path], status="complete", repo_root=Path.cwd())
     print(json.dumps(status, indent=2))
 
 

@@ -89,6 +89,25 @@ def require_completed_manifest(
     return manifest
 
 
+def require_current_artifact(path: Path) -> dict:
+    """Require an exact, completed artifact produced by the current checkout.
+
+    Scientific stages use this for derived rankings, detectors, and summaries.
+    Prepared datasets are intentionally handled separately because they may be
+    reused across commits after their complete input/output hashes are checked.
+    """
+    if not path.is_file():
+        raise RuntimeError(f"required current-run artifact is missing: {path}")
+    try:
+        return require_completed_manifest(
+            path.parent, expected_outputs=(path,), require_current_git=True
+        )
+    except RuntimeError as exc:
+        raise RuntimeError(
+            f"required artifact is not a complete output of the current Git SHA: {path}: {exc}"
+        ) from exc
+
+
 def require_calibration_report(path: Path, *, boolean_key: str | None = None) -> dict:
     if not path.is_file():
         raise RuntimeError(f"required calibration report is missing: {path}")

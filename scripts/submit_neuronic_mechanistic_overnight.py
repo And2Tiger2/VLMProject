@@ -420,6 +420,24 @@ def require_valid_prepared_data(repo: Path) -> None:
         raise RuntimeError(
             "prepared MMMC data predates source-fingerprint validation; rerun preparation"
         )
+    if mmmc.get("same_image_prompt_contrast") is not True:
+        raise RuntimeError(
+            "prepared MMMC pairs do not hold the conflict image fixed across prompts; rerun preparation"
+        )
+    mmmc_pairs = repo / "segments/mechanistic_heads_qwen3_8b/data/mmmc/prepared/object_pairs.jsonl"
+    for line in mmmc_pairs.read_text(encoding="utf-8").splitlines():
+        if line.strip():
+            row = json.loads(line)
+            if row["donor_image"] != row["recipient_image"]:
+                raise RuntimeError(
+                    "prepared MMMC contains a clean/conflict pair with different images; rerun preparation"
+                )
+    if point.get("waldo_pair_masks_complete") is not True:
+        raise RuntimeError("prepared Waldo-like causal pairs lack exact target/decoy masks")
+    if point.get("waldo_relocation_distractors_matched") is not True:
+        raise RuntimeError("prepared Waldo-like relocation pairs do not hold distractors fixed")
+    if len(point.get("four_candidate_target_indices", [])) < 2:
+        raise RuntimeError("prepared four-candidate task has a constant target slot")
 
 
 if __name__ == "__main__":

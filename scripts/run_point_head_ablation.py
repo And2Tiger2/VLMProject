@@ -14,7 +14,7 @@ from PIL import Image
 from vlm_eval.mechanistic_heads.causal import candidate_margin, projected_head_scaling
 from vlm_eval.mechanistic_heads.config import add_standard_run_arguments, effective_limit, load_json_config, prepare_output_directory
 from vlm_eval.mechanistic_heads.controls import layer_matched_control_draws, multivariate_matched_control_draws
-from vlm_eval.mechanistic_heads.preflight import require_scientific_validation, validation_path_from_config
+from vlm_eval.mechanistic_heads.preflight import require_current_artifact, require_scientific_validation, validation_path_from_config
 from vlm_eval.mechanistic_heads.qwen3_runtime import checkpoint_manifest_inputs, runtime_from_config
 from vlm_eval.mechanistic_heads.reproducibility import referenced_image_paths, seed_everything, write_run_manifest
 from vlm_eval.mechanistic_heads.schema import read_paired_jsonl
@@ -33,18 +33,32 @@ def main() -> None:
     general = {}
     general_path = Path(config["general_causal_importance"])
     if general_path.is_file():
+        require_current_artifact(general_path)
         general = {(int(row["layer"]), int(row["head"])): float(row["general_causal_importance"]) for row in read_tsv(general_path)}
     elif not args.smoke:
         raise RuntimeError("full point-head validation requires general causal importance controls")
     rows: list[dict[str, Any]] = []
     inputs: list[Path] = [args.config, *checkpoint_manifest_inputs(config, checkpoint_override=args.checkpoint)]
+    cross_task_sets: dict[str, list[tuple[int, int]]] = {}
+    for study in config["studies"]:
+        score_path = Path(study["scores"])
+        require_current_artifact(score_path)
+        source_rows = read_tsv(score_path)
+        ranking = aggregate_scores(source_rows, str(study["score_column"]))
+        ordered = sorted(ranking, key=lambda head: abs(ranking[head]), reverse=True)
+        k = min(2 if args.smoke else int(study.get("k", 30)), len(ordered))
+        cross_task_sets[f"{study['name']}_top"] = ordered[:k]
     for study_index, study in enumerate(config["studies"]):
         score_path = Path(study["scores"]); pair_path = Path(study["paired_dataset"]); inputs.extend([score_path, pair_path])
+        require_current_artifact(score_path)
         source_rows = read_tsv(score_path)
         ranking = aggregate_scores(source_rows, str(study["score_column"]))
         ordered = sorted(ranking, key=lambda head: abs(ranking[head]), reverse=True)
         k = min(2 if args.smoke else int(study.get("k", 30)), len(ordered)); selected = ordered[:k]; low = list(reversed(ordered))[:k]
-        sets = {"top": selected, "bottom": low}
+        # Apply every discovered functional set to every task. This is the
+        # causal task-by-head-set matrix needed for a real double dissociation.
+        sets = dict(cross_task_sets)
+        sets[f"{study['name']}_bottom"] = low
         n_draws=max(20,int(config.get("random_draws",20)))
         families={}
         if general:
@@ -57,7 +71,7 @@ def main() -> None:
                 families[name]=multivariate_matched_control_draws(selected,diagnostics,feature_names=columns,n_draws=n_draws,seed=args.seed+study_index*20+offset)
         for family,draws in families.items():
             if args.smoke:draws=draws[:1]
-            for draw,heads in enumerate(draws):sets[f"{family}_random_{draw:02d}"]=heads
+            for draw,heads in enumerate(draws):sets[f"{study['name']}_{family}_random_{draw:02d}"]=heads
         pairs = [pair for pair in read_paired_jsonl(pair_path) if pair.split == str(study.get("split", "locked_test"))]
         limit = effective_limit(args)
         if limit is None and config.get("max_examples_per_study") is not None: limit=int(config["max_examples_per_study"])
@@ -78,7 +92,7 @@ def main() -> None:
                 rows.append({"study": study["name"], "pair_id": pair.pair_id, "head_set": set_name, "n_heads": len(heads), "baseline_margin": baseline, "ablated_margin": ablated, "margin_change": ablated - baseline, "preference_flip": int(baseline >= 0 and ablated < 0)})
     write_tsv(output, rows)
     aggregate = summarize(rows)
-    summary = {"valid": True, "label": "instrumentation smoke test" if args.smoke else "locked confirmation", "architecture": vars(runtime.architecture), "aggregate": aggregate, "control_policy": "20 joint matches on layer, image attention, projected norm, entropy, gaze, and general causal importance per selected set in full mode"}
+    summary = {"valid": True, "label": "instrumentation smoke test" if args.smoke else "locked confirmation", "architecture": vars(runtime.architecture), "aggregate": aggregate, "cross_task_head_sets": sorted(cross_task_sets), "control_policy": "Every discovered point-function set is ablated on every locked task; each task also uses 20 joint matches on layer, image attention, projected norm, entropy, gaze, and general causal importance in full mode"}
     summary_path = args.output_dir / "summary.json"; summary_path.write_text(json.dumps(summary, indent=2), encoding="utf-8")
     write_run_manifest(args.output_dir, config={**config, "architecture": vars(runtime.architecture)}, seeds={"global": args.seed}, inputs=inputs, outputs=[output, summary_path], status="complete", repo_root=Path.cwd())
     print(json.dumps(summary, indent=2))

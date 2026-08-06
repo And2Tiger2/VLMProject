@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any
 
 from vlm_eval.mechanistic_heads.config import add_standard_run_arguments, load_json_config, prepare_output_directory
+from vlm_eval.mechanistic_heads.preflight import require_current_artifact
 from vlm_eval.mechanistic_heads.reproducibility import write_run_manifest
 
 
@@ -20,6 +21,7 @@ def main() -> None:
     for source in config["sources"]:
         path=Path(source["path"])
         if not path.is_file():continue
+        require_current_artifact(path)
         inputs.append(path);families[source["name"]]=aggregate(path,source["column"],source.get("contrast"))
     minimum=int(config.get("minimum_families",2))
     if len(families)<minimum:raise RuntimeError(f"general causal importance requires {minimum} completed score families; found {len(families)}")

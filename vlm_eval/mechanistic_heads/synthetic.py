@@ -207,6 +207,7 @@ def render_waldo_like_scene(
     size: int = 400,
     target_scale: float = 1.0,
     background: tuple[int, int, int] = (225, 235, 220),
+    distractor_centers: list[tuple[int, int]] | None = None,
 ) -> RenderedScene:
     """Render an original four-feature conjunction-search character scene."""
 
@@ -222,9 +223,15 @@ def render_waldo_like_scene(
         (target_cell % 10) * (size // 10) + size // 20,
         (target_cell // 10) * (size // 10) + size // 20,
     )
-    centers = [target_center] + _sample_centers(
-        rng, clutter, size=size, margin=18, min_distance=28, forbidden=[target_center]
-    )
+    if distractor_centers is None:
+        distractor_centers = _sample_centers(
+            rng, clutter, size=size, margin=18, min_distance=28, forbidden=[target_center]
+        )
+    elif len(distractor_centers) != clutter:
+        raise ValueError(
+            f"expected {clutter} distractor centers, received {len(distractor_centers)}"
+        )
+    centers = [target_center, *distractor_centers]
     for index, center in enumerate(centers):
         is_target = index == 0 and target_present
         incorrect_binding = False
@@ -258,6 +265,26 @@ def render_waldo_like_scene(
             }
         )
     return RenderedScene(image=image, masks=masks, objects=objects)
+
+
+def waldo_distractor_centers(
+    *,
+    seed: int,
+    scene_id: str,
+    clutter: int,
+    forbidden_cells: list[int],
+    size: int = 400,
+) -> list[tuple[int, int]]:
+    """Return deterministic distractor locations shared by matched scenes."""
+    rng = random.Random(stable_seed(seed, "waldo-like", scene_id, "matched-centers"))
+    cell_size = size // 10
+    forbidden = [
+        ((cell % 10) * cell_size + cell_size // 2, (cell // 10) * cell_size + cell_size // 2)
+        for cell in forbidden_cells
+    ]
+    return _sample_centers(
+        rng, clutter, size=size, margin=18, min_distance=28, forbidden=forbidden
+    )
 
 
 def _sample_centers(

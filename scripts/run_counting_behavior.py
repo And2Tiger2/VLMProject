@@ -12,6 +12,7 @@ from pathlib import Path
 from PIL import Image
 
 from vlm_eval.mechanistic_heads.config import add_standard_run_arguments, effective_limit, load_json_config, prepare_output_directory
+from vlm_eval.mechanistic_heads.preflight import require_scientific_validation, validation_path_from_config
 from vlm_eval.mechanistic_heads.qwen3_runtime import Qwen3MechanisticRuntime
 from vlm_eval.mechanistic_heads.reproducibility import referenced_image_paths, seed_everything, write_run_manifest
 
@@ -22,6 +23,8 @@ def main() -> None:
     parser.add_argument("--device-map", default="cuda")
     args = parser.parse_args()
     config = load_json_config(args.config)
+    if not args.smoke:
+        require_scientific_validation(validation_path_from_config(config))
     output = args.output_dir / "counting_behavior.tsv"
     prepare_output_directory(args.output_dir, resume=args.resume, overwrite=args.overwrite, known_outputs=(output.name,))
     seed_everything(args.seed)

@@ -7,5 +7,20 @@
     "point_answer": "segments/mechanistic_heads_qwen3_8b/runs/point_behavior/point_answer/behavior.tsv",
     "shuffled_point_answer": "segments/mechanistic_heads_qwen3_8b/runs/point_behavior/shuffled_point_answer/behavior.tsv"
   },
-  "centroid_summary": "segments/mechanistic_heads_qwen3_8b/runs/point_attention_centroids/full/centroid_rmse_by_layer.tsv"
+  "centroid_summary": "segments/mechanistic_heads_qwen3_8b/runs/point_attention_centroids/full/centroid_rmse_by_layer.tsv",
+  "head_ablation": "segments/mechanistic_heads_qwen3_8b/runs/point_head_ablation/full/point_head_ablation.tsv",
+  "head_score_sources": {
+    "search": {
+      "path": "segments/mechanistic_heads_qwen3_8b/runs/search_head_scan/full/search_head_scores.tsv",
+      "column": "search_causal_score"
+    },
+    "verification": {
+      "path": "segments/mechanistic_heads_qwen3_8b/runs/verification_head_scan/full/verification_head_scores.tsv",
+      "column": "verification_causal_score"
+    },
+    "distractor_suppression": {
+      "path": "segments/mechanistic_heads_qwen3_8b/runs/distractor_head_scan/full/distractor_head_scores.tsv",
+      "column": "distractor_suppression_score"
+    }
+  }
 }

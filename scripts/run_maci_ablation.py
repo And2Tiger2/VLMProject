@@ -17,7 +17,7 @@ from vlm_eval.mechanistic_heads.config import (
     prepare_output_directory,
 )
 from vlm_eval.mechanistic_heads.qwen3_runtime import Qwen3MechanisticRuntime
-from vlm_eval.mechanistic_heads.preflight import require_calibration_report, require_scientific_validation, validation_path_from_config
+from vlm_eval.mechanistic_heads.preflight import require_calibration_report, require_current_artifact, require_scientific_validation, validation_path_from_config
 from vlm_eval.mechanistic_heads.mmmc import MMMCImages
 from vlm_eval.mechanistic_heads.reproducibility import seed_everything, write_run_manifest
 from vlm_eval.mechanistic_heads.schema import read_paired_jsonl
@@ -30,6 +30,7 @@ def main() -> None:
     parser.add_argument("--cache-dir", type=Path)
     args = parser.parse_args()
     config = load_json_config(args.config)
+    require_current_artifact(Path(config["head_scores"]))
     if not args.smoke:
         require_scientific_validation(validation_path_from_config(config))
         if config.get("stability_report"):
@@ -58,6 +59,7 @@ def main() -> None:
     if not bool(config.get("include_validation_k_sweep", True)):
         conditions = {name: heads for name, heads in conditions.items() if not name.startswith("validation_sweep_")}
     if bool(config.get("matched_control_distributions", False)):
+        require_current_artifact(Path(config["general_causal_importance"]))
         conditions.update(matched_conditions(score_rows, ranking, config=config, n_layers=runtime.architecture.n_layers, n_heads=runtime.architecture.n_heads, seed=args.seed))
     if args.smoke:
         conditions = {key: value for key, value in conditions.items() if key in {"baseline", "driving_top30", "resisting_top40", "random_seed0"}}

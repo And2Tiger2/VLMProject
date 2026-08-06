@@ -14,6 +14,7 @@ from vlm_eval.mechanistic_heads.io import write_tsv
 from vlm_eval.mechanistic_heads.preflight import (
     require_calibration_report,
     require_completed_manifest,
+    require_current_artifact,
     require_scientific_validation,
 )
 from vlm_eval.mechanistic_heads.reproducibility import hash_paths, referenced_image_paths
@@ -250,6 +251,58 @@ def test_completed_manifest_binds_current_sha_inputs_and_outputs(tmp_path: Path)
         )
 
 
+def test_current_artifact_requires_parent_manifest_and_exact_hash(tmp_path: Path) -> None:
+    artifact = tmp_path / "scores.tsv"
+    artifact.write_text("layer\thead\n0\t0\n", encoding="utf-8")
+    with pytest.raises(RuntimeError, match="complete output of the current Git SHA"):
+        require_current_artifact(artifact)
+
+    digest = hashlib.sha256(artifact.read_bytes()).hexdigest()
+    current_sha = subprocess.run(
+        ["git", "rev-parse", "HEAD"], cwd=ROOT, check=True, text=True, capture_output=True
+    ).stdout.strip()
+    (tmp_path / "run_manifest.json").write_text(
+        json.dumps(
+            {
+                "status": "complete",
+                "git_sha": current_sha,
+                "input_sha256": {},
+                "output_sha256": {str(artifact): digest},
+            }
+        ),
+        encoding="utf-8",
+    )
+    require_current_artifact(artifact)
+    artifact.write_text("tampered", encoding="utf-8")
+    with pytest.raises(RuntimeError, match="missing or changed"):
+        require_current_artifact(artifact)
+
+
+def test_afterany_atlas_refuses_stale_scientific_artifacts() -> None:
+    source = (ROOT / "scripts/render_mechanistic_head_reports.py").read_text(
+        encoding="utf-8"
+    )
+    assert "is_current_artifact(path)" in source
+    assert "stale_path_ignored" in source
+
+
+def test_preparation_regenerates_outputs_after_generator_changes() -> None:
+    source = (
+        ROOT / "scripts/slurm_neuronic_mechanistic_prepare.sh"
+    ).read_text(encoding="utf-8")
+    assert source.count("--overwrite") == 4
+    assert "--resume" not in source
+
+
+def test_optional_real_waldo_hashes_source_and_derived_images() -> None:
+    source = (ROOT / "scripts/prepare_real_waldo_transfer.py").read_text(
+        encoding="utf-8"
+    )
+    assert "referenced_image_paths(records)" in source
+    assert "*source_images" in source
+    assert "*derived" in source
+
+
 def test_point_smoke_and_full_checkpoints_are_isolated() -> None:
     source = (ROOT / "scripts/slurm_neuronic_mechanistic_heads.sh").read_text(
         encoding="utf-8"
@@ -282,6 +335,38 @@ def test_waldo_head_discovery_and_locked_validation_families_are_disjoint(
         assert not (by_split["prototype"] & by_split["validation"])
         assert not (by_split["prototype"] & by_split["locked_test"])
         assert not (by_split["validation"] & by_split["locked_test"])
+        assert all(Path(row.donor_mask).is_file() for row in family)
+        assert all(Path(row.recipient_mask).is_file() for row in family)
+
+
+def test_waldo_four_candidate_target_position_is_not_constant(tmp_path: Path) -> None:
+    module = load_script("generate_point_search_data.py")
+    result = module.generate_point_search_datasets(
+        tmp_path,
+        config={"training_scenes": 2, "ood_scenes_per_condition": 1, "waldo_like_scenes": 24},
+        seed=17,
+        smoke=False,
+        limit=None,
+        resume=False,
+    )
+    assert result["valid"]
+    rows = [
+        json.loads(line)
+        for line in (tmp_path / "waldo_like.jsonl").read_text(encoding="utf-8").splitlines()
+    ]
+    present = [row for row in rows if row["target_present"]]
+    candidate_indices = {
+        int(row["tasks"]["four_candidate_selection"].split("=")[1]) for row in present
+    }
+    assert len(candidate_indices) > 1
+    assert all(len(row["masks"]) == len(row["objects"]) + 1 for row in rows)
+
+
+def test_mmmc_prompt_contrast_holds_image_fixed() -> None:
+    source = (ROOT / "scripts/prepare_mmmc.py").read_text(encoding="utf-8")
+    assert 'donor_image=f"hf://{DATASET_ID}/{row[\'source_split\']}/{row[\'conflict_index\']}"' in source
+    assert 'recipient_image=f"hf://{DATASET_ID}/{row[\'source_split\']}/{row[\'conflict_index\']}"' in source
+    assert '"same_image_prompt_contrast": True' in source
 
 
 def test_checkpoint_resume_rejects_changed_run_context(tmp_path: Path) -> None:

@@ -18,7 +18,7 @@ from vlm_eval.naturalbench import NaturalBenchPrediction, extract_naturalbench_a
 from vlm_eval.mechanistic_heads.causal import candidate_margin, capture_prefill, projected_head_scaling
 from vlm_eval.mechanistic_heads.config import add_standard_run_arguments, effective_limit, load_json_config, prepare_output_directory
 from vlm_eval.mechanistic_heads.controls import layer_matched_control_draws, multivariate_matched_control_draws
-from vlm_eval.mechanistic_heads.preflight import require_scientific_validation, validation_path_from_config
+from vlm_eval.mechanistic_heads.preflight import require_current_artifact, require_scientific_validation, validation_path_from_config
 from vlm_eval.mechanistic_heads.qwen3_runtime import Qwen3MechanisticRuntime
 from vlm_eval.mechanistic_heads.reproducibility import seed_everything, write_run_manifest
 from vlm_eval.mechanistic_heads.schema import read_paired_jsonl
@@ -29,11 +29,18 @@ def main() -> None:
     add_standard_run_arguments(parser); parser.add_argument("--device-map", default="cuda")
     args=parser.parse_args(); config=load_json_config(args.config)
     if not args.smoke: require_scientific_validation(validation_path_from_config(config))
+    require_current_artifact(Path(config["head_scores"]))
+    detector_path = Path(config["conflict_detector"]) if config.get("conflict_detector") else None
+    if detector_path is not None and detector_path.is_file():
+        require_current_artifact(detector_path)
+    elif detector_path is not None and not args.smoke:
+        raise RuntimeError(f"locked validation requires the configured conflict detector: {detector_path}")
+    if not args.smoke:require_current_artifact(Path(config["general_causal_importance"]))
     output=args.output_dir/"vlmbias_predictions.jsonl"; prepare_output_directory(args.output_dir,resume=args.resume,overwrite=args.overwrite,known_outputs=(output.name,))
     seed_everything(args.seed); runtime=Qwen3MechanisticRuntime(model_id=str(config.get("model_id","Qwen/Qwen3-VL-8B-Instruct")),device_map=args.device_map)
     score_rows=read_tsv(Path(config["head_scores"])); contrast=str(config.get("selection_contrast","semantic_prior")); selected_rows=[row for row in score_rows if row["contrast"]==contrast]
     selected_rows.sort(key=lambda row:float(row["mean_signed_score"]),reverse=True); driving=[(int(row["layer"]),int(row["head"])) for row in selected_rows if float(row["mean_signed_score"])>0][:int(config.get("driving_k",30))]; resisting=[(int(row["layer"]),int(row["head"])) for row in reversed(selected_rows) if float(row["mean_signed_score"])<0][:int(config.get("resisting_k",40))]
-    detector = json.loads(Path(config["conflict_detector"]).read_text(encoding="utf-8")) if config.get("conflict_detector") and Path(config["conflict_detector"]).is_file() else None
+    detector = json.loads(detector_path.read_text(encoding="utf-8")) if detector_path is not None and detector_path.is_file() else None
     conditions=build_conditions(driving,resisting,score_rows,config,args.seed,runtime.architecture.n_layers,runtime.architecture.n_heads,have_detector=detector is not None,include_controls=not args.smoke,require_external_general=not args.smoke)
     if args.smoke: conditions={key:value for key,value in conditions.items() if key in {"baseline","driving_suppress","resisting_amplify","joint_role_aware","conflict_gated"}}
     locked_ids={pair.pair_id.split("-",1)[1] for pair in read_paired_jsonl(Path(config["paired_contrasts"])) if pair.split==str(config.get("split","locked_test")) and pair.metadata["contrast"]==contrast}
@@ -73,11 +80,12 @@ def main() -> None:
                 with projected_head_scaling(runtime.model,scales if intervene else {}): generated=runtime.model.generate(**inputs,do_sample=False,max_new_tokens=8)
                 text=runtime.processor.batch_decode(generated[:,inputs.input_ids.shape[1]:],skip_special_tokens=True,clean_up_tokenization_spaces=False)[0].strip(); parsed=extract_naturalbench_answer(text,call.question_type); predictions.append(NaturalBenchPrediction(call.group_id,call.call_id,call.question_id,call.image_id,call.question_type,call.prompt,call.ground_truth,text,parsed,normalize_naturalbench_answer(parsed)==normalize_naturalbench_answer(call.ground_truth),call.source))
             naturalbench[condition]=summarize_naturalbench(predictions)
-    summary={"valid":True,"label":"instrumentation smoke test" if args.smoke else "locked confirmation","selection_contrast":contrast,"n_locked_examples":len(examples),"head_sets":{"driving":driving,"resisting":resisting},"vlmbias":summaries,"transitions":transitions,"naturalbench":naturalbench,"control_policy":"20 joint matches on layer, image attention, projected norm, entropy, gaze, and general causal importance; NaturalBench retention is evaluated on core interventions only","architecture":vars(runtime.architecture)}
+    normalized_transitions={condition:{key.replace("other_wrong","other-wrong"):value for key,value in values.items()} for condition,values in transitions.items()}
+    summary={"valid":True,"label":"instrumentation smoke test" if args.smoke else "locked confirmation","selection_contrast":contrast,"n_locked_examples":len(examples),"head_sets":{"driving":driving,"resisting":resisting},"vlmbias":summaries,"transitions":normalized_transitions,"naturalbench":naturalbench,"control_policy":"20 joint matches on layer, image attention, projected norm, entropy, gaze, and general causal importance; NaturalBench retention is evaluated on core interventions only","architecture":vars(runtime.architecture)}
     summary_path=args.output_dir/"summary.json";summary_path.write_text(json.dumps(summary,indent=2),encoding="utf-8")
     manifest_inputs=[args.config,Path(config["head_scores"]),Path(config["paired_contrasts"]),Path(config["vlmbias_dataset"]),*[Path(example.image_path) for example in examples if example.image_path],*naturalbench_input_paths]
     for key in ("naturalbench_dataset","gaze_ranking","conflict_detector","general_causal_importance"):
-        if config.get(key):manifest_inputs.append(Path(config[key]))
+        if config.get(key) and Path(config[key]).is_file():manifest_inputs.append(Path(config[key]))
     write_run_manifest(args.output_dir,config={**config,"architecture":vars(runtime.architecture)},seeds={"global":args.seed},inputs=manifest_inputs,outputs=[output,summary_path],status="complete",repo_root=Path.cwd());print(json.dumps(summary,indent=2))
 
 

@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "minimum_families": 2,
+  "minimum_families": 6,
   "sources": [
     {"name": "count", "path": "segments/mechanistic_heads_qwen3_8b/runs/counting_head_scan/full/count_head_scores.tsv", "column": "symmetric_causal_score"},
     {"name": "search", "path": "segments/mechanistic_heads_qwen3_8b/runs/search_head_scan/full/search_head_scores.tsv", "column": "search_causal_score"},

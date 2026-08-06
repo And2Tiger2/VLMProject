@@ -12,6 +12,7 @@ from typing import Any
 from PIL import Image
 
 from vlm_eval.mechanistic_heads.config import add_standard_run_arguments, effective_limit, load_json_config, prepare_output_directory
+from vlm_eval.mechanistic_heads.preflight import require_scientific_validation, validation_path_from_config
 from vlm_eval.mechanistic_heads.qwen3_runtime import checkpoint_manifest_inputs, runtime_from_config
 from vlm_eval.mechanistic_heads.reproducibility import referenced_image_paths, seed_everything, write_run_manifest
 
@@ -23,7 +24,9 @@ POINT_RE = re.compile(r"point\s*=\s*\((0(?:\.\d+)?|1(?:\.0+)?),(0(?:\.\d+)?|1(?:
 def main() -> None:
     parser=argparse.ArgumentParser(description="Evaluate synthetic Waldo-like localization and verification tasks.")
     add_standard_run_arguments(parser);parser.add_argument("--device-map",default="cuda");parser.add_argument("--checkpoint")
-    args=parser.parse_args();config=load_json_config(args.config);output=args.output_dir/"waldo_behavior.tsv"
+    args=parser.parse_args();config=load_json_config(args.config)
+    if not args.smoke:require_scientific_validation(validation_path_from_config(config))
+    output=args.output_dir/"waldo_behavior.tsv"
     prepare_output_directory(args.output_dir,resume=args.resume,overwrite=args.overwrite,known_outputs=(output.name,"summary.json"));seed_everything(args.seed)
     dataset=read_jsonl(Path(config["dataset"]));dataset=[row for row in dataset if row["split"]==str(config.get("split","locked_test"))];limit=effective_limit(args)
     if limit is not None:dataset=dataset[:limit]
@@ -45,7 +48,7 @@ def task_specs(row:dict[str,Any])->list[tuple[str,str,str,str]]:
     cell="absent" if row["target_cell"] is None else f"cell={int(row['target_cell']):02d}"
     point=row["tasks"]["normalized_point"]
     candidates=row["metadata"]["four_candidate_cells"]
-    candidate_prompt="Candidate cells are "+", ".join(f"{index}={cell:02d}" for index,cell in enumerate(candidates))+". Which candidate is the four-feature target? Answer candidate=N."
+    candidate_prompt="Candidate cells are "+", ".join(f"{index}={cell:02d}" for index,cell in enumerate(candidates))+". Which candidate is the four-feature target? Answer candidate=N, or absent."
     return [
         ("invisible_grid",row["image_path"],row["prompts"][row["metadata"]["prompt_wording_variant"]%2],cell),
         ("visible_grid_ocr",row["metadata"]["visible_grid_image"],"Read the visible 10x10 grid label at the target. Answer cell=NN.",cell),

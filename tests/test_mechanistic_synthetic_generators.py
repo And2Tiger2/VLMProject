@@ -8,6 +8,7 @@ from vlm_eval.mechanistic_heads.synthetic import (
     render_syndot,
     render_waldo_like_scene,
     syndot_positions,
+    waldo_distractor_centers,
     length_matched_nonspatial_answer,
 )
 
@@ -74,6 +75,34 @@ def test_waldo_like_generator_is_original_deterministic_and_masked() -> None:
     assert first.masks["target"].getbbox() is not None
     impostors = [row for row in first.objects if row["class"] == "distractor-incorrect-binding"]
     assert len(impostors) == 1 and not impostors[0]["binding_correct"]
+
+
+def test_waldo_relocation_keeps_distractors_identical() -> None:
+    centers = waldo_distractor_centers(
+        seed=9, scene_id="relocate", clutter=8, forbidden_cells=[11, 88]
+    )
+    left = render_waldo_like_scene(
+        seed=9,
+        scene_id="relocate",
+        target_present=True,
+        target_cell=11,
+        clutter=8,
+        distractor_centers=centers,
+    )
+    right = render_waldo_like_scene(
+        seed=9,
+        scene_id="relocate",
+        target_present=True,
+        target_cell=88,
+        clutter=8,
+        distractor_centers=centers,
+    )
+    assert [row["center"] for row in left.objects[1:]] == [
+        row["center"] for row in right.objects[1:]
+    ]
+    assert [row["features"] for row in left.objects[1:]] == [
+        row["features"] for row in right.objects[1:]
+    ]
 
 
 def test_length_matched_direct_answer_is_exact_and_nonspatial() -> None:

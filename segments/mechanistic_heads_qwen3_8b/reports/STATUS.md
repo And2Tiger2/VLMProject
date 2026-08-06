@@ -10,6 +10,9 @@
   context-bound resume checkpoints, hashes, and manifests.
 - Deterministic SynDot, constant-eight, color/shape search, and original
   four-feature Waldo-like generators with exact masks and grouped splits.
+- Waldo-like relocation pairs now keep every distractor fixed, causal pairs
+  carry exact target/decoy masks, and the four-candidate target slot is
+  randomized deterministically instead of leaking through candidate order.
 - Counting VAP/head scan/controls/locked validation; point training, behavior,
   centroid/search/verification/distractor scans and ablations; MMMC preparation,
   MACI scan/ablation/detector/gating; signed VLMBias contrasts/validation and
@@ -20,6 +23,12 @@
   now wait for the general-importance artifact they consume. Failed branches
   are killed as invalid dependencies, while an `afterany` final status job
   records failures and computationally pending work.
+- Every derived ranking, detector, validation, control table, and atlas input
+  is bound to a completed manifest, exact file hash, and the current Git SHA;
+  an older run can no longer be silently mixed into a new scientific result.
+- MACI clean/conflict prompt pairs hold the exact conflict image fixed. The
+  paired clean-row image is retained only as audited metadata, so the signed
+  head scan changes wording rather than image content.
 
 ## Run
 
@@ -39,7 +48,8 @@
 
 ## Passed
 
-- The complete CPU unit/integration suite passes in the audited checkout.
+- The complete CPU unit/integration suite passes in the audited checkout (206
+  tests in the final local audit).
 - Both synthetic generator smokes write real schemas, images, masks, pairs,
   grouped splits, manifests, input/output hashes, and resume markers.
 - Python compilation, every JSON config, all 26 task CLI imports/help routes,
@@ -57,6 +67,8 @@
   teacher-forcing length mismatch, custom causal-mask registration, eager
   backend comparison, dense projected-head OOMs, missing PEFT installation,
   mixed-row TSV output, and validation jobs scheduled before their inputs.
+- The old Slurm DAG is not resumable: its VAP, MACI, VLMBias, and point-training
+  smoke failures correctly prevented all dependent scientific jobs.
 - No scientific calibration result exists yet; no replication success is
   claimed.
 

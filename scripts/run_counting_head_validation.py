@@ -23,6 +23,7 @@ from vlm_eval.mechanistic_heads.config import (
     prepare_output_directory,
 )
 from vlm_eval.mechanistic_heads.preflight import (
+    require_current_artifact,
     require_scientific_validation,
     validation_path_from_config,
 )
@@ -37,6 +38,8 @@ def main() -> None:
     parser.add_argument("--device-map", default="cuda")
     args = parser.parse_args()
     config = load_json_config(args.config)
+    require_current_artifact(Path(config["count_ranking"]))
+    require_current_artifact(Path(config["controls"]))
     if not args.smoke:
         require_scientific_validation(validation_path_from_config(config))
     output = args.output_dir / "count_head_validation.tsv"

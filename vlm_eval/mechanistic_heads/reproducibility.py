@@ -71,7 +71,7 @@ def git_sha(cwd: Path | None = None) -> str | None:
 
 def environment_snapshot() -> dict[str, Any]:
     packages: dict[str, str] = {}
-    for package in ("torch", "transformers", "datasets", "PIL", "numpy"):
+    for package in ("torch", "transformers", "datasets", "PIL", "numpy", "peft", "sklearn"):
         try:
             module = __import__(package)
             packages[package] = str(getattr(module, "__version__", "unknown"))

@@ -14,7 +14,7 @@ import numpy as np
 from vlm_eval.mechanistic_heads.causal import candidate_margin, capture_prefill, projected_head_scaling
 from vlm_eval.mechanistic_heads.config import add_standard_run_arguments, effective_limit, load_json_config, prepare_output_directory
 from vlm_eval.mechanistic_heads.mmmc import MMMCImages
-from vlm_eval.mechanistic_heads.preflight import require_scientific_validation, validation_path_from_config
+from vlm_eval.mechanistic_heads.preflight import require_current_artifact, require_scientific_validation, validation_path_from_config
 from vlm_eval.mechanistic_heads.qwen3_runtime import Qwen3MechanisticRuntime
 from vlm_eval.mechanistic_heads.reproducibility import seed_everything, write_run_manifest
 from vlm_eval.mechanistic_heads.schema import read_paired_jsonl
@@ -24,6 +24,8 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Compare always/never/detector/confidence/random MACI interventions.")
     add_standard_run_arguments(parser); parser.add_argument("--device-map", default="cuda"); parser.add_argument("--cache-dir", type=Path)
     args = parser.parse_args(); config = load_json_config(args.config)
+    require_current_artifact(Path(config["head_scores"]))
+    require_current_artifact(Path(config["detector"]))
     if not args.smoke: require_scientific_validation(validation_path_from_config(config))
     output = args.output_dir / "gated_interventions.tsv"; prepare_output_directory(args.output_dir, resume=args.resume, overwrite=args.overwrite, known_outputs=(output.name,))
     seed_everything(args.seed); runtime = Qwen3MechanisticRuntime(model_id=str(config.get("model_id", "Qwen/Qwen3-VL-8B-Instruct")), device_map=args.device_map)

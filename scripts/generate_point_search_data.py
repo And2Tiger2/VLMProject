@@ -23,6 +23,7 @@ from vlm_eval.mechanistic_heads.synthetic import (
     render_search_scene,
     render_waldo_like_scene,
     stable_seed,
+    waldo_distractor_centers,
 )
 
 
@@ -179,6 +180,11 @@ def generate_point_search_datasets(
         target_center = target_objects[0]["center"] if target_objects else None
         decoy_cells = [obj["cell"] for obj in scene.objects if obj["class"].startswith("distractor")][:3]
         candidate_cells = ([target_cell] if target_cell is not None else []) + decoy_cells
+        candidate_rng = random.Random(stable_seed(seed, scene_id, "candidate-order"))
+        candidate_rng.shuffle(candidate_cells)
+        target_candidate = (
+            candidate_cells.index(target_cell) if target_cell is not None else None
+        )
         waldo_rows.append(
             {
                 "id": scene_id,
@@ -198,7 +204,7 @@ def generate_point_search_datasets(
                     ),
                     "presence": "present" if target_present else "absent",
                     "visible_grid_ocr": "absent" if target_cell is None else f"cell={target_cell:02d}",
-                    "four_candidate_selection": "absent" if target_cell is None else "candidate=0",
+                    "four_candidate_selection": "absent" if target_candidate is None else f"candidate={target_candidate}",
                 },
                 "prompts": [
                     "Which 10x10 cell contains the four-feature target? Answer cell=NN.",
@@ -270,6 +276,19 @@ def generate_point_search_datasets(
                 ("distractor", distractor_pairs),
             )
         },
+        "waldo_pair_masks_complete": all(
+            pair.donor_mask and pair.recipient_mask
+            for pairs in (search_pairs, verification_pairs, distractor_pairs)
+            for pair in pairs
+        ),
+        "waldo_relocation_distractors_matched": True,
+        "four_candidate_target_indices": sorted(
+            {
+                int(row["tasks"]["four_candidate_selection"].split("=")[1])
+                for row in waldo_rows
+                if row["target_present"]
+            }
+        ),
         "artifacts": [
             str(point_path),
             str(waldo_path),
@@ -293,21 +312,35 @@ def _write_waldo_pairs(
         cell_b = stable_seed(seed, group_id, "b") % 100
         if cell_b == cell_a:
             cell_b = (cell_a + 37) % 100
+        distractor_centers = waldo_distractor_centers(
+            seed=seed,
+            scene_id=group_id,
+            clutter=24,
+            forbidden_cells=[cell_a, cell_b],
+        )
         scenes = {
-            "location_a": render_waldo_like_scene(seed=seed, scene_id=group_id, target_present=True, target_cell=cell_a, similarity=2),
-            "location_b": render_waldo_like_scene(seed=seed, scene_id=group_id, target_present=True, target_cell=cell_b, similarity=2),
+            "location_a": render_waldo_like_scene(seed=seed, scene_id=group_id, target_present=True, target_cell=cell_a, similarity=2, distractor_centers=distractor_centers),
+            "location_b": render_waldo_like_scene(seed=seed, scene_id=group_id, target_present=True, target_cell=cell_b, similarity=2, distractor_centers=distractor_centers),
             "true": render_waldo_like_scene(seed=seed, scene_id=group_id, target_present=True, target_cell=cell_a, similarity=3),
             "impostor": render_waldo_like_scene(seed=seed, scene_id=group_id, target_present=False, target_cell=cell_a, similarity=3),
             "low_decoy": render_waldo_like_scene(seed=seed, scene_id=group_id, target_present=True, target_cell=cell_a, similarity=1),
             "high_decoy": render_waldo_like_scene(seed=seed, scene_id=group_id, target_present=True, target_cell=cell_a, similarity=3),
         }
         paths: dict[str, Path] = {}
+        mask_paths: dict[str, dict[str, Path]] = {}
         for name, scene in scenes.items():
             image_path = output_dir / "waldo_pairs" / "images" / f"{group_id}-{name}.png"
             image_path.parent.mkdir(parents=True, exist_ok=True)
             if not resume or not image_path.exists():
                 scene.image.save(image_path)
             paths[name] = image_path.resolve()
+            mask_paths[name] = {}
+            for mask_name, mask in scene.masks.items():
+                mask_path = output_dir / "waldo_pairs" / "masks" / f"{group_id}-{name}-{mask_name}.png"
+                mask_path.parent.mkdir(parents=True, exist_ok=True)
+                if not resume or not mask_path.exists():
+                    mask.save(mask_path)
+                mask_paths[name][mask_name] = mask_path.resolve()
         split_bucket = index % 10
         split = (
             "prototype"
@@ -337,6 +370,8 @@ def _write_waldo_pairs(
                 recipient_prompt="Which 10x10 cell contains the four-feature target? Answer cell=NN.",
                 donor_answer=f"cell={cell_b:02d}",
                 recipient_answer=f"cell={cell_a:02d}",
+                donor_mask=str(mask_paths["location_b"]["target"]),
+                recipient_mask=str(mask_paths["location_a"]["target"]),
                 **common,
             )
         )
@@ -349,6 +384,8 @@ def _write_waldo_pairs(
                 recipient_prompt="Is the four-feature target present? Answer present or absent.",
                 donor_answer="present",
                 recipient_answer="absent",
+                donor_mask=str(mask_paths["true"]["target"]),
+                recipient_mask=str(mask_paths["impostor"]["object_000"]),
                 **common,
             )
         )
@@ -361,6 +398,8 @@ def _write_waldo_pairs(
                 recipient_prompt="Which 10x10 cell contains the four-feature target? Answer cell=NN.",
                 donor_answer=f"cell={cell_a:02d}",
                 recipient_answer=f"cell={strong_decoy_cell:02d}",
+                donor_mask=str(mask_paths["low_decoy"]["target"]),
+                recipient_mask=str(mask_paths["high_decoy"]["object_001"]),
                 metadata={
                     **common["metadata"],
                     "target_cell": cell_a,

@@ -11,7 +11,7 @@ import numpy as np
 from vlm_eval.mechanistic_heads.causal import capture_prefill
 from vlm_eval.mechanistic_heads.config import add_standard_run_arguments, effective_limit, load_json_config, prepare_output_directory
 from vlm_eval.mechanistic_heads.mmmc import MMMCImages
-from vlm_eval.mechanistic_heads.preflight import require_calibration_report, require_scientific_validation, validation_path_from_config
+from vlm_eval.mechanistic_heads.preflight import require_calibration_report, require_current_artifact, require_scientific_validation, validation_path_from_config
 from vlm_eval.mechanistic_heads.qwen3_runtime import Qwen3MechanisticRuntime
 from vlm_eval.mechanistic_heads.reproducibility import seed_everything, write_run_manifest
 from vlm_eval.mechanistic_heads.schema import read_paired_jsonl
@@ -24,6 +24,7 @@ def main() -> None:
     parser.add_argument("--cache-dir", type=Path)
     args = parser.parse_args()
     config = load_json_config(args.config)
+    require_current_artifact(Path(config["head_scores"]))
     if not args.smoke:
         require_scientific_validation(validation_path_from_config(config))
         require_calibration_report(Path(config["stability_report"]), boolean_key="passes_stability_gate")
@@ -57,7 +58,17 @@ def main() -> None:
     result = fit_detector(np.stack(features), np.asarray(labels), splits, seed=args.seed)
     result.update({"valid": True, "label": "instrumentation smoke test" if args.smoke else "methods-based reproduction", "resisting_heads": [list(head) for head in resisting], "feature": "mean last-prefill raw A_hV_h over resisting heads"})
     output.write_text(json.dumps(result, indent=2), encoding="utf-8")
-    write_run_manifest(args.output_dir, config={**config, "architecture": vars(runtime.architecture)}, seeds={"global": args.seed}, inputs=[args.config, Path(config["paired_dataset"]), audit_path, Path(config["head_scores"]),Path(config["stability_report"]),Path(config["ablation_report"])], outputs=[output], status="complete", repo_root=Path.cwd())
+    manifest_inputs = [
+        args.config,
+        Path(config["paired_dataset"]),
+        audit_path,
+        Path(config["head_scores"]),
+    ]
+    for key in ("stability_report", "ablation_report"):
+        path = Path(config[key])
+        if path.is_file():
+            manifest_inputs.append(path)
+    write_run_manifest(args.output_dir, config={**config, "architecture": vars(runtime.architecture)}, seeds={"global": args.seed}, inputs=manifest_inputs, outputs=[output], status="complete", repo_root=Path.cwd())
     print(json.dumps(result, indent=2))
 
 

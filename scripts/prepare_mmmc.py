@@ -174,7 +174,9 @@ def prepare_mmmc(
             PairedExample(
                 pair_id=row["pair_id"],
                 group_id=row["image_id"],
-                donor_image=f"hf://{DATASET_ID}/{row['source_split']}/{row['clean_index']}",
+                # MACI prompt contrast: hold the conflict image exactly fixed
+                # and vary only clean versus conflict wording.
+                donor_image=f"hf://{DATASET_ID}/{row['source_split']}/{row['conflict_index']}",
                 recipient_image=f"hf://{DATASET_ID}/{row['source_split']}/{row['conflict_index']}",
                 donor_prompt=str(row["clean_question"]),
                 recipient_prompt=str(row["conflict_question"]),
@@ -189,6 +191,8 @@ def prepare_mmmc(
                     ),
                     "clean_index": row["clean_index"],
                     "conflict_index": row["conflict_index"],
+                    "clean_image_reference": f"hf://{DATASET_ID}/{row['source_split']}/{row['clean_index']}",
+                    "same_image_prompt_contrast": True,
                     "key_component": row["key_component"],
                 },
                 split=split,
@@ -232,6 +236,7 @@ def prepare_mmmc(
             "factual candidate is the object-conflict row's provided answer; "
             "hallucinated candidate is the paired clean row's provided answer"
         ),
+        "same_image_prompt_contrast": True,
         "exclusions": dict(sorted(exclusions.items())),
         "split_pair_counts": dict(split_pair_counts),
         "split_group_counts": split_group_counts,

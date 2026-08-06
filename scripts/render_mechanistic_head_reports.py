@@ -10,6 +10,7 @@ from typing import Any
 
 from vlm_eval.mechanistic_heads.atlas import ATLAS_COLUMNS, initialize_head_atlas, write_head_atlas
 from vlm_eval.mechanistic_heads.config import add_standard_run_arguments, load_json_config, prepare_output_directory
+from vlm_eval.mechanistic_heads.preflight import require_current_artifact
 from vlm_eval.mechanistic_heads.reproducibility import write_run_manifest
 
 
@@ -47,20 +48,26 @@ def main() -> None:
         path = Path(path_value)
         if not path.is_file():
             continue
+        try:
+            require_current_artifact(path)
+        except RuntimeError:
+            # The final atlas runs afterany so it can report failed branches.
+            # Never fill it from a stale artifact left by an older checkout.
+            continue
         inputs.append(path)
         aggregates = _aggregate_tsv(path, score_column)
         for key, value in aggregates.items():
             if key in by_head:
                 by_head[key][atlas_column] = value
     count_value = config.get("count_scores")
-    if count_value and Path(count_value).is_file():
+    if count_value and Path(count_value).is_file() and is_current_artifact(Path(count_value)):
         count_path = Path(count_value)
         for atlas_column, source_column in (("image_attention", "image_attention_ratio"), ("projected_output_norm", "projected_output_norm")):
             aggregates = _aggregate_tsv(count_path, source_column)
             for key, value in aggregates.items():
                 if key in by_head: by_head[key][atlas_column] = value
     vlmbias_value = config.get("vlmbias_scores")
-    if vlmbias_value and Path(vlmbias_value).is_file():
+    if vlmbias_value and Path(vlmbias_value).is_file() and is_current_artifact(Path(vlmbias_value)):
         path = Path(vlmbias_value); inputs.append(path)
         with path.open("r", encoding="utf-8") as handle:
             source_rows = list(csv.DictReader(handle, delimiter="\t"))
@@ -98,7 +105,7 @@ def resolve_architecture(config: dict[str, Any]) -> tuple[int, int, str]:
         if not value:
             continue
         manifest = Path(value).parent / "run_manifest.json"
-        if manifest.is_file():
+        if Path(value).is_file() and is_current_artifact(Path(value)) and manifest.is_file():
             arch = json.loads(manifest.read_text(encoding="utf-8")).get("config", {}).get("architecture")
             if arch:
                 dimensions = (int(arch["n_layers"]), int(arch["n_heads"]))
@@ -108,7 +115,7 @@ def resolve_architecture(config: dict[str, Any]) -> tuple[int, int, str]:
     instrumentation = config.get("status_sources", {}).get("instrumentation")
     if instrumentation:
         manifest = Path(instrumentation).parent / "run_manifest.json"
-        if manifest.is_file():
+        if Path(instrumentation).is_file() and is_current_artifact(Path(instrumentation)) and manifest.is_file():
             arch = json.loads(manifest.read_text(encoding="utf-8")).get("config", {}).get("architecture")
             if arch:
                 dimensions = (int(arch["n_layers"]), int(arch["n_heads"]))
@@ -307,10 +314,24 @@ def load_validation_statuses(config: dict[str, Any], inputs: list[Path]) -> dict
                 "label": "computationally pending",
                 "missing_path": str(path),
             }
+        elif not is_current_artifact(path):
+            statuses[name] = {
+                "valid": None,
+                "label": "computationally pending",
+                "stale_path_ignored": str(path),
+            }
         else:
             statuses[name] = json.loads(path.read_text(encoding="utf-8"))
             inputs.append(path)
     return statuses
+
+
+def is_current_artifact(path: Path) -> bool:
+    try:
+        require_current_artifact(path)
+    except RuntimeError:
+        return False
+    return True
 
 
 def _status_markdown(rows: list[dict[str, Any]], figures: list[Path], inputs: list[Path], validation_statuses: dict[str, dict[str, Any]]) -> str:

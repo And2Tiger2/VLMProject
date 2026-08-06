@@ -17,7 +17,7 @@ from typing import Any
 from PIL import Image, ImageDraw
 
 from vlm_eval.mechanistic_heads.config import add_standard_run_arguments, effective_limit, load_json_config, prepare_output_directory
-from vlm_eval.mechanistic_heads.reproducibility import seed_everything, write_run_manifest
+from vlm_eval.mechanistic_heads.reproducibility import referenced_image_paths, seed_everything, write_run_manifest
 from vlm_eval.mechanistic_heads.splits import group_split
 
 
@@ -45,7 +45,9 @@ def main()->None:
     for row in records:
         previous=owners.setdefault(row["page_id"],row["split"])
         if previous!=row["split"]:raise RuntimeError("crop-level/page leakage detected")
-    output.write_text("".join(json.dumps(row,sort_keys=True)+"\n" for row in records),encoding="utf-8");audit={"valid":bool(records),"label":"dataset preparation","license_files":[{"path":str(path),"sha256":sha(path),"text_excerpt":path.read_text(encoding="utf-8",errors="replace")[:400]} for path in license_paths],"annotation_classes":categories,"target_categories":[categories[value] for value in sorted(targets)],"n_images":len({row["image_id"] for row in records}),"n_boxes":len(records),"n_pages":len(owners),"split_pages":{split:len({row["page_id"] for row in records if row["split"]==split}) for split in grouped},"split_policy":"original page ID only; crop-level random split refused","head_scoring_geometry":"exact boxes","behavioral_geometry":"10x10 cell only","errors":[]};audit_path=args.output_dir/"audit.json";audit_path.write_text(json.dumps(audit,indent=2),encoding="utf-8");write_run_manifest(args.output_dir,config=config,seeds={"split":args.seed,"matched_crop":args.seed},inputs=[args.config,annotation,*license_paths],outputs=[output,audit_path],status="complete",repo_root=Path.cwd());print(json.dumps(audit,indent=2))
+    output.write_text("".join(json.dumps(row,sort_keys=True)+"\n" for row in records),encoding="utf-8");audit={"valid":bool(records),"label":"dataset preparation","license_files":[{"path":str(path),"sha256":sha(path),"text_excerpt":path.read_text(encoding="utf-8",errors="replace")[:400]} for path in license_paths],"annotation_classes":categories,"target_categories":[categories[value] for value in sorted(targets)],"n_images":len({row["image_id"] for row in records}),"n_boxes":len(records),"n_pages":len(owners),"split_pages":{split:len({row["page_id"] for row in records if row["split"]==split}) for split in grouped},"split_policy":"original page ID only; crop-level random split refused","head_scoring_geometry":"exact boxes","behavioral_geometry":"10x10 cell only","errors":[]};audit_path=args.output_dir/"audit.json";audit_path.write_text(json.dumps(audit,indent=2),encoding="utf-8")
+    referenced=referenced_image_paths(records);output_root=args.output_dir.resolve();derived=[path for path in referenced if path.resolve().is_relative_to(output_root)];source_images=[path for path in referenced if not path.resolve().is_relative_to(output_root)]
+    write_run_manifest(args.output_dir,config=config,seeds={"split":args.seed,"matched_crop":args.seed},inputs=[args.config,annotation,*license_paths,*source_images],outputs=[output,audit_path,*derived],status="complete",repo_root=Path.cwd());print(json.dumps(audit,indent=2))
 
 
 def render_zoom_conditions(row:dict[str,Any],output_dir:Path,seed:int)->dict[str,str]:
