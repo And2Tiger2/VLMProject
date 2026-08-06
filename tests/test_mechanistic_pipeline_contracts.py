@@ -76,7 +76,9 @@ def test_direct_smoke_paths_use_total_example_budgets() -> None:
     assert "resisting_k = min(2" in detector
     assert "allowed_layers: list[int] = []" in maci_ablation
     assert "driving_k=min(2" in maci_gated
-    assert "if args.smoke:\n        allowed_layers=[]" in vlmbias_validation
+    assert "if args.smoke:" in vlmbias_validation
+    assert "allowed_layers=[]" in vlmbias_validation
+    assert "len(driving) < min(2, driving_k)" in vlmbias_validation
     assert 'smoke_splits = ("prototype", "validation", "locked_test")' in mmmc
 
 
@@ -84,6 +86,18 @@ def test_long_prompt_signed_scans_offload_captures_to_cpu() -> None:
     for script_name in ("run_maci_head_scan.py", "run_vlmbias_signed_head_scan.py"):
         source = (ROOT / "scripts" / script_name).read_text(encoding="utf-8")
         assert source.count("to_cpu=True") >= 2
+
+
+def test_distractor_scan_uses_matched_low_decoy_difference() -> None:
+    source = (ROOT / "scripts/run_distractor_head_scan.py").read_text(
+        encoding="utf-8"
+    )
+    assert "low_baseline" in source
+    assert "low_ablated_values" in source
+    assert (
+        '"distractor_suppression_score": high_decoy_ablation_harm - '
+        "low_decoy_ablation_harm"
+    ) in source
 
 
 def test_failed_behavioral_calibrations_fail_slurm_prerequisites() -> None:
@@ -334,6 +348,8 @@ def test_mechanistic_extras_and_frozen_sync_cover_training_runtime() -> None:
     )
     assert '"peft>=0.13.0"' in pyproject
     assert "uv sync --frozen --extra qwen --extra mechanistic --extra dev" in wrapper
+    assert "overnight-smoke-resume" in wrapper
+    assert "--profile smoke --reuse-prepared" in wrapper
 
 
 def test_paper_style_maci_sets_require_signed_head_counts() -> None:
@@ -799,6 +815,79 @@ def test_smoke_profile_submits_bounded_preparation(tmp_path: Path) -> None:
     command = submitter.commands[0]
     export_arg = next(value for value in command if value.startswith("--export="))
     assert "MODE=smoke" in export_arg
+
+
+def test_smoke_dag_exercises_every_downstream_consumer(tmp_path: Path) -> None:
+    module = load_script("submit_neuronic_mechanistic_overnight.py")
+    submitter = module.Submitter(repo=tmp_path, dry_run=True)
+    instrumentation = submitter.gpu(
+        "instrumentation", "instrumentation", "smoke", dependencies=[]
+    )
+    primary = module.submit_smokes(submitter, instrumentation=instrumentation)
+    finals = module.submit_downstream_smokes(
+        submitter, primary_smokes=primary
+    )
+
+    assert len(primary) == 13
+    assert finals == [submitter.jobs["smoke_head_atlas"]]
+    expected = {
+        "smoke_general_importance",
+        "smoke_maci_stability",
+        "smoke_counting_controls",
+        "smoke_counting_validation",
+        "smoke_point_ablation",
+        "smoke_point_reports",
+        "smoke_maci_ablation",
+        "smoke_maci_detector",
+        "smoke_maci_gated",
+        "smoke_maci_confirmation",
+        "smoke_vlmbias_validation",
+        "smoke_head_atlas",
+    }
+    assert expected <= set(submitter.jobs)
+    for name in expected:
+        command = submitter.commands[list(submitter.jobs).index(name)]
+        export_arg = next(value for value in command if value.startswith("--export="))
+        assert "MODE=smoke" in export_arg
+
+    atlas_command = submitter.commands[
+        list(submitter.jobs).index("smoke_head_atlas")
+    ]
+    atlas_dependency = next(
+        value for value in atlas_command if value.startswith("--dependency=")
+    )
+    assert submitter.jobs["smoke_vlmbias_validation"] in atlas_dependency
+    assert submitter.jobs["smoke_point_reports"] in atlas_dependency
+    assert submitter.jobs["smoke_counting_validation"] in atlas_dependency
+
+
+def test_smoke_configs_only_consume_smoke_discovery_artifacts() -> None:
+    config_names = (
+        "smoke_general_head_importance.json",
+        "smoke_counting_controls.json",
+        "smoke_counting_validation.json",
+        "smoke_point_head_ablation.json",
+        "smoke_maci_stability.json",
+        "smoke_maci_ablation.json",
+        "smoke_maci_confirmation.json",
+        "smoke_maci_detector.json",
+        "smoke_maci_gated_intervention.json",
+        "smoke_vlmbias_head_validation.json",
+        "smoke_point_search_reports.json",
+        "smoke_head_atlas.json",
+    )
+    for name in config_names:
+        path = ROOT / "segments/mechanistic_heads_qwen3_8b/configs" / name
+        config = json.loads(path.read_text(encoding="utf-8"))
+        encoded = json.dumps(config)
+        assert "/full/" not in encoded
+
+    general = json.loads(
+        (ROOT / "segments/mechanistic_heads_qwen3_8b/configs/smoke_general_head_importance.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    assert general["expected_heads"] == 64
 
 
 def test_optional_real_waldo_hashes_source_and_derived_images() -> None:

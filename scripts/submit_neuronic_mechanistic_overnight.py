@@ -120,6 +120,23 @@ class Submitter:
             dependencies=[run],
         )
 
+    def post(
+        self,
+        name: str,
+        task: str,
+        mode: str,
+        *,
+        dependencies: Iterable[str],
+        dependency_mode: str = "afterok",
+    ) -> str:
+        return self.submit(
+            name,
+            POST_SCRIPT,
+            exports={"TASK": task, "MODE": mode},
+            dependencies=dependencies,
+            dependency_mode=dependency_mode,
+        )
+
 
 def submit_smokes(submitter: Submitter, *, instrumentation: str) -> list[str]:
     independent = [
@@ -146,6 +163,121 @@ def submit_smokes(submitter: Submitter, *, instrumentation: str) -> list[str]:
         submitter.gpu("smoke_distractor_heads", "distractor-heads", "smoke", dependencies=[point_train]),
     ]
     return independent + [point_train] + point_smokes
+
+
+def submit_downstream_smokes(
+    submitter: Submitter, *, primary_smokes: list[str]
+) -> list[str]:
+    """Exercise every consumer stage with isolated smoke artifacts.
+
+    These jobs validate artifact contracts and control flow only. Scientific
+    calibration gates remain disabled under ``--smoke`` and all GPU consumers
+    retain the common eight-example/two-layer bounds.
+    """
+
+    general = submitter.post(
+        "smoke_general_importance",
+        "general-importance",
+        "smoke",
+        dependencies=[
+            submitter.jobs["smoke_counting_heads"],
+            submitter.jobs["smoke_search_heads"],
+            submitter.jobs["smoke_verification_heads"],
+            submitter.jobs["smoke_distractor_heads"],
+            submitter.jobs["smoke_maci_heads"],
+            submitter.jobs["smoke_vlmbias_heads"],
+        ],
+    )
+    maci_stability = submitter.post(
+        "smoke_maci_stability",
+        "maci-stability",
+        "smoke",
+        dependencies=[submitter.jobs["smoke_maci_heads"]],
+    )
+    counting_controls = submitter.post(
+        "smoke_counting_controls",
+        "counting-controls",
+        "smoke",
+        dependencies=[submitter.jobs["smoke_counting_heads"], general],
+    )
+    point_ablation = submitter.gpu(
+        "smoke_point_ablation",
+        "point-ablation",
+        "smoke",
+        dependencies=[
+            submitter.jobs["smoke_point_training"],
+            submitter.jobs["smoke_search_heads"],
+            submitter.jobs["smoke_verification_heads"],
+            submitter.jobs["smoke_distractor_heads"],
+            general,
+        ],
+    )
+    maci_ablation = submitter.gpu(
+        "smoke_maci_ablation",
+        "maci-ablation",
+        "smoke",
+        dependencies=[submitter.jobs["smoke_maci_heads"]],
+    )
+    detector = submitter.gpu(
+        "smoke_maci_detector",
+        "maci-detector",
+        "smoke",
+        dependencies=[submitter.jobs["smoke_maci_heads"], maci_stability, maci_ablation],
+    )
+    count_validation = submitter.gpu(
+        "smoke_counting_validation",
+        "counting-validation",
+        "smoke",
+        dependencies=[counting_controls],
+    )
+    maci_gated = submitter.gpu(
+        "smoke_maci_gated",
+        "maci-gated",
+        "smoke",
+        dependencies=[detector],
+    )
+    maci_confirmation = submitter.gpu(
+        "smoke_maci_confirmation",
+        "maci-confirm",
+        "smoke",
+        dependencies=[maci_ablation, maci_stability, general],
+    )
+    vlmbias_validation = submitter.gpu(
+        "smoke_vlmbias_validation",
+        "vlmbias-validation",
+        "smoke",
+        dependencies=[submitter.jobs["smoke_vlmbias_heads"], detector, general],
+    )
+    point_reports = submitter.post(
+        "smoke_point_reports",
+        "point-reports",
+        "smoke",
+        dependencies=[
+            point_ablation,
+            submitter.jobs["smoke_point_behavior"],
+            submitter.jobs["smoke_point_centroids"],
+        ],
+    )
+    atlas = submitter.post(
+        "smoke_head_atlas",
+        "atlas",
+        "smoke",
+        dependencies=[
+            *primary_smokes,
+            general,
+            maci_stability,
+            counting_controls,
+            count_validation,
+            point_ablation,
+            point_reports,
+            maci_ablation,
+            detector,
+            maci_gated,
+            maci_confirmation,
+            vlmbias_validation,
+        ],
+    )
+    return [atlas]
 
 
 def submit_full_suite(
@@ -371,10 +503,13 @@ def main() -> None:
         "smoke",
         dependencies=prepare_dependencies,
     )
-    smokes = submit_smokes(submitter, instrumentation=instrumentation)
-    finals: list[str] = smokes
+    primary_smokes = submit_smokes(submitter, instrumentation=instrumentation)
+    smoke_finals = submit_downstream_smokes(
+        submitter, primary_smokes=primary_smokes
+    )
+    finals: list[str] = smoke_finals
     if args.profile == "all":
-        finals = submit_full_suite(submitter, smoke_barrier=smokes)
+        finals = submit_full_suite(submitter, smoke_barrier=smoke_finals)
 
     receipt = {
         "profile": args.profile,

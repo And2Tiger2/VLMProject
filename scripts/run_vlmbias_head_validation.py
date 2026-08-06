@@ -41,6 +41,10 @@ def main() -> None:
     score_rows=read_tsv(Path(config["head_scores"])); contrast=str(config.get("selection_contrast","semantic_prior")); selected_rows=[row for row in score_rows if row["contrast"]==contrast]
     selected_rows.sort(key=lambda row:float(row["mean_signed_score"]),reverse=True); driving_k=int(config.get("driving_k",30));resisting_k=int(config.get("resisting_k",40));driving=[(int(row["layer"]),int(row["head"])) for row in selected_rows if float(row["mean_signed_score"])>0][:driving_k]; resisting=[(int(row["layer"]),int(row["head"])) for row in reversed(selected_rows) if float(row["mean_signed_score"])<0][:resisting_k]
     if args.smoke:
+        if len(driving) < min(2, driving_k):
+            driving=[(int(row["layer"]),int(row["head"])) for row in selected_rows[:min(2,driving_k)]]
+        if len(resisting) < min(2, resisting_k):
+            resisting=[(int(row["layer"]),int(row["head"])) for row in reversed(selected_rows[-min(2,resisting_k):])]
         allowed_layers=[]
         for layer,_head in [*driving,*resisting]:
             if layer not in allowed_layers:allowed_layers.append(layer)

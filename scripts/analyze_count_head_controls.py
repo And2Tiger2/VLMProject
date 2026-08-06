@@ -48,7 +48,7 @@ def main() -> None:
     overlap_rows = []
     gaze_ranked = sorted(gaze, key=lambda head: abs(gaze[head]), reverse=True)
     control_draws = max(20, int(config.get("control_draws", 20)))
-    for k in (10, 25, 50):
+    for k in ((2,) if args.smoke else (10, 25, 50)):
         selected = [(row["layer"], row["head"]) for row in ranking[:k]]
         gaze_set = set(gaze_ranked[:k]); selected_set = set(selected)
         overlap_rows.append({"k": k, "intersection": len(selected_set & gaze_set), "union": len(selected_set | gaze_set), "jaccard": len(selected_set & gaze_set) / len(selected_set | gaze_set)})
@@ -103,13 +103,13 @@ def main() -> None:
         and len(finite_stability) == len(stability)
         and all(value >= minimum_stability for value in finite_stability)
     )
-    status = {"valid": True, "label": "methods-based reproduction" if passes_stability else "failed calibration", "n_heads": len(ranking), "control_draws": control_draws, "cross_seed_runs": len(seed_rankings), "cross_seed_repeats": len(repeat_paths), "cross_seed_status": "computed" if len(seed_rankings) >= 3 else "computationally pending", "minimum_stability_spearman": minimum_stability, "passes_stability_gate": passes_stability, "general_causal_importance": "provided" if general_path and Path(general_path).is_file() else "unavailable; fully matched controls intentionally withheld", "figures": [str(path) for path in figures]}
+    status = {"valid": True, "label": "instrumentation smoke test" if args.smoke else ("methods-based reproduction" if passes_stability else "failed calibration"), "n_heads": len(ranking), "control_draws": control_draws, "cross_seed_runs": len(seed_rankings), "cross_seed_repeats": len(repeat_paths), "cross_seed_status": "computed" if len(seed_rankings) >= 3 else "computationally pending", "minimum_stability_spearman": minimum_stability, "passes_stability_gate": passes_stability, "general_causal_importance": "provided" if general_path and Path(general_path).is_file() else "unavailable; fully matched controls intentionally withheld", "figures": [str(path) for path in figures]}
     status_path = args.output_dir / "summary.json"; status_path.write_text(json.dumps(status, indent=2), encoding="utf-8")
     report_path=args.output_dir/"report.md";report_path.write_text("\n".join(["# Counting-head discovery report","",f"- Label: {status['label']}","- Heads are ranked by symmetric bidirectional candidate-margin shift, not attention mass.",f"- Runtime-verified architecture: {n_layers} layers × {n_heads} heads.",f"- Matched-control draws per family: {control_draws}.",f"- Cross-seed rank status: {status['cross_seed_status']}.","- Do not declare count heads until locked necessity/sufficiency, constant-complexity, answer-code, sham, relocation, renderer-transfer, and matched-control gates pass.","","## PNG files","",*[f"- `{path.name}`" for path in figures]]),encoding="utf-8")
     manifest_inputs=[args.config, source, Path(config["gaze_ranking"])]
     if general_path and Path(general_path).is_file(): manifest_inputs.append(Path(general_path))
     manifest_inputs.extend(repeat_paths)
-    write_run_manifest(args.output_dir, config=config, seeds={"controls": args.seed}, inputs=manifest_inputs, outputs=[*outputs, *figures, status_path,report_path], status="complete", repo_root=Path.cwd())
+    write_run_manifest(args.output_dir, config={**config, "smoke": args.smoke}, seeds={"controls": args.seed}, inputs=manifest_inputs, outputs=[*outputs, *figures, status_path,report_path], status="complete", repo_root=Path.cwd())
     print(json.dumps(status, indent=2))
 
 

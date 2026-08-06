@@ -31,6 +31,7 @@ from vlm_eval.mechanistic_heads.token_spans import trace_qwen3_token_spans
 from vlm_eval.mechanistic_heads.token_spans import locate_subsequence
 from vlm_eval.mechanistic_heads.checkpoint import JsonlCheckpoint
 from vlm_eval.mechanistic_heads.causal import (
+    _assert_attention_normalized,
     batched_visual_attention_map_patch_many,
     bounded_head_microbatch,
     projected_head_patch,
@@ -212,6 +213,18 @@ def test_attention_transplant_and_knockout_are_normalized() -> None:
     knocked = image_attention_knockout(recipient, torch.tensor([False, True, False]))
     assert knocked.sum().item() == pytest.approx(1.0)
     assert knocked[..., 1].item() == 0.0
+
+
+def test_attention_normalization_guard_uses_model_dtype_precision() -> None:
+    # This is representative of the small row-sum drift observed after Qwen's
+    # float32 softmax is cast back to bfloat16.
+    approximate = torch.tensor([[[[0.3359375, 0.3359375, 0.33203125]]]], dtype=torch.bfloat16)
+    _assert_attention_normalized(approximate, label="test")
+    with pytest.raises(RuntimeError, match="broke normalization"):
+        _assert_attention_normalized(
+            torch.tensor([[[[0.25, 0.25, 0.25]]]], dtype=torch.bfloat16),
+            label="test",
+        )
 
 
 def _pair(group: str, split: str, source: str) -> PairedExample:

@@ -94,8 +94,12 @@ case "$TASK" in
     ;;
   counting-validation)
     VERIFY_DIR="segments/mechanistic_heads_qwen3_8b/runs/counting_validation/$OUT_SUFFIX"
+    COUNT_VALIDATION_CONFIG="segments/mechanistic_heads_qwen3_8b/configs/counting_validation.json"
+    if [[ "$MODE" == "smoke" ]]; then
+      COUNT_VALIDATION_CONFIG="segments/mechanistic_heads_qwen3_8b/configs/smoke_counting_validation.json"
+    fi
     uv run python scripts/run_counting_head_validation.py \
-      --config segments/mechanistic_heads_qwen3_8b/configs/counting_validation.json \
+      --config "$COUNT_VALIDATION_CONFIG" \
       --output-dir "segments/mechanistic_heads_qwen3_8b/runs/counting_validation/$OUT_SUFFIX" \
       --seed "$SEED" --device-map cuda --resume "${smoke_args[@]}"
     ;;
@@ -179,8 +183,12 @@ case "$TASK" in
     ;;
   point-ablation)
     VERIFY_DIR="segments/mechanistic_heads_qwen3_8b/runs/point_head_ablation/$OUT_SUFFIX"
+    POINT_ABLATION_CONFIG="segments/mechanistic_heads_qwen3_8b/configs/point_head_ablation.json"
+    if [[ "$MODE" == "smoke" ]]; then
+      POINT_ABLATION_CONFIG="segments/mechanistic_heads_qwen3_8b/configs/smoke_point_head_ablation.json"
+    fi
     uv run python scripts/run_point_head_ablation.py \
-      --config segments/mechanistic_heads_qwen3_8b/configs/point_head_ablation.json \
+      --config "$POINT_ABLATION_CONFIG" \
       --output-dir "segments/mechanistic_heads_qwen3_8b/runs/point_head_ablation/$OUT_SUFFIX" \
       --seed "$SEED" --device-map cuda --checkpoint "$POINT_ANSWER_CHECKPOINT" \
       --resume "${smoke_args[@]}"
@@ -204,32 +212,48 @@ case "$TASK" in
     ;;
   maci-ablation)
     VERIFY_DIR="segments/mechanistic_heads_qwen3_8b/runs/maci_ablation/$OUT_SUFFIX"
+    MACI_ABLATION_CONFIG="segments/mechanistic_heads_qwen3_8b/configs/maci_ablation.json"
+    if [[ "$MODE" == "smoke" ]]; then
+      MACI_ABLATION_CONFIG="segments/mechanistic_heads_qwen3_8b/configs/smoke_maci_ablation.json"
+    fi
     uv run python scripts/run_maci_ablation.py \
-      --config segments/mechanistic_heads_qwen3_8b/configs/maci_ablation.json \
+      --config "$MACI_ABLATION_CONFIG" \
       --output-dir "segments/mechanistic_heads_qwen3_8b/runs/maci_ablation/$OUT_SUFFIX" \
       --cache-dir segments/mechanistic_heads_qwen3_8b/data/mmmc_cache \
       --seed "$SEED" --device-map cuda --resume "${smoke_args[@]}"
     ;;
   maci-confirm)
     VERIFY_DIR="segments/mechanistic_heads_qwen3_8b/runs/maci_ablation_locked/$OUT_SUFFIX"
+    MACI_CONFIRM_CONFIG="segments/mechanistic_heads_qwen3_8b/configs/maci_ablation_locked.json"
+    if [[ "$MODE" == "smoke" ]]; then
+      MACI_CONFIRM_CONFIG="segments/mechanistic_heads_qwen3_8b/configs/smoke_maci_confirmation.json"
+    fi
     uv run python scripts/run_maci_ablation.py \
-      --config segments/mechanistic_heads_qwen3_8b/configs/maci_ablation_locked.json \
+      --config "$MACI_CONFIRM_CONFIG" \
       --output-dir "segments/mechanistic_heads_qwen3_8b/runs/maci_ablation_locked/$OUT_SUFFIX" \
       --cache-dir segments/mechanistic_heads_qwen3_8b/data/mmmc_cache \
       --seed "$SEED" --device-map cuda --resume "${smoke_args[@]}"
     ;;
   maci-detector)
     VERIFY_DIR="segments/mechanistic_heads_qwen3_8b/runs/maci_detector/$OUT_SUFFIX"
+    MACI_DETECTOR_CONFIG="segments/mechanistic_heads_qwen3_8b/configs/maci_detector.json"
+    if [[ "$MODE" == "smoke" ]]; then
+      MACI_DETECTOR_CONFIG="segments/mechanistic_heads_qwen3_8b/configs/smoke_maci_detector.json"
+    fi
     uv run python scripts/train_maci_conflict_detector.py \
-      --config segments/mechanistic_heads_qwen3_8b/configs/maci_detector.json \
+      --config "$MACI_DETECTOR_CONFIG" \
       --output-dir "segments/mechanistic_heads_qwen3_8b/runs/maci_detector/$OUT_SUFFIX" \
       --cache-dir segments/mechanistic_heads_qwen3_8b/data/mmmc_cache \
       --seed "$SEED" --device-map cuda --resume "${smoke_args[@]}"
     ;;
   maci-gated)
     VERIFY_DIR="segments/mechanistic_heads_qwen3_8b/runs/maci_gated_intervention/$OUT_SUFFIX"
+    MACI_GATED_CONFIG="segments/mechanistic_heads_qwen3_8b/configs/maci_gated_intervention.json"
+    if [[ "$MODE" == "smoke" ]]; then
+      MACI_GATED_CONFIG="segments/mechanistic_heads_qwen3_8b/configs/smoke_maci_gated_intervention.json"
+    fi
     uv run python scripts/run_maci_gated_intervention.py \
-      --config segments/mechanistic_heads_qwen3_8b/configs/maci_gated_intervention.json \
+      --config "$MACI_GATED_CONFIG" \
       --output-dir "segments/mechanistic_heads_qwen3_8b/runs/maci_gated_intervention/$OUT_SUFFIX" \
       --cache-dir segments/mechanistic_heads_qwen3_8b/data/mmmc_cache \
       --seed "$SEED" --device-map cuda --resume "${smoke_args[@]}"
@@ -243,8 +267,12 @@ case "$TASK" in
     ;;
   vlmbias-validation)
     VERIFY_DIR="segments/mechanistic_heads_qwen3_8b/runs/vlmbias_head_validation/$OUT_SUFFIX"
+    VLMBIAS_VALIDATION_CONFIG="segments/mechanistic_heads_qwen3_8b/configs/vlmbias_head_validation.json"
+    if [[ "$MODE" == "smoke" ]]; then
+      VLMBIAS_VALIDATION_CONFIG="segments/mechanistic_heads_qwen3_8b/configs/smoke_vlmbias_head_validation.json"
+    fi
     uv run python scripts/run_vlmbias_head_validation.py \
-      --config segments/mechanistic_heads_qwen3_8b/configs/vlmbias_head_validation.json \
+      --config "$VLMBIAS_VALIDATION_CONFIG" \
       --output-dir "segments/mechanistic_heads_qwen3_8b/runs/vlmbias_head_validation/$OUT_SUFFIX" \
       --seed "$SEED" --device-map cuda --resume "${smoke_args[@]}"
     ;;

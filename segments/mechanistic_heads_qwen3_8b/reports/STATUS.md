@@ -26,7 +26,10 @@
   centroid/search/verification/distractor scans and ablations; MMMC preparation,
   MACI scan/ablation/detector/gating; signed VLMBias contrasts/validation and
   NaturalBench retention; unified 1,152-head atlas and PNG reporting.
-- Dependency-safe `overnight-smoke` and explicit `overnight-all` Slurm DAGs.
+- Dependency-safe `overnight-smoke`, prepared-data-preserving
+  `overnight-smoke-resume`, and explicit `overnight-all` Slurm DAGs. The smoke
+  graph now exercises discovery, aggregation, controls, validations, detector,
+  gating, reporting, and atlas consumers before any full scientific stage.
   Full discovery arrays are serialized at four concurrent layer GPUs and all
   downstream validations use `afterok` gates. Cross-task matched validations
   now wait for the general-importance artifact they consume. Failed branches
@@ -61,7 +64,7 @@
 
 ## Passed
 
-- The complete CPU unit/integration suite passes in the audited checkout (231
+- The complete CPU unit/integration suite passes in the audited checkout (235
   tests in the final local audit).
 - Both synthetic generator smokes write real schemas, images, masks, pairs,
   grouped splits, manifests, input/output hashes, and resume markers.
@@ -85,6 +88,9 @@
   mixed-row TSV output, and validation jobs scheduled before their inputs.
 - Long-prompt signed scans now offload captures to CPU and lazily project only
   selected heads/positions back onto the active device.
+- Distractor-head discovery now uses the matched difference in ablation harm
+  between high-decoy and low-decoy scenes, rather than scoring the high-decoy
+  intervention alone.
 - Smoke-only submissions now prepare bounded smoke datasets; full/resume
   submission still refuses undersized counting, point-search, or MMMC data.
 - The old Slurm DAG is not resumable: its VAP, MACI, VLMBias, and point-training

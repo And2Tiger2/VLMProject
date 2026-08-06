@@ -14,6 +14,31 @@ from vlm_eval.mechanistic_heads.likelihood import (
 )
 
 
+def _assert_attention_normalized(probabilities: Any, *, label: str) -> None:
+    """Validate probability rows at a tolerance appropriate for their dtype.
+
+    Qwen's eager attention casts the float32 softmax back to the model dtype.
+    A bfloat16 row can therefore differ from one by a few 1e-3 even before an
+    intervention.  Keep this as a real normalization guard without applying a
+    float32-only tolerance to bfloat16 inference.
+    """
+
+    import torch
+
+    sums = probabilities.float().sum(dim=-1)
+    tolerance = 1e-4
+    if probabilities.dtype.is_floating_point:
+        tolerance = max(tolerance, float(torch.finfo(probabilities.dtype).eps))
+    if not torch.allclose(
+        sums, torch.ones_like(sums), atol=tolerance, rtol=0
+    ):
+        maximum = float((sums - 1).abs().max().detach().cpu())
+        raise RuntimeError(
+            f"{label} broke normalization: max_abs={maximum:.6g}, "
+            f"tolerance={tolerance:.6g}"
+        )
+
+
 @dataclass(frozen=True)
 class CapturedPrefill:
     inputs: Any
@@ -485,9 +510,7 @@ def visual_attention_map_patch(
         recipient_mass = current.index_select(-1, recipient_keys).sum()
         current[recipient_keys] = donor_slice / donor_mass * recipient_mass
         result[0, head_idx, recipient_query_position, :] = current
-        sums = result.float().sum(dim=-1)
-        if not torch.allclose(sums, torch.ones_like(sums), atol=1e-4, rtol=0):
-            raise RuntimeError("attention-map patch broke normalization")
+        _assert_attention_normalized(result, label="attention-map patch")
         return result
 
     layer.self_attn._vlm_mechanistic_attention_replacement = replacement
@@ -525,8 +548,7 @@ def visual_attention_map_patch_many(
             source = donor_probabilities[0, head_idx, donor_query, :].index_select(-1, donor_keys).to(probabilities.device, probabilities.dtype)
             if float(source.sum()) <= 0: raise RuntimeError("donor visual slice has zero mass")
             current = result[0, head_idx, recipient_query, :]; mass = current.index_select(-1, recipient_keys).sum(); current[recipient_keys] = source / source.sum() * mass; result[0, head_idx, recipient_query, :] = current
-        sums = result.float().sum(-1)
-        if not torch.allclose(sums, torch.ones_like(sums), atol=1e-4, rtol=0): raise RuntimeError("attention-map patch broke normalization")
+        _assert_attention_normalized(result, label="attention-map patch")
         return result
     layer.self_attn._vlm_mechanistic_attention_replacement = replacement
     try: yield
@@ -592,9 +614,7 @@ def batched_visual_attention_map_patch_many(
                 recipient_mass = current.index_select(-1, recipient_keys).sum()
                 current[recipient_keys] = source / source_mass * recipient_mass
                 result[batch_idx, head_idx, recipient_query, :] = current
-        sums = result.float().sum(-1)
-        if not torch.allclose(sums, torch.ones_like(sums), atol=1e-4, rtol=0):
-            raise RuntimeError("batched attention-map patch broke normalization")
+        _assert_attention_normalized(result, label="batched attention-map patch")
         return result
 
     layer.self_attn._vlm_mechanistic_attention_replacement = replacement

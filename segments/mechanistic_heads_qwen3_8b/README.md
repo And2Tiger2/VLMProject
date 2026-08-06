@@ -122,6 +122,16 @@ training smokes, and every study smoke as one dependency-safe DAG:
 bash scripts/run_neuronic_mechanistic_heads.sh overnight-smoke
 ```
 
+If the full prepared datasets already passed their manifests (as on the current
+Neuronic checkout), reuse them and submit only the bounded smoke DAG:
+
+```bash
+bash scripts/run_neuronic_mechanistic_heads.sh overnight-smoke-resume
+```
+
+This avoids replacing the full prepared datasets with smoke-sized generator
+outputs and skips the multi-hour MMMC preparation stage.
+
 The explicit full-suite command first runs all of those gates and then submits
 the matched LoRA conditions, behavioral calibrations, all 36-layer discovery
 arrays, aggregations, matched controls, locked validations, detector/gated

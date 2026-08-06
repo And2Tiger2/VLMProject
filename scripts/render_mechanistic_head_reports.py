@@ -94,8 +94,9 @@ def main() -> None:
     validation_statuses = load_validation_statuses(config, inputs)
     status = args.output_dir / "STATUS.md"
     status.write_text(_status_markdown(rows, figures, inputs, validation_statuses), encoding="utf-8")
-    write_run_manifest(args.output_dir, config={**config, "verified_architecture": {"n_layers": n_layers, "n_heads": n_heads, "source": architecture_source}}, seeds={"render": args.seed}, inputs=inputs, outputs=[atlas_path, overlap_path, correlation_path, double_path, status, *figures], status="complete", repo_root=Path.cwd())
-    print(json.dumps({"valid": True, "atlas": str(atlas_path), "figures": [str(path) for path in figures]}, indent=2))
+    label = "instrumentation smoke test" if args.smoke else "methods-based reproduction"
+    write_run_manifest(args.output_dir, config={**config, "smoke": args.smoke, "verified_architecture": {"n_layers": n_layers, "n_heads": n_heads, "source": architecture_source}}, seeds={"render": args.seed}, inputs=inputs, outputs=[atlas_path, overlap_path, correlation_path, double_path, status, *figures], status="complete", repo_root=Path.cwd())
+    print(json.dumps({"valid": True, "label": label, "atlas": str(atlas_path), "figures": [str(path) for path in figures]}, indent=2))
 
 
 def resolve_architecture(config: dict[str, Any]) -> tuple[int, int, str]:

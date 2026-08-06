@@ -6,7 +6,7 @@ ACTION="${1:-help}"
 MODE="${2:-smoke}"
 cd "$REPO"
 
-if [[ "$ACTION" == "overnight-smoke" || "$ACTION" == "overnight-all" || "$ACTION" == "overnight-all-resume" ]]; then
+if [[ "$ACTION" == "overnight-smoke" || "$ACTION" == "overnight-smoke-resume" || "$ACTION" == "overnight-all" || "$ACTION" == "overnight-all-resume" ]]; then
   # Resolve the shared environment once before submitting concurrent jobs.
   # Point-search training requires PEFT from the mechanistic extra.
   uv sync --frozen --extra qwen --extra mechanistic --extra dev
@@ -19,6 +19,10 @@ case "$ACTION" in
   overnight-smoke)
     uv run python scripts/submit_neuronic_mechanistic_overnight.py \
       --repo "$REPO" --profile smoke
+    ;;
+  overnight-smoke-resume)
+    uv run python scripts/submit_neuronic_mechanistic_overnight.py \
+      --repo "$REPO" --profile smoke --reuse-prepared
     ;;
   overnight-all)
     uv run python scripts/submit_neuronic_mechanistic_overnight.py \
@@ -96,6 +100,6 @@ case "$ACTION" in
     fi
     ;;
   help|*)
-    echo "usage: $0 {archive-stale|overnight-smoke|overnight-all|overnight-all-resume|prepare-synthetic|download-mmmc|instrumentation|counting-behavior|counting-vap|counting-heads|counting-heads-repeat1|counting-heads-repeat2|general-importance|counting-controls|counting-validation|waldo-behavior|point-centroids|search-heads|verification-heads|distractor-heads|point-ablation|maci-heads|maci-heads-aligned|maci-stability|maci-ablation|maci-confirm|maci-detector|maci-gated|vlmbias-heads|vlmbias-validation|atlas} [smoke|full]"
+    echo "usage: $0 {archive-stale|overnight-smoke|overnight-smoke-resume|overnight-all|overnight-all-resume|prepare-synthetic|download-mmmc|instrumentation|counting-behavior|counting-vap|counting-heads|counting-heads-repeat1|counting-heads-repeat2|general-importance|counting-controls|counting-validation|waldo-behavior|point-centroids|search-heads|verification-heads|distractor-heads|point-ablation|maci-heads|maci-heads-aligned|maci-stability|maci-ablation|maci-confirm|maci-detector|maci-gated|vlmbias-heads|vlmbias-validation|atlas} [smoke|full]"
     ;;
 esac

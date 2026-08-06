@@ -63,7 +63,22 @@ def main() -> None:
         require_current_artifact(Path(config["general_causal_importance"]))
         conditions.update(matched_conditions(score_rows, ranking, config=config, n_layers=runtime.architecture.n_layers, n_heads=runtime.architecture.n_heads, seed=args.seed))
     if args.smoke:
-        conditions = {key: value for key, value in conditions.items() if key in {"baseline", "driving_top30", "resisting_top40", "random_seed0"}}
+        measured_heads = [head for head, _score in ranking]
+        smoke_driving = [head for head, score in ranking if score > 0][:2]
+        smoke_resisting = [head for head, score in reversed(ranking) if score < 0][:2]
+        if len(smoke_driving) < 2:
+            smoke_driving = measured_heads[:2]
+        if len(smoke_resisting) < 2:
+            smoke_resisting = list(reversed(measured_heads))[:2]
+        smoke_random = [
+            head for head in measured_heads if head not in set(smoke_driving + smoke_resisting)
+        ][:2]
+        conditions = {
+            "baseline": [],
+            "driving_top30": smoke_driving,
+            "resisting_top40": smoke_resisting,
+            "random_seed0": smoke_random,
+        }
         allowed_layers: list[int] = []
         for head, _score in ranking:
             if head[0] not in allowed_layers:

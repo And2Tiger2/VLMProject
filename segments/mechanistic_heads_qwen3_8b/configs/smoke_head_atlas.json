@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "model_id": "Qwen/Qwen3-VL-8B-Instruct",
+  "top_k": 2,
+  "gaze_ranking": "segments/gaze_heads_qwen3_8b/runs/gaze_discovery_seed42_merged/gaze_head_ranking.json",
+  "count_scores": "segments/mechanistic_heads_qwen3_8b/runs/counting_head_scan/smoke/count_head_scores.tsv",
+  "search_scores": "segments/mechanistic_heads_qwen3_8b/runs/search_head_scan/smoke/search_head_scores.tsv",
+  "verification_scores": "segments/mechanistic_heads_qwen3_8b/runs/verification_head_scan/smoke/verification_head_scores.tsv",
+  "distractor_scores": "segments/mechanistic_heads_qwen3_8b/runs/distractor_head_scan/smoke/distractor_head_scores.tsv",
+  "mmmc_scores": "segments/mechanistic_heads_qwen3_8b/runs/maci_head_scan/smoke/maci_head_scores.tsv",
+  "vlmbias_scores": "segments/mechanistic_heads_qwen3_8b/runs/vlmbias_signed_head_scan/smoke/vlmbias_signed_head_scores.tsv",
+  "status_sources": {
+    "instrumentation": "segments/mechanistic_heads_qwen3_8b/reports/instrumentation/instrumentation_validation.json",
+    "counting_validation_smoke": "segments/mechanistic_heads_qwen3_8b/runs/counting_validation/smoke/summary.json",
+    "point_ablation_smoke": "segments/mechanistic_heads_qwen3_8b/runs/point_head_ablation/smoke/summary.json",
+    "maci_stability_smoke": "segments/mechanistic_heads_qwen3_8b/reports/maci_stability/smoke/summary.json",
+    "maci_confirmation_smoke": "segments/mechanistic_heads_qwen3_8b/runs/maci_ablation_locked/smoke/summary.json",
+    "maci_gated_smoke": "segments/mechanistic_heads_qwen3_8b/runs/maci_gated_intervention/smoke/summary.json",
+    "vlmbias_validation_smoke": "segments/mechanistic_heads_qwen3_8b/runs/vlmbias_head_validation/smoke/summary.json"
+  }
+}

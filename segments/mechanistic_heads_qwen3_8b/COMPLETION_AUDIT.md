@@ -15,7 +15,7 @@ family has been found.
 | System, visual, image-end, user, final-prompt, and answer spans | Implemented; L40 verified | `token_spans.py`; instrumentation span assertions. |
 | Layer, attention, MLP, raw `A_hV_h`, maps, and exact post-`W_O` capture | Implemented; L40 verified | `capture.py`, `patching.py`; reconstruction gate includes projection bias once. Projected contributions are lazy to avoid 10–40 GiB derived tensors. |
 | Exact projected-head patching | Implemented; L40 verified | Identity, self-subtraction, and batched/serial gates. |
-| Attention-map transplantation | Implemented; GPU pending scientifically | Equal-length replacement or explicit equal-cardinality visual slices; recipient visual mass is preserved and maps are renormalized. |
+| Attention-map transplantation | Implemented; GPU pending scientifically | Equal-length replacement or explicit equal-cardinality visual slices; recipient visual mass is preserved and maps are renormalized. Normalization checks use a dtype-aware tolerance so valid bfloat16 maps pass while malformed maps are rejected. |
 | Zero, mean, resample, image knockout, and scaling ablations | Implemented; GPU pending scientifically | `ablations.py` and locked validation runners. |
 | Layer arrays, head microbatching, resume | Implemented | 36 layer shards with at most four concurrent scan GPUs; sequence-aware microbatch bound; checkpoints bind config, inputs, seed, layers, adapter, and Git SHA. |
 | Twelve mandatory instrumentation checks | Implemented; passed on L40 at `9dbf9d0` | A fresh pass is required after every code revision before scientific jobs can start. |
@@ -49,7 +49,7 @@ family has been found.
 | Localization, visible-grid, normalized point, verification, four-candidate, presence tasks | Implemented; behavioral calibration pending | Candidate order is deterministically randomized to prevent target-slot leakage. |
 | Search relocation pairs | Implemented | Only the identical target moves; all distractors remain pixel/metadata matched. |
 | True versus impostor verification pairs | Implemented | Location and every distractor are fixed; only one target feature changes. |
-| Distractor-suppression pairs | Implemented | Target and background are fixed; exactly one distractor becomes a strong incorrect-binding decoy. Discovery uses correct-versus-decoy likelihood; locked generation is required before interpreting selection rates. |
+| Distractor-suppression pairs | Implemented | Target and background are fixed; exactly one distractor becomes a strong incorrect-binding decoy. Discovery uses the matched high-decoy minus low-decoy difference in correct-versus-decoy ablation harm; locked generation is required before interpreting selection rates. |
 | Gaze/count/OCR/random/matched controls and double dissociation | Implemented; GPU pending | Cross-task head sets are applied to all three locked tasks with at least 20 matched draws. Locked claims fail unless own-task effects beat bottom, cross-task, and jointly matched controls; distractor claims additionally require increased generated decoy selections. |
 | Real Waldo transfer | Optional loader only; not executed | Documented Kaggle command, license/class/page audit, page-level split refusal, boxes, and six zoom/crop conditions. No real images are downloaded automatically. |
 
@@ -75,6 +75,9 @@ family has been found.
 - The current instrumentation revision passed all twelve checks on an L40.
 - Subsequent smoke jobs exposed three independent issues now fixed in code:
   union-field TSV output, dense post-`W_O` capture OOM, and missing PEFT setup.
+- The smoke DAG now includes every downstream artifact consumer, so a fresh
+  smoke validates controls, locked-validation mechanics, detector/gating,
+  reports, and atlas assembly—not only the discovery scans that feed them.
 - The full DAG now separates scientific prerequisites from resource ordering:
   independent scan families are serialized with `afterany`, while true inputs
   and calibration gates use `afterok`. One study can fail without erasing the

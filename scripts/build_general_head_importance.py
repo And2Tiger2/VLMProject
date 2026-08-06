@@ -25,11 +25,28 @@ def main() -> None:
         inputs.append(path);families[source["name"]]=aggregate(path,source["column"],source.get("contrast"))
     minimum=int(config.get("minimum_families",2))
     if len(families)<minimum:raise RuntimeError(f"general causal importance requires {minimum} completed score families; found {len(families)}")
+    family_heads = {name: set(values) for name, values in families.items()}
+    reference_name = next(iter(family_heads))
+    mismatched = {
+        name: {
+            "missing": len(family_heads[reference_name] - heads),
+            "extra": len(heads - family_heads[reference_name]),
+        }
+        for name, heads in family_heads.items()
+        if heads != family_heads[reference_name]
+    }
+    if mismatched:
+        raise RuntimeError(
+            "general causal importance requires identical measured head coverage "
+            f"across families; reference={reference_name}, mismatches={mismatched}"
+        )
     universe=sorted(set.intersection(*(set(values) for values in families.values())))
     normalized={name:percentile_abs(values,universe) for name,values in families.items()}
     rows=[{"layer":head[0],"head":head[1],"general_causal_importance":sum(normalized[name][head] for name in normalized)/len(normalized),"n_score_families":len(normalized),**{f"{name}_absolute_percentile":normalized[name][head] for name in normalized}} for head in universe]
-    write_tsv(output,rows);summary={"valid":len(rows)==1152,"label":"methods-based reproduction","n_heads":len(rows),"families":sorted(families),"definition":"mean within-family percentile of absolute held-out causal score"}
-    summary_path=args.output_dir/"summary.json";summary_path.write_text(json.dumps(summary,indent=2),encoding="utf-8");write_run_manifest(args.output_dir,config=config,seeds={"render":args.seed},inputs=inputs,outputs=[output,summary_path],status="complete" if summary["valid"] else "failed",repo_root=Path.cwd());print(json.dumps(summary,indent=2))
+    expected_heads = int(config.get("expected_heads", 64 if args.smoke else 1152))
+    valid = bool(rows) and len(rows) == expected_heads
+    write_tsv(output,rows);summary={"valid":valid,"label":"instrumentation smoke test" if args.smoke else "methods-based reproduction","n_heads":len(rows),"expected_heads":expected_heads,"families":sorted(families),"definition":"mean within-family percentile of absolute held-out causal score"}
+    summary_path=args.output_dir/"summary.json";summary_path.write_text(json.dumps(summary,indent=2),encoding="utf-8");write_run_manifest(args.output_dir,config={**config,"smoke":args.smoke},seeds={"render":args.seed},inputs=inputs,outputs=[output,summary_path],status="complete" if summary["valid"] else "failed",repo_root=Path.cwd());print(json.dumps(summary,indent=2))
     if not summary["valid"]:raise SystemExit(1)
 
 

@@ -34,7 +34,9 @@ def main() -> None:
     seed_everything(args.seed)
     runtime = Qwen3MechanisticRuntime(model_id=str(config.get("model_id", "Qwen/Qwen3-VL-8B-Instruct")), device_map=args.device_map)
     resisting_k = min(2, int(config.get("resisting_heads", 40))) if args.smoke else int(config.get("resisting_heads", 40))
-    resisting = load_resisting_heads(Path(config["head_scores"]), k=resisting_k)
+    resisting = load_resisting_heads(
+        Path(config["head_scores"]), k=resisting_k, allow_unsigned=args.smoke
+    )
     pairs = read_paired_jsonl(Path(config["paired_dataset"])); limit = effective_limit(args)
     by_split = {}
     for pair in pairs: by_split.setdefault(pair.split, []).append(pair)
@@ -98,7 +100,9 @@ def fit_detector(x: np.ndarray, y: np.ndarray, splits: list[str], *, seed: int) 
     return {"threshold": float(threshold), "metrics": metrics, "coefficient": model.coef_[0].tolist(), "intercept": model.intercept_.tolist(), "scaler_mean": scaler.mean_.tolist(), "scaler_scale": scaler.scale_.tolist(), "nonzero_coefficients": int(np.count_nonzero(model.coef_))}
 
 
-def load_resisting_heads(path: Path, *, k: int) -> list[tuple[int, int]]:
+def load_resisting_heads(
+    path: Path, *, k: int, allow_unsigned: bool = False
+) -> list[tuple[int, int]]:
     with path.open("r", encoding="utf-8") as handle: rows = list(csv.DictReader(handle, delimiter="\t"))
     ranked = sorted(
         (
@@ -108,10 +112,15 @@ def load_resisting_heads(path: Path, *, k: int) -> list[tuple[int, int]]:
         ),
         key=lambda row: float(row["mean_signed_intervention_score"]),
     )
+    if allow_unsigned and len(ranked) < k:
+        ranked = sorted(
+            rows, key=lambda row: float(row["mean_signed_intervention_score"])
+        )
     heads = [(int(row["layer"]), int(row["head"])) for row in ranked[:k]]
     if len(heads) != k:
+        role = "heads" if allow_unsigned else "negative resisting heads"
         raise RuntimeError(
-            f"conflict detector requires {k} negative resisting heads; found {len(heads)}"
+            f"conflict detector requires {k} {role}; found {len(heads)}"
         )
     return heads
 

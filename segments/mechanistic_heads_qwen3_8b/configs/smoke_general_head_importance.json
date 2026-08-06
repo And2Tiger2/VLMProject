@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "minimum_families": 6,
+  "expected_heads": 64,
+  "sources": [
+    {"name": "count", "path": "segments/mechanistic_heads_qwen3_8b/runs/counting_head_scan/smoke/count_head_scores.tsv", "column": "symmetric_causal_score"},
+    {"name": "search", "path": "segments/mechanistic_heads_qwen3_8b/runs/search_head_scan/smoke/search_head_scores.tsv", "column": "search_causal_score"},
+    {"name": "verification", "path": "segments/mechanistic_heads_qwen3_8b/runs/verification_head_scan/smoke/verification_head_scores.tsv", "column": "verification_causal_score"},
+    {"name": "distractor", "path": "segments/mechanistic_heads_qwen3_8b/runs/distractor_head_scan/smoke/distractor_head_scores.tsv", "column": "distractor_suppression_score"},
+    {"name": "mmmc", "path": "segments/mechanistic_heads_qwen3_8b/runs/maci_head_scan/smoke/maci_head_scores.tsv", "column": "mean_signed_intervention_score"},
+    {"name": "vlmbias_semantic", "path": "segments/mechanistic_heads_qwen3_8b/runs/vlmbias_signed_head_scan/smoke/vlmbias_signed_head_scores.tsv", "column": "mean_signed_score", "contrast": "semantic_prior"}
+  ]
+}

@@ -1,0 +1,8 @@
+{
+  "schema_version": 1,
+  "per_example_scores": "segments/mechanistic_heads_qwen3_8b/runs/maci_head_scan/smoke/maci_head_scores_per_example.tsv",
+  "repeat_per_example_scores": [],
+  "top_k": 2,
+  "minimum_spearman": 0.5,
+  "minimum_sign_agreement": 0.7
+}

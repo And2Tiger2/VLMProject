@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "model_id": "Qwen/Qwen3-VL-8B-Instruct",
+  "count_ranking": "segments/mechanistic_heads_qwen3_8b/reports/counting_controls/smoke/count_head_ranking.tsv",
+  "controls": "segments/mechanistic_heads_qwen3_8b/reports/counting_controls/smoke/count_head_controls.tsv",
+  "stability_summary": "segments/mechanistic_heads_qwen3_8b/reports/counting_controls/smoke/summary.json",
+  "gaze_ranking": "segments/gaze_heads_qwen3_8b/runs/gaze_discovery_seed42_merged/gaze_head_ranking.json",
+  "paired_dataset": "segments/mechanistic_heads_qwen3_8b/data/generated/counting/constant_complexity_pairs.jsonl",
+  "split": "locked_test",
+  "patch_scope": "final_prompt_token",
+  "mean_reference_examples": 2,
+  "validation_control_families": ["fully_matched"],
+  "instrumentation_report": "segments/mechanistic_heads_qwen3_8b/reports/instrumentation/instrumentation_validation.json"
+}

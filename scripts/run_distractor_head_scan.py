@@ -49,31 +49,40 @@ def main() -> None:
     for pair in pairs:
         expected=[(pair.pair_id,layer,head) for layer in layers for head in range(runtime.architecture.n_heads)]
         if all(not checkpoint.missing(key) for key in expected):continue
-        image = Image.open(pair.recipient_image).convert("RGB")
-        capture = capture_prefill(runtime, image_path=image, prompt=pair.recipient_prompt, layers=layers)
+        high_image = Image.open(pair.recipient_image).convert("RGB")
+        low_image = Image.open(pair.donor_image).convert("RGB")
+        capture = capture_prefill(runtime, image_path=high_image, prompt=pair.recipient_prompt, layers=layers)
+        low_capture = capture_prefill(runtime, image_path=low_image, prompt=pair.donor_prompt, layers=layers)
         inputs = capture.inputs
+        low_inputs = low_capture.inputs
         effective_head_microbatch = bounded_head_microbatch(
             args.head_microbatch, capture.prompt_length
         )
         baseline, _ = candidate_margin(runtime, inputs, positive_answer=pair.donor_answer, negative_answer=pair.recipient_answer)
+        low_baseline, _ = candidate_margin(runtime, low_inputs, positive_answer=pair.donor_answer, negative_answer=pair.recipient_answer)
         for layer in layers:
             for start in range(0, runtime.architecture.n_heads, effective_head_microbatch):
                 heads = list(range(start, min(start + effective_head_microbatch, runtime.architecture.n_heads)))
                 heads=[head for head in heads if checkpoint.missing((pair.pair_id,layer,head))]
                 if not heads:continue
                 repeated = repeat_model_inputs(inputs, len(heads))
+                low_repeated = repeat_model_inputs(low_inputs, len(heads))
                 with batched_head_scaling(runtime.model, layer_idx=layer, head_indices=heads, scale=0.0):
                     ablated_values, _ = batched_candidate_margin(runtime, repeated, positive_answer=pair.donor_answer, negative_answer=pair.recipient_answer)
+                    low_ablated_values, _ = batched_candidate_margin(runtime, low_repeated, positive_answer=pair.donor_answer, negative_answer=pair.recipient_answer)
                 chunk_rows=[]
                 for batch_idx, head in enumerate(heads):
                     ablated = float(ablated_values[batch_idx].detach().cpu())
+                    low_ablated = float(low_ablated_values[batch_idx].detach().cpu())
+                    high_decoy_ablation_harm = baseline - ablated
+                    low_decoy_ablation_harm = low_baseline - low_ablated
                     query=[capture.prompt_length-1];attention=capture.store.attention_probabilities[layer][0,head,query,:].float().clamp_min(1e-12);image_index=runtime.torch.as_tensor(capture.image_positions,dtype=runtime.torch.long,device=attention.device);projected=capture.store.projected_heads[layer][0,query,head,:]
-                    chunk_rows.append({"pair_id": pair.pair_id, "layer": layer, "head": head, "baseline_correct_vs_decoy_margin": baseline, "ablated_correct_vs_decoy_margin": ablated, "distractor_suppression_score": baseline - ablated, "image_attention":float(attention.index_select(-1,image_index).sum(-1).mean().detach().cpu()),"projected_output_norm":float(projected.float().norm(dim=-1).mean().detach().cpu()),"attention_entropy":float((-(attention*attention.log()).sum(-1)).mean().detach().cpu())})
+                    chunk_rows.append({"pair_id": pair.pair_id, "layer": layer, "head": head, "high_decoy_baseline_margin": baseline, "high_decoy_ablated_margin": ablated, "low_decoy_baseline_margin": low_baseline, "low_decoy_ablated_margin": low_ablated, "high_decoy_ablation_harm": high_decoy_ablation_harm, "low_decoy_ablation_harm": low_decoy_ablation_harm, "distractor_suppression_score": high_decoy_ablation_harm - low_decoy_ablation_harm, "score_definition": "ablation harm with strong decoy minus matched low-decoy ablation harm", "image_attention":float(attention.index_select(-1,image_index).sum(-1).mean().detach().cpu()),"projected_output_norm":float(projected.float().norm(dim=-1).mean().detach().cpu()),"attention_entropy":float((-(attention*attention.log()).sum(-1)).mean().detach().cpu())})
                 rows.extend(chunk_rows);checkpoint.append(chunk_rows)
     with output.open("w", encoding="utf-8", newline="") as handle:
         writer = csv.DictWriter(handle, fieldnames=sorted({key for row in rows for key in row}) or ["pair_id"], delimiter="\t"); writer.writeheader(); writer.writerows(rows)
     if not args.smoke:manifest_inputs.extend([Path(config["point_calibration"]),Path(config["waldo_calibration"])])
-    write_run_manifest(args.output_dir, config={**config, "layers": layers, "smoke": args.smoke, "architecture": vars(runtime.architecture)}, seeds={"global": args.seed}, inputs=manifest_inputs, outputs=[output,checkpoint_path,checkpoint.meta_path], status="complete", repo_root=Path.cwd())
+    write_run_manifest(args.output_dir, config={**config, "layers": layers, "smoke": args.smoke, "architecture": vars(runtime.architecture), "score_definition": "matched high-decoy ablation harm minus low-decoy ablation harm"}, seeds={"global": args.seed}, inputs=manifest_inputs, outputs=[output,checkpoint_path,checkpoint.meta_path], status="complete", repo_root=Path.cwd())
     print(json.dumps({"valid": True, "rows": len(rows), "output": str(output)}, indent=2))
 
 

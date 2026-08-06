@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "model_id": "Qwen/Qwen3-VL-8B-Instruct",
+  "head_scores": "segments/mechanistic_heads_qwen3_8b/runs/vlmbias_signed_head_scan/smoke/vlmbias_signed_head_scores.tsv",
+  "paired_contrasts": "segments/mechanistic_heads_qwen3_8b/data/generated/vlmbias_contrasts/vlmbias_signed_contrasts.jsonl",
+  "vlmbias_dataset": "segments/vlm_bias_attention/data/vlmbias_400.jsonl",
+  "naturalbench_dataset": "segments/gaze_heads_qwen3_8b/experiments/attention_methods_v1/all_naturalbench.jsonl",
+  "gaze_ranking": "segments/gaze_heads_qwen3_8b/runs/gaze_discovery_seed42_merged/gaze_head_ranking.json",
+  "conflict_detector": "segments/mechanistic_heads_qwen3_8b/runs/maci_detector/smoke/conflict_detector.json",
+  "general_causal_importance": "segments/mechanistic_heads_qwen3_8b/reports/general_importance/smoke/general_head_importance.tsv",
+  "selection_contrast": "semantic_prior",
+  "split": "prototype",
+  "driving_k": 2,
+  "resisting_k": 2,
+  "resisting_scale": 2.0,
+  "naturalbench_retention_tolerance": 0.05,
+  "naturalbench_condition_prefixes": ["baseline", "driving_suppress", "resisting_amplify", "joint_role_aware", "conflict_gated"]
+}

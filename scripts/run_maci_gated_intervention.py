@@ -33,7 +33,9 @@ def main() -> None:
     limit = effective_limit(args)
     if limit is None and config.get("max_examples") is not None: limit=int(config["max_examples"])
     if limit is not None: pairs = pairs[:limit]
-    detector = json.loads(Path(config["detector"]).read_text(encoding="utf-8")); ranking = read_tsv(Path(config["head_scores"])); driving_k=min(2,int(config.get("driving_heads",30))) if args.smoke else int(config.get("driving_heads",30)); driving_rows=[row for row in sorted(ranking,key=lambda row:float(row["mean_signed_intervention_score"]),reverse=True) if float(row["mean_signed_intervention_score"])>0][:driving_k]; driving=[(int(row["layer"]),int(row["head"])) for row in driving_rows]; resisting=[tuple(head) for head in detector["resisting_heads"]]
+    detector = json.loads(Path(config["detector"]).read_text(encoding="utf-8")); ranking = read_tsv(Path(config["head_scores"])); driving_k=min(2,int(config.get("driving_heads",30))) if args.smoke else int(config.get("driving_heads",30)); ordered=sorted(ranking,key=lambda row:float(row["mean_signed_intervention_score"]),reverse=True); driving_rows=[row for row in ordered if float(row["mean_signed_intervention_score"])>0][:driving_k]
+    if args.smoke and len(driving_rows) < driving_k: driving_rows=ordered[:driving_k]
+    driving=[(int(row["layer"]),int(row["head"])) for row in driving_rows]; resisting=[tuple(head) for head in detector["resisting_heads"]]
     if args.smoke:
         allowed_layers=[]
         for layer,_head in [*driving,*resisting]:

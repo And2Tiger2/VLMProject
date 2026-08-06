@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "behavior_sources": {
+    "base": "segments/mechanistic_heads_qwen3_8b/runs/point_behavior_smoke/base/behavior.tsv",
+    "direct_answer": "segments/mechanistic_heads_qwen3_8b/runs/point_behavior_smoke/direct_answer/behavior.tsv",
+    "direct_length_matched": "segments/mechanistic_heads_qwen3_8b/runs/point_behavior_smoke/direct_length_matched/behavior.tsv",
+    "point_answer": "segments/mechanistic_heads_qwen3_8b/runs/point_behavior_smoke/point_answer/behavior.tsv",
+    "shuffled_point_answer": "segments/mechanistic_heads_qwen3_8b/runs/point_behavior_smoke/shuffled_point_answer/behavior.tsv"
+  },
+  "centroid_summary": "segments/mechanistic_heads_qwen3_8b/runs/point_attention_centroids/smoke/centroid_rmse_by_layer.tsv",
+  "head_ablation": "segments/mechanistic_heads_qwen3_8b/runs/point_head_ablation/smoke/point_head_ablation.tsv",
+  "head_score_sources": {
+    "search": {"path": "segments/mechanistic_heads_qwen3_8b/runs/search_head_scan/smoke/search_head_scores.tsv", "column": "search_causal_score"},
+    "verification": {"path": "segments/mechanistic_heads_qwen3_8b/runs/verification_head_scan/smoke/verification_head_scores.tsv", "column": "verification_causal_score"},
+    "distractor_suppression": {"path": "segments/mechanistic_heads_qwen3_8b/runs/distractor_head_scan/smoke/distractor_head_scores.tsv", "column": "distractor_suppression_score"}
+  }
+}

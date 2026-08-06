@@ -138,6 +138,9 @@ def main() -> None:
         stability_summary=stability_summary,
         matched_control_quantile=float(config.get("matched_control_quantile", 0.95)),
     )
+    if args.smoke:
+        summary["label"] = "instrumentation smoke test"
+        summary["calibration_result"] = "not assessed in smoke"
     figure_path=args.output_dir/"count_head_double_dissociation.png";render_validation(summary["aggregate"],figure_path)
     summary_path = args.output_dir / "summary.json"
     summary_path.write_text(json.dumps(summary, indent=2), encoding="utf-8")
