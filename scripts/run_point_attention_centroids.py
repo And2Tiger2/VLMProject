@@ -19,6 +19,7 @@ from vlm_eval.mechanistic_heads.config import add_standard_run_arguments, effect
 from vlm_eval.mechanistic_heads.preflight import require_calibration_report, require_scientific_validation, validation_path_from_config
 from vlm_eval.mechanistic_heads.qwen3_runtime import checkpoint_manifest_inputs, runtime_from_config
 from vlm_eval.mechanistic_heads.reproducibility import hash_paths, referenced_image_paths, seed_everything, write_run_manifest
+from vlm_eval.mechanistic_heads.synthetic import point_condition_prompt
 from vlm_eval.mechanistic_heads.token_spans import locate_subsequence
 
 
@@ -72,7 +73,9 @@ def main() -> None:
 
 def trace_example(runtime, row: dict, layers: list[int]) -> list[dict]:
     image = Image.open(row["image_path"]).convert("RGB")
-    inputs = runtime.prepare(image, str(row["prompt"]), prompt_mode="raw")
+    inputs = runtime.prepare(
+        image, point_condition_prompt(row, "point_answer"), prompt_mode="raw"
+    )
     answer = str(row["answers"]["point"]); answer_ids = runtime.answer_token_ids(answer)
     kwargs, answer_ids, prompt_length = append_answer_tokens(inputs, answer_ids)
     with runtime.torch.no_grad(), Qwen3CaptureHooks(runtime.model, layers=layers, to_cpu=False) as store:

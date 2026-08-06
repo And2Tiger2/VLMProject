@@ -17,6 +17,10 @@ MODE="${MODE:-full}"
 SEED="${SEED:-260318523}"
 JOB_STARTED_AT="$(date +%s)"
 cd "$REPO"
+if ! git diff --quiet -- . || ! git diff --cached --quiet -- .; then
+  echo "refusing mechanistic postprocessing: tracked worktree changes do not match HEAD" >&2
+  exit 2
+fi
 export PATH="$CACHE_ROOT/bin:$PATH"
 export UV_CACHE_DIR="$CACHE_ROOT/uv"
 export HF_HOME="$CACHE_ROOT/huggingface"

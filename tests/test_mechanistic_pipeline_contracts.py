@@ -1227,6 +1227,42 @@ def test_point_behavior_budget_can_emit_fifty_coordinates() -> None:
     assert int(config["max_new_tokens"]) >= 512
 
 
+def test_point_behavior_count_parser_handles_every_declared_protocol() -> None:
+    module = load_script("evaluate_point_search.py")
+    assert module.parse_count_answer("3") == 3
+    assert module.parse_count_answer("3 neutral evidence seen") == 3
+    assert module.parse_count_answer("answer=3 evidence seen") == 3
+    assert module.parse_count_answer("points=[(037,064)]; answer=1") == 1
+    assert module.parse_count_answer("points=[(037,064)]") is None
+
+
+def test_point_centroid_trace_uses_the_point_answer_instruction() -> None:
+    source = (ROOT / "scripts/run_point_attention_centroids.py").read_text(
+        encoding="utf-8"
+    )
+    assert 'point_condition_prompt(row, "point_answer")' in source
+
+
+def test_point_lora_training_uses_bounded_activation_memory() -> None:
+    source = (ROOT / "scripts/train_point_search.py").read_text(encoding="utf-8")
+    assert "model.config.use_cache = False" in source
+    assert "model.gradient_checkpointing_enable" in source
+    assert "gradient_checkpointing=True" in source
+    assert '"use_reentrant": False' in source
+
+
+def test_every_mechanistic_slurm_entrypoint_refuses_tracked_dirty_code() -> None:
+    for name in (
+        "slurm_neuronic_mechanistic_heads.sh",
+        "slurm_neuronic_mechanistic_prepare.sh",
+        "slurm_neuronic_mechanistic_aggregate.sh",
+        "slurm_neuronic_mechanistic_postprocess.sh",
+    ):
+        source = (ROOT / "scripts" / name).read_text(encoding="utf-8")
+        assert "git diff --quiet -- ." in source
+        assert "git diff --cached --quiet -- ." in source
+
+
 def test_vlmbias_semantic_contrast_uses_all_rows_without_requiring_masks(
     tmp_path: Path,
 ) -> None:

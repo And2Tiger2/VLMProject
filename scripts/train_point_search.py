@@ -164,6 +164,19 @@ def train_condition(
     else:
         raise ValueError(f"unknown training_mode: {training_mode}")
 
+    # Qwen3-VL-8B fits comfortably for inference on the 48 GB Neuronic GPUs,
+    # but retaining every decoder activation for LoRA backpropagation does
+    # not.  Cache tensors are training-incompatible, and non-reentrant
+    # checkpointing keeps the activation footprint bounded without changing
+    # the effective batch size or optimizer schedule.
+    model.config.use_cache = False
+    if hasattr(model, "enable_input_require_grads"):
+        model.enable_input_require_grads()
+    if hasattr(model, "gradient_checkpointing_enable"):
+        model.gradient_checkpointing_enable(
+            gradient_checkpointing_kwargs={"use_reentrant": False}
+        )
+
     answer_key = CONDITIONS[condition]
 
     class Dataset(torch.utils.data.Dataset):
@@ -236,6 +249,9 @@ def train_condition(
         report_to=[],
         seed=seed,
         remove_unused_columns=False,
+        gradient_checkpointing=True,
+        gradient_checkpointing_kwargs={"use_reentrant": False},
+        bf16=bool(torch.cuda.is_available() and torch.cuda.is_bf16_supported()),
     )
     trainer = Trainer(model=model, args=arguments, train_dataset=Dataset(), data_collator=collate)
     train_output = trainer.train(
@@ -249,6 +265,11 @@ def train_condition(
         "training_mode": training_mode,
         "n_rows": len(rows),
         "metrics": train_output.metrics,
+        "memory_policy": {
+            "use_cache": False,
+            "gradient_checkpointing": True,
+            "gradient_checkpointing_use_reentrant": False,
+        },
         "deviation": (
             "LoRA pilot; never label as full-weight paper replication"
             if training_mode == "lora"

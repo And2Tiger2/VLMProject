@@ -49,6 +49,14 @@
   base conditions request only a count, the length control explicitly forbids
   coordinates, and Point-Answer conditions request the deterministic point
   syntax. This avoids teaching the direct controls a point-output task.
+- Coordinate-centroid tracing now uses that same Point-Answer instruction
+  while teacher-forcing coordinate answers; it no longer combines a direct
+  count-only prompt with a point-form target sequence.
+- Point LoRA training disables the generation cache and uses non-reentrant
+  gradient checkpointing, bounding decoder activation memory on 48 GB GPUs
+  without changing the configured effective batch size.
+- Every Slurm entrypoint refuses tracked code/config changes, so a run cannot
+  execute bytes that differ from the Git SHA written into its manifest.
 - VLMBias semantic-prior contrasts cover all 400 source rows because they do
   not require a mask. Context and detail contrasts remain restricted to the
   114 manually reviewed mask rows, with one subject-grouped split shared by
@@ -72,7 +80,7 @@
 
 ## Passed
 
-- The complete CPU unit/integration suite passes in the audited checkout (259
+- The complete CPU unit/integration suite passes in the audited checkout (263
   tests in the final local audit).
 - Both synthetic generator smokes write real schemas, images, masks, pairs,
   grouped splits, manifests, input/output hashes, and resume markers.

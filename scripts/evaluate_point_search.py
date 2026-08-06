@@ -22,6 +22,18 @@ from vlm_eval.mechanistic_heads.synthetic import length_matched_nonspatial_answe
 
 CONDITION_KEYS = {"base": "base", "direct_answer": "direct", "direct_length_matched": "direct_length_matched", "point_answer": "point", "shuffled_point_answer": "shuffled_point"}
 POINT_RE = re.compile(r"\((\d{1,3}),(\d{1,3})\)")
+LABELED_COUNT_RE = re.compile(r"(?:answer|count)\s*=\s*(\d+)", re.IGNORECASE)
+LEADING_COUNT_RE = re.compile(r"^\s*(\d+)\b")
+
+
+def parse_count_answer(text: str) -> int | None:
+    """Parse the declared count formats without reading coordinate digits."""
+
+    labeled = LABELED_COUNT_RE.search(text)
+    if labeled is not None:
+        return int(labeled.group(1))
+    leading = LEADING_COUNT_RE.match(text)
+    return int(leading.group(1)) if leading is not None else None
 
 
 def main() -> None:
@@ -55,9 +67,7 @@ def main() -> None:
         expected_points = [(int(x), int(y)) for x, y in POINT_RE.findall(expected)]
         predicted_points = [(int(x), int(y)) for x, y in POINT_RE.findall(text)]
         expected_count = int(row["target_count"])
-        count_match = re.search(r"(?:answer|count)\s*=\s*(\d+)", text)
-        if count_match is None and re.fullmatch(r"\s*\d+\s*", text): count_match = re.match(r"\s*(\d+)", text)
-        predicted_count = int(count_match.group(1)) if count_match else None
+        predicted_count = parse_count_answer(text)
         rmse = point_rmse(predicted_points, expected_points)
         records.append({"id": row["id"], "split": row["split"], "condition": args.condition, "target_count": expected_count, "expected": expected, "output": text, "parsed_count": "" if predicted_count is None else predicted_count, "count_correct": int(predicted_count == expected_count), "sequence_exact": int(text == expected), "point_rmse": "" if rmse is None else rmse})
     write_tsv(output, records)

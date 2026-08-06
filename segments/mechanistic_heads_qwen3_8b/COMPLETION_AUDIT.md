@@ -20,6 +20,7 @@ family has been found.
 | Layer arrays, head microbatching, resume | Implemented | 36 layer shards with at most four concurrent scan GPUs; sequence-aware microbatch bound; checkpoints bind config, inputs, seed, layers, adapter, and Git SHA. |
 | Twelve mandatory instrumentation checks | Implemented; passed on L40 at `9dbf9d0` | A fresh pass is required after every code revision before scientific jobs can start. |
 | Reproducibility records | Implemented | Every completed run records config, Git SHA, environment, seeds, input/output hashes, and resume metadata. Prepared-data manifests also hash generator source code. |
+| Clean-code execution | Implemented | Every Slurm entrypoint refuses tracked worktree changes, preventing manifests from labeling uncommitted code as the recorded Git SHA. |
 | Standard CLI and smoke policy | Implemented | All scientific CLIs expose the standard arguments; smoke limits to at most eight examples and one or two layers, refuses config/CLI expansion beyond the layer cap, selects complete MMMC pairs, and writes production schemas. |
 
 ## Study A — counting circuits
@@ -42,8 +43,8 @@ family has been found.
 | Requirement | Status | Evidence / limitation |
 |---|---|---|
 | Six colors × six shapes; 50 objects; disjoint conjunctions; 2,000 train; six OOD counts × 50 | Implemented | Uses the paper's exact color names, glyph set, six train conjunctions, and ten test conjunctions; generator stores centers, boxes, classes, masks, template IDs, and grouped splits. |
-| Base/direct/length-matched/point/shuffled-point training | Implemented; PEFT smoke pending | Matched scenes use condition-specific instructions: direct asks only for a count, the length control forbids coordinates, and Point-Answer requests coordinates. LoRA is labeled modified replication; optional full-weight AdamW/cosine/200-warmup config is documented and not auto-launched. |
-| Coordinate-token centroid tracing | Implemented; GPU pending | Per-layer denoised centroids and point RMSE. |
+| Base/direct/length-matched/point/shuffled-point training | Implemented; PEFT smoke pending | Matched scenes use condition-specific instructions: direct asks only for a count, the length control forbids coordinates, and Point-Answer requests coordinates. LoRA is labeled modified replication; optional full-weight AdamW/cosine/200-warmup config is documented and not auto-launched. LoRA disables cache and uses non-reentrant gradient checkpointing to bound activation memory. |
+| Coordinate-token centroid tracing | Implemented; GPU pending | Per-layer denoised centroids and point RMSE; the trace uses the same Point-Answer prompt as training/evaluation. |
 | Per-head attention transplantation and top/bottom/random validation | Implemented; GPU pending | Uses complete emitted localization-sequence likelihood and explicit visual-slice normalization. |
 | Non-copyright four-feature target and strong distractors | Implemented | Position, scale, full-scene zoom, clutter, similarity, occlusion, background, presence, and prompt wording vary; images, masks, centers, boxes, and cells remain aligned. |
 | Localization, visible-grid, normalized point, verification, four-candidate, presence tasks | Implemented; behavioral calibration pending | Candidate order is deterministically randomized to prevent target-slot leakage. |

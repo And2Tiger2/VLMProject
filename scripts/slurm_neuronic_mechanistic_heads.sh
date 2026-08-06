@@ -21,6 +21,10 @@ JOB_STARTED_AT="$(date +%s)"
 mkdir -p "$CACHE_ROOT/uv" "$CACHE_ROOT/huggingface" "$CACHE_ROOT/torch" \
   "$REPO/segments/mechanistic_heads_qwen3_8b/runs/slurm"
 cd "$REPO"
+if ! git diff --quiet -- . || ! git diff --cached --quiet -- .; then
+  echo "refusing mechanistic run: tracked worktree changes do not match HEAD" >&2
+  exit 2
+fi
 export PATH="$CACHE_ROOT/bin:$PATH"
 export UV_CACHE_DIR="$CACHE_ROOT/uv"
 export HF_HOME="$CACHE_ROOT/huggingface"

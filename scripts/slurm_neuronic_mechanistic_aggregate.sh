@@ -10,6 +10,10 @@ REPO="${REPO:-$SLURM_SUBMIT_DIR}"
 SOURCE_TASK="${SOURCE_TASK:?SOURCE_TASK is required}"
 JOB_STARTED_AT="$(date +%s)"
 cd "$REPO"
+if ! git diff --quiet -- . || ! git diff --cached --quiet -- .; then
+  echo "refusing mechanistic aggregation: tracked worktree changes do not match HEAD" >&2
+  exit 2
+fi
 case "$SOURCE_TASK" in
   counting-vap) ROOT=counting_vap ;;
   counting-heads) ROOT=counting_head_scan ;;
