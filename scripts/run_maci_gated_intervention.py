@@ -33,7 +33,14 @@ def main() -> None:
     limit = effective_limit(args)
     if limit is None and config.get("max_examples") is not None: limit=int(config["max_examples"])
     if limit is not None: pairs = pairs[:limit]
-    detector = json.loads(Path(config["detector"]).read_text(encoding="utf-8")); ranking = read_tsv(Path(config["head_scores"])); driving_k=int(config.get("driving_heads",30)); driving_rows=[row for row in sorted(ranking,key=lambda row:float(row["mean_signed_intervention_score"]),reverse=True) if float(row["mean_signed_intervention_score"])>0][:driving_k]; driving=[(int(row["layer"]),int(row["head"])) for row in driving_rows]; resisting=[tuple(head) for head in detector["resisting_heads"]]
+    detector = json.loads(Path(config["detector"]).read_text(encoding="utf-8")); ranking = read_tsv(Path(config["head_scores"])); driving_k=min(2,int(config.get("driving_heads",30))) if args.smoke else int(config.get("driving_heads",30)); driving_rows=[row for row in sorted(ranking,key=lambda row:float(row["mean_signed_intervention_score"]),reverse=True) if float(row["mean_signed_intervention_score"])>0][:driving_k]; driving=[(int(row["layer"]),int(row["head"])) for row in driving_rows]; resisting=[tuple(head) for head in detector["resisting_heads"]]
+    if args.smoke:
+        allowed_layers=[]
+        for layer,_head in [*driving,*resisting]:
+            if layer not in allowed_layers:allowed_layers.append(layer)
+            if len(allowed_layers)==2:break
+        driving=[head for head in driving if head[0] in allowed_layers][:2]
+        resisting=[head for head in resisting if head[0] in allowed_layers][:2]
     if len(driving) != driving_k:
         raise RuntimeError(f"gated intervention requires {driving_k} positive driving heads; found {len(driving)}")
     audit_path = Path(config["paired_dataset"]).with_name("audit.json")

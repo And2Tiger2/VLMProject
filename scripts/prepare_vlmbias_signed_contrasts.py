@@ -74,7 +74,12 @@ def prepare_contrasts(
     dataset_rows = {str(row["id"]): row for row in _read_jsonl(dataset_path)}
     accepted_path = Path(config["accepted_masks"])
     accepted = _read_jsonl(accepted_path)
-    if limit is not None:
+    if smoke:
+        # Each accepted row emits semantic/context and optionally detail
+        # contrasts. Two source rows therefore exercise all paths while
+        # keeping the smoke output below eight paired examples.
+        accepted = accepted[: min(int(limit or 8), 2)]
+    elif limit is not None:
         accepted = accepted[:limit]
     split_rows = group_split(
         accepted,

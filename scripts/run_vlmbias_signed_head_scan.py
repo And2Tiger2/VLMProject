@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Any
 
 from vlm_eval.mechanistic_heads.causal import batched_candidate_margin, batched_projected_head_patch, bounded_head_microbatch, candidate_margin, capture_prefill, repeat_model_inputs
-from vlm_eval.mechanistic_heads.config import add_standard_run_arguments, effective_limit, load_json_config, parse_layer_spec, prepare_output_directory
+from vlm_eval.mechanistic_heads.config import add_standard_run_arguments, effective_limit, enforce_smoke_layer_limit, load_json_config, parse_layer_spec, prepare_output_directory
 from vlm_eval.mechanistic_heads.checkpoint import JsonlCheckpoint
 from vlm_eval.mechanistic_heads.qwen3_runtime import Qwen3MechanisticRuntime
 from vlm_eval.mechanistic_heads.preflight import require_scientific_validation, validation_path_from_config
@@ -39,6 +39,7 @@ def main() -> None:
         layers = [0, runtime.architecture.n_layers - 1]
     cli_layers = parse_layer_spec(args.layers, n_layers=runtime.architecture.n_layers)
     if cli_layers is not None: layers = cli_layers
+    layers = enforce_smoke_layer_limit(args, layers)
     pairs = [pair for pair in read_paired_jsonl(Path(config["paired_dataset"])) if pair.split == str(config.get("split", "prototype"))]
     limit = effective_limit(args)
     if limit is not None:

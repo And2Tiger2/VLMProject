@@ -61,10 +61,12 @@
 
 ## Passed
 
-- The complete CPU unit/integration suite passes in the audited checkout (219
+- The complete CPU unit/integration suite passes in the audited checkout (224
   tests in the final local audit).
 - Both synthetic generator smokes write real schemas, images, masks, pairs,
   grouped splits, manifests, input/output hashes, and resume markers.
+- Smoke layer and example caps are enforced after config/CLI overrides; MMMC
+  smoke selects complete pairs rather than an arbitrary raw-row prefix.
 - Python compilation, every JSON config, all 30 standard task CLI imports/help routes
   plus the orchestration/report helpers,
   shell syntax, dry-run DAG generation, checkpoint context rejection, and

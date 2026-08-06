@@ -48,6 +48,17 @@ def effective_limit(args: argparse.Namespace, *, smoke_max: int = 8) -> int | No
     return args.limit
 
 
+def partitioned_limit(total: int | None, *, groups: int, index: int) -> int | None:
+    """Allocate a total example budget deterministically across groups."""
+
+    if total is None:
+        return None
+    if groups <= 0 or not 0 <= index < groups:
+        raise ValueError(f"invalid group partition: groups={groups}, index={index}")
+    quotient, remainder = divmod(total, groups)
+    return quotient + int(index < remainder)
+
+
 def parse_layer_spec(value: str | None, *, n_layers: int) -> list[int] | None:
     if value is None: return None
     layers: set[int] = set()
@@ -58,3 +69,20 @@ def parse_layer_spec(value: str | None, *, n_layers: int) -> list[int] | None:
     if not layers or min(layers) < 0 or max(layers) >= n_layers:
         raise ValueError(f"layer specification {value!r} is outside 0..{n_layers-1}")
     return sorted(layers)
+
+
+def enforce_smoke_layer_limit(
+    args: argparse.Namespace, layers: list[int], *, maximum: int = 2
+) -> list[int]:
+    """Refuse a config/CLI override that expands a smoke run.
+
+    Layer selection is intentionally resolved by each runner because full jobs
+    may be sharded with ``--layers``.  This final common guard must therefore
+    run *after* config and CLI overrides have been applied.
+    """
+
+    if args.smoke and len(layers) > maximum:
+        raise ValueError(
+            f"smoke mode permits at most {maximum} layers; received {layers}"
+        )
+    return layers

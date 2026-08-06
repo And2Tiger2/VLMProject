@@ -15,7 +15,7 @@ from vlm_eval.mechanistic_heads.capture import Qwen3CaptureHooks
 from vlm_eval.mechanistic_heads.checkpoint import JsonlCheckpoint
 from vlm_eval.mechanistic_heads.likelihood import append_answer_tokens
 from vlm_eval.mechanistic_heads.io import write_tsv
-from vlm_eval.mechanistic_heads.config import add_standard_run_arguments, effective_limit, load_json_config, parse_layer_spec, prepare_output_directory
+from vlm_eval.mechanistic_heads.config import add_standard_run_arguments, effective_limit, enforce_smoke_layer_limit, load_json_config, parse_layer_spec, prepare_output_directory
 from vlm_eval.mechanistic_heads.preflight import require_calibration_report, require_scientific_validation, validation_path_from_config
 from vlm_eval.mechanistic_heads.qwen3_runtime import checkpoint_manifest_inputs, runtime_from_config
 from vlm_eval.mechanistic_heads.reproducibility import hash_paths, referenced_image_paths, seed_everything, write_run_manifest
@@ -48,6 +48,7 @@ def main() -> None:
     if args.smoke: layers = [0, runtime.architecture.n_layers - 1]
     cli_layers = parse_layer_spec(args.layers, n_layers=runtime.architecture.n_layers)
     if cli_layers is not None: layers = cli_layers
+    layers = enforce_smoke_layer_limit(args, layers)
     manifest_inputs=[args.config, Path(config["dataset"]), *referenced_image_paths(rows), *checkpoint_manifest_inputs(config, checkpoint_override=args.checkpoint)]
     checkpoint=JsonlCheckpoint(checkpoint_path,key=lambda row:(row["id"],row["point_index"],row["layer"]),resume=args.resume,context={"config":config,"seed":args.seed,"smoke":args.smoke,"layers":layers,"input_sha256":hash_paths(manifest_inputs)})
     records = list(checkpoint.rows)

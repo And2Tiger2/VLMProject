@@ -7,10 +7,12 @@ import json
 from pathlib import Path
 import subprocess
 import sys
+import types
 
 import pytest
 
 from vlm_eval.mechanistic_heads.io import write_tsv
+from vlm_eval.mechanistic_heads.config import enforce_smoke_layer_limit, partitioned_limit
 from vlm_eval.mechanistic_heads.preflight import (
     require_calibration_report,
     require_completed_manifest,
@@ -22,6 +24,60 @@ from vlm_eval.mechanistic_heads.checkpoint import JsonlCheckpoint
 
 
 ROOT = Path(__file__).resolve().parents[1]
+
+
+def test_smoke_layer_limit_cannot_be_overridden() -> None:
+    class Args:
+        smoke = True
+
+    assert enforce_smoke_layer_limit(Args(), [0, 35]) == [0, 35]
+    with pytest.raises(ValueError, match="at most 2 layers"):
+        enforce_smoke_layer_limit(Args(), [0, 1, 2])
+
+    Args.smoke = False
+    assert enforce_smoke_layer_limit(Args(), list(range(36))) == list(range(36))
+
+
+def test_total_smoke_budget_partitions_across_groups() -> None:
+    assert [partitioned_limit(8, groups=3, index=index) for index in range(3)] == [3, 3, 2]
+    assert sum(partitioned_limit(8, groups=3, index=index) or 0 for index in range(3)) == 8
+    assert partitioned_limit(None, groups=3, index=0) is None
+    with pytest.raises(ValueError, match="invalid group partition"):
+        partitioned_limit(8, groups=0, index=0)
+
+
+def test_data_smoke_caps_cover_expanding_generators() -> None:
+    counting = (ROOT / "scripts/generate_counting_data.py").read_text(
+        encoding="utf-8"
+    )
+    point = (ROOT / "scripts/generate_point_search_data.py").read_text(
+        encoding="utf-8"
+    )
+    vlmbias = (ROOT / "scripts/prepare_vlmbias_signed_contrasts.py").read_text(
+        encoding="utf-8"
+    )
+    assert "constant_pairs = min(constant_pairs, 1)" in counting
+    assert "train_n = min(train_n, 2)" in point
+    assert "ood_per_condition = min(ood_per_condition, 1)" in point
+    assert "accepted[: min(int(limit or 8), 2)]" in vlmbias
+
+
+def test_direct_smoke_paths_use_total_example_budgets() -> None:
+    counting_validation = (ROOT / "scripts/run_counting_head_validation.py").read_text(encoding="utf-8")
+    point_ablation = (ROOT / "scripts/run_point_head_ablation.py").read_text(encoding="utf-8")
+    detector = (ROOT / "scripts/train_maci_conflict_detector.py").read_text(encoding="utf-8")
+    maci_ablation = (ROOT / "scripts/run_maci_ablation.py").read_text(encoding="utf-8")
+    maci_gated = (ROOT / "scripts/run_maci_gated_intervention.py").read_text(encoding="utf-8")
+    vlmbias_validation = (ROOT / "scripts/run_vlmbias_head_validation.py").read_text(encoding="utf-8")
+    mmmc = (ROOT / "scripts/prepare_mmmc.py").read_text(encoding="utf-8")
+    assert "effective_limit(args, smoke_max=4)" in counting_validation
+    assert "partitioned_limit(total_smoke_limit" in point_ablation
+    assert "partitioned_limit(limit, groups=len(split_names)" in detector
+    assert "resisting_k = min(2" in detector
+    assert "allowed_layers: list[int] = []" in maci_ablation
+    assert "driving_k=min(2" in maci_gated
+    assert "if args.smoke:\n        allowed_layers=[]" in vlmbias_validation
+    assert 'smoke_splits = ("prototype", "validation", "locked_test")' in mmmc
 
 
 def load_script(name: str):
@@ -752,6 +808,74 @@ def test_mmmc_prompt_contrast_holds_image_fixed() -> None:
     assert 'donor_image=f"hf://{DATASET_ID}/{row[\'source_split\']}/{row[\'conflict_index\']}"' in source
     assert 'recipient_image=f"hf://{DATASET_ID}/{row[\'source_split\']}/{row[\'conflict_index\']}"' in source
     assert '"same_image_prompt_contrast": True' in source
+
+
+def test_mmmc_smoke_selects_complete_pairs_and_exercises_splits(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    module = load_script("prepare_mmmc.py")
+
+    class FakeRows(list):
+        _fingerprint = "fake-fingerprint"
+
+        def cast_column(self, _name, _feature):
+            return self
+
+        def select(self, indices):
+            return FakeRows(self[index] for index in indices)
+
+    rows = FakeRows()
+    for index in range(10):
+        rows.extend(
+            [
+                {
+                    "image_id": f"image-{index}",
+                    "image": {"path": f"image-{index}.png"},
+                    "conflict_type": "clean",
+                    "question": f"clean question {index}",
+                    "answer": f"prior-{index}",
+                    "key_component": "object",
+                },
+                {
+                    "image_id": f"image-{index}",
+                    "image": {"path": f"image-{index}.png"},
+                    "conflict_type": "object",
+                    "question": f"conflict question {index}",
+                    "answer": f"fact-{index}",
+                    "key_component": "object",
+                },
+            ]
+        )
+
+    class FakeImage:
+        def __init__(self, *, decode):
+            self.decode = decode
+
+    fake_datasets = types.ModuleType("datasets")
+    fake_datasets.Image = FakeImage
+    fake_datasets.load_dataset = lambda *_args, **_kwargs: {"train": rows}
+    monkeypatch.setitem(sys.modules, "datasets", fake_datasets)
+
+    audit, pairs = module.prepare_mmmc(
+        output_dir=tmp_path,
+        cache_dir=None,
+        config={"clean_conflict_values": ["clean"]},
+        seed=7,
+        smoke=True,
+        limit=8,
+        skip_tokenization=True,
+    )
+    assert audit["valid"]
+    assert audit["n_object_conflict_pairs"] == 8
+    assert audit["n_object_conflict_pairs_available"] == 10
+    assert audit["pairing_success_rate"] == 1.0
+    assert set(audit["split_pair_counts"]) == {
+        "prototype",
+        "validation",
+        "locked_test",
+    }
+    assert len(pairs) == 8
+    assert all(pair.donor_image == pair.recipient_image for pair in pairs)
 
 
 def test_checkpoint_resume_rejects_changed_run_context(tmp_path: Path) -> None:

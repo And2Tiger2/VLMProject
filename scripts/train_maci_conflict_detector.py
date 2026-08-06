@@ -9,7 +9,7 @@ from pathlib import Path
 import numpy as np
 
 from vlm_eval.mechanistic_heads.causal import capture_prefill
-from vlm_eval.mechanistic_heads.config import add_standard_run_arguments, effective_limit, load_json_config, prepare_output_directory
+from vlm_eval.mechanistic_heads.config import add_standard_run_arguments, effective_limit, load_json_config, partitioned_limit, prepare_output_directory
 from vlm_eval.mechanistic_heads.mmmc import MMMCImages
 from vlm_eval.mechanistic_heads.preflight import require_calibration_report, require_current_artifact, require_scientific_validation, validation_path_from_config
 from vlm_eval.mechanistic_heads.qwen3_runtime import Qwen3MechanisticRuntime
@@ -33,12 +33,20 @@ def main() -> None:
     prepare_output_directory(args.output_dir, resume=args.resume, overwrite=args.overwrite, known_outputs=(output.name,))
     seed_everything(args.seed)
     runtime = Qwen3MechanisticRuntime(model_id=str(config.get("model_id", "Qwen/Qwen3-VL-8B-Instruct")), device_map=args.device_map)
-    resisting = load_resisting_heads(Path(config["head_scores"]), k=int(config.get("resisting_heads", 40)))
+    resisting_k = min(2, int(config.get("resisting_heads", 40))) if args.smoke else int(config.get("resisting_heads", 40))
+    resisting = load_resisting_heads(Path(config["head_scores"]), k=resisting_k)
     pairs = read_paired_jsonl(Path(config["paired_dataset"])); limit = effective_limit(args)
     by_split = {}
     for pair in pairs: by_split.setdefault(pair.split, []).append(pair)
     if limit is not None:
-        pairs = [pair for rows in by_split.values() for pair in rows[:limit]]
+        split_names = tuple(name for name in ("prototype", "validation", "locked_test") if name in by_split)
+        pairs = [
+            pair
+            for split_index, split in enumerate(split_names)
+            for pair in by_split[split][
+                : partitioned_limit(limit, groups=len(split_names), index=split_index)
+            ]
+        ]
     else:
         split_limits = config.get("max_pairs_by_split", {})
         pairs = [

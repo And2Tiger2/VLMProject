@@ -91,7 +91,12 @@ def prepare_mmmc(
     }
     split_sizes = {split: len(rows) for split, rows in dataset.items()}
     scanned: list[dict[str, Any]] = []
-    per_split_limit = limit if smoke or limit is not None else None
+    # A smoke run must select complete clean/conflict pairs, not merely the
+    # first few raw rows (which may contain no matching pair). Scanning MMMC
+    # metadata is cheap because image decoding is disabled; cap the paired
+    # examples below instead. Explicit non-smoke --limit retains its raw-row
+    # audit semantics.
+    per_split_limit = None if smoke else limit
     for split, rows in dataset.items():
         selected = rows if per_split_limit is None else rows.select(range(min(len(rows), per_split_limit)))
         for index, row in enumerate(selected):
@@ -152,22 +157,35 @@ def prepare_mmmc(
                 }
             )
 
+    n_object_conflict_pairs_available = len(pairing_rows)
+    if smoke:
+        pairing_rows = pairing_rows[: int(limit or 8)]
+
     rng = random.Random(seed)
     group_ids = sorted({row["image_id"] for row in pairing_rows})
     rng.shuffle(group_ids)
-    prototype_n = min(int(config.get("prototype_examples", 256)), len(group_ids))
-    remaining = max(0, len(group_ids) - prototype_n)
-    validation_n = min(int(config.get("validation_examples", 512)), max(0, remaining - 500))
-    split_by_group = {
-        group_id: (
-            "prototype"
-            if index < prototype_n
-            else "validation"
-            if index < prototype_n + validation_n
-            else "locked_test"
-        )
-        for index, group_id in enumerate(group_ids)
-    }
+    if smoke:
+        # Exercise all downstream split-dependent schemas without claiming a
+        # scientific split from an eight-pair instrumentation sample.
+        smoke_splits = ("prototype", "validation", "locked_test")
+        split_by_group = {
+            group_id: smoke_splits[index % len(smoke_splits)]
+            for index, group_id in enumerate(group_ids)
+        }
+    else:
+        prototype_n = min(int(config.get("prototype_examples", 256)), len(group_ids))
+        remaining = max(0, len(group_ids) - prototype_n)
+        validation_n = min(int(config.get("validation_examples", 512)), max(0, remaining - 500))
+        split_by_group = {
+            group_id: (
+                "prototype"
+                if index < prototype_n
+                else "validation"
+                if index < prototype_n + validation_n
+                else "locked_test"
+            )
+            for index, group_id in enumerate(group_ids)
+        }
     for row in pairing_rows:
         split = split_by_group[row["image_id"]]
         pairs.append(
@@ -225,12 +243,14 @@ def prepare_mmmc(
         "conflict_types": dict(sorted(conflict_types.items())),
         "n_unique_image_ids": len(groups),
         "n_object_conflict_pairs": len(pairs),
+        "n_object_conflict_pairs_available": n_object_conflict_pairs_available,
         "object_pairs_per_image_id_histogram": {
             str(count): frequency
             for count, frequency in sorted(pairs_per_image_histogram.items())
         },
         "pairing_success_rate": (
-            len(pairs) / max(1, conflict_types.get("object", 0))
+            n_object_conflict_pairs_available
+            / max(1, conflict_types.get("object", 0))
         ),
         "candidate_rule": (
             "factual candidate is the object-conflict row's provided answer; "

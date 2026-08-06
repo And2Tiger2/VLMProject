@@ -82,8 +82,10 @@ def generate_point_search_datasets(
     ood_per_condition = int(config.get("ood_scenes_per_condition", 50))
     waldo_n = int(config.get("waldo_like_scenes", 1000))
     if smoke:
-        train_n = min(train_n, 4)
-        ood_per_condition = min(ood_per_condition, 2)
+        # Eight point-search rows total: two train plus one for each of the six
+        # OOD target counts. Waldo and each causal-pair file remain <= 4 rows.
+        train_n = min(train_n, 2)
+        ood_per_condition = min(ood_per_condition, 1)
         waldo_n = min(waldo_n, 4)
     if limit is not None:
         train_n = min(train_n, limit)

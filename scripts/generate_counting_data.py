@@ -95,7 +95,10 @@ def generate_counting_datasets(
         train_n = min(train_n, 4)
         test_n = min(test_n, 4)
         pair_n = min(pair_n, 4)
-        constant_pairs = min(constant_pairs, 4)
+        # One group expands to exactly eight image rows (two roles x two
+        # visual variants x two position variants), exercising every schema
+        # without violating the smoke example cap.
+        constant_pairs = min(constant_pairs, 1)
     if limit is not None:
         train_n = min(train_n, limit)
         test_n = min(test_n, limit)

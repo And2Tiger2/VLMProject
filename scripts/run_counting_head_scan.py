@@ -18,6 +18,7 @@ from vlm_eval.mechanistic_heads.causal import (
 )
 from vlm_eval.mechanistic_heads.config import (
     add_standard_run_arguments,
+    enforce_smoke_layer_limit,
     effective_limit,
     load_json_config,
     parse_layer_spec,
@@ -61,6 +62,7 @@ def main() -> None:
         layers = [int(value) for value in config["layers"]]
     cli_layers = parse_layer_spec(args.layers, n_layers=runtime.architecture.n_layers)
     if cli_layers is not None: layers = cli_layers
+    layers = enforce_smoke_layer_limit(args, layers)
     pairs = read_paired_jsonl(Path(config["paired_dataset"]))
     limit = effective_limit(args)
     if limit is not None:

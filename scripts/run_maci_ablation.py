@@ -64,6 +64,16 @@ def main() -> None:
         conditions.update(matched_conditions(score_rows, ranking, config=config, n_layers=runtime.architecture.n_layers, n_heads=runtime.architecture.n_heads, seed=args.seed))
     if args.smoke:
         conditions = {key: value for key, value in conditions.items() if key in {"baseline", "driving_top30", "resisting_top40", "random_seed0"}}
+        allowed_layers: list[int] = []
+        for head, _score in ranking:
+            if head[0] not in allowed_layers:
+                allowed_layers.append(head[0])
+            if len(allowed_layers) == 2:
+                break
+        conditions = {
+            name: [head for head in heads if head[0] in allowed_layers][:2]
+            for name, heads in conditions.items()
+        }
     pairs = [
         pair
         for pair in read_paired_jsonl(Path(config["paired_dataset"]))

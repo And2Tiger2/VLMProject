@@ -40,6 +40,13 @@ def main() -> None:
     seed_everything(args.seed); runtime=Qwen3MechanisticRuntime(model_id=str(config.get("model_id","Qwen/Qwen3-VL-8B-Instruct")),device_map=args.device_map)
     score_rows=read_tsv(Path(config["head_scores"])); contrast=str(config.get("selection_contrast","semantic_prior")); selected_rows=[row for row in score_rows if row["contrast"]==contrast]
     selected_rows.sort(key=lambda row:float(row["mean_signed_score"]),reverse=True); driving_k=int(config.get("driving_k",30));resisting_k=int(config.get("resisting_k",40));driving=[(int(row["layer"]),int(row["head"])) for row in selected_rows if float(row["mean_signed_score"])>0][:driving_k]; resisting=[(int(row["layer"]),int(row["head"])) for row in reversed(selected_rows) if float(row["mean_signed_score"])<0][:resisting_k]
+    if args.smoke:
+        allowed_layers=[]
+        for layer,_head in [*driving,*resisting]:
+            if layer not in allowed_layers:allowed_layers.append(layer)
+            if len(allowed_layers)==2:break
+        driving=[head for head in driving if head[0] in allowed_layers][:2]
+        resisting=[head for head in resisting if head[0] in allowed_layers][:2]
     if not args.smoke and (len(driving) != driving_k or len(resisting) != resisting_k):
         raise RuntimeError(
             "VLMBias role-aware validation requires signed head sets of the configured "

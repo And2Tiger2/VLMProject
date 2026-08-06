@@ -13,7 +13,7 @@ from typing import Any
 from PIL import Image
 
 from vlm_eval.mechanistic_heads.causal import candidate_margin, projected_head_scaling
-from vlm_eval.mechanistic_heads.config import add_standard_run_arguments, effective_limit, load_json_config, prepare_output_directory
+from vlm_eval.mechanistic_heads.config import add_standard_run_arguments, effective_limit, load_json_config, partitioned_limit, prepare_output_directory
 from vlm_eval.mechanistic_heads.controls import layer_matched_control_draws, multivariate_matched_control_draws
 from vlm_eval.mechanistic_heads.preflight import require_current_artifact, require_scientific_validation, validation_path_from_config
 from vlm_eval.mechanistic_heads.qwen3_runtime import checkpoint_manifest_inputs, runtime_from_config
@@ -49,7 +49,9 @@ def main() -> None:
         ordered = sorted(ranking, key=lambda head: abs(ranking[head]), reverse=True)
         k = min(2 if args.smoke else int(study.get("k", 30)), len(ordered))
         cross_task_sets[f"{study['name']}_top"] = ordered[:k]
-    for study_index, study in enumerate(config["studies"]):
+    studies = config["studies"]
+    total_smoke_limit = effective_limit(args) if args.smoke else None
+    for study_index, study in enumerate(studies):
         score_path = Path(study["scores"]); pair_path = Path(study["paired_dataset"]); inputs.extend([score_path, pair_path])
         require_current_artifact(score_path)
         source_rows = read_tsv(score_path)
@@ -74,7 +76,11 @@ def main() -> None:
             if args.smoke:draws=draws[:1]
             for draw,heads in enumerate(draws):sets[f"{study['name']}_{family}_random_{draw:02d}"]=heads
         pairs = [pair for pair in read_paired_jsonl(pair_path) if pair.split == str(study.get("split", "locked_test"))]
-        limit = effective_limit(args)
+        limit = (
+            partitioned_limit(total_smoke_limit, groups=len(studies), index=study_index)
+            if args.smoke
+            else effective_limit(args)
+        )
         if limit is None and config.get("max_examples_per_study") is not None: limit=int(config["max_examples_per_study"])
         if limit is not None: pairs = pairs[:limit]
         inputs.extend(referenced_image_paths(pairs))

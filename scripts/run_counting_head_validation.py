@@ -62,7 +62,9 @@ def main() -> None:
     )
 
     pairs = [pair for pair in read_paired_jsonl(Path(config["paired_dataset"])) if pair.split == str(config.get("split", "locked_test"))]
-    limit = effective_limit(args)
+    # Every selected base pair may add one matched-sham pair below. Keep the
+    # expanded smoke workload at or below eight examples.
+    limit = effective_limit(args, smoke_max=4)
     if limit is None and config.get("max_examples") is not None:
         limit = int(config["max_examples"])
     if limit is not None:
@@ -157,7 +159,7 @@ def build_mean_replacements(runtime: Any, pairs: list[Any], layers: list[int], *
 
 
 def build_head_sets(ranking: list[dict[str, str]], gaze: list[tuple[int, int]], controls: list[dict[str, str]], *, smoke: bool, control_families: tuple[str, ...] = ("fully_matched",)) -> dict[str, list[tuple[int, int]]]:
-    ks = (10,) if smoke else (10, 25, 50)
+    ks = (2,) if smoke else (10, 25, 50)
     result: dict[str, list[tuple[int, int]]] = {}
     for k in ks:
         result[f"count_top{k}"] = [(int(row["layer"]), int(row["head"])) for row in ranking[:k]]
@@ -177,6 +179,20 @@ def build_head_sets(ranking: list[dict[str, str]], gaze: list[tuple[int, int]], 
         ]
         if low:
             result[f"low_count_score_k{k}"] = low
+    if smoke:
+        allowed_layers: list[int] = []
+        for heads in result.values():
+            for layer, _head in heads:
+                if layer not in allowed_layers:
+                    allowed_layers.append(layer)
+                if len(allowed_layers) == 2:
+                    break
+            if len(allowed_layers) == 2:
+                break
+        result = {
+            name: [head for head in heads if head[0] in allowed_layers][:2]
+            for name, heads in result.items()
+        }
     return result
 
 
