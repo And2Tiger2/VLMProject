@@ -136,7 +136,9 @@ arrays are serialized and use `0-35%4`, so no more than four layer-scan GPUs are
 requested simultaneously; independent behavioral/training jobs may overlap.
 Queue time and full Point-Answer training mean the complete DAG is not
 guaranteed to finish in one night. Any failed smoke causes its dependent full
-jobs to remain unrun through Slurm's `afterok` dependencies. The complete job
+jobs to remain unrun through Slurm's `afterok` dependencies. Independent full
+study arrays are resource-serialized with `afterany`, so a failed counting or
+point stage does not needlessly cancel later MACI/VLMBias diagnostics. The complete job
 receipt is written to
 `segments/mechanistic_heads_qwen3_8b/runs/overnight_submission.json`.
 
@@ -170,6 +172,8 @@ corresponding behavioral calibration and instrumentation smoke are valid.
 ```bash
 bash scripts/run_neuronic_mechanistic_heads.sh counting-vap full
 bash scripts/run_neuronic_mechanistic_heads.sh counting-heads full
+bash scripts/run_neuronic_mechanistic_heads.sh counting-heads-repeat1 full
+bash scripts/run_neuronic_mechanistic_heads.sh counting-heads-repeat2 full
 bash scripts/run_neuronic_mechanistic_heads.sh search-heads full
 bash scripts/run_neuronic_mechanistic_heads.sh verification-heads full
 bash scripts/run_neuronic_mechanistic_heads.sh distractor-heads full

@@ -99,6 +99,26 @@ def test_batched_and_serial_single_head_patching_agree() -> None:
     assert torch.equal(batched, serial)
 
 
+def test_batched_head_patching_accepts_lazy_projected_contributions() -> None:
+    generator = torch.Generator().manual_seed(41)
+    donor_raw = torch.randn(1, 3, 4, 2, generator=generator)
+    recipient_raw = torch.randn(1, 3, 4, 2, generator=generator)
+    weight = torch.randn(6, 8, generator=generator)
+    donor_dense = projected_head_contributions(donor_raw, weight)
+    recipient_dense = projected_head_contributions(recipient_raw, weight)
+    output = recipient_dense.sum(-2)
+    expected = batched_single_head_patches(
+        output, donor_dense, recipient_dense, [1, 3]
+    )
+    actual = batched_single_head_patches(
+        output,
+        LazyProjectedHeads(donor_raw, weight),
+        LazyProjectedHeads(recipient_raw, weight),
+        [1, 3],
+    )
+    assert torch.equal(actual, expected)
+
+
 def test_serial_projected_head_hook_supports_identical_microbatch_rows() -> None:
     attention = torch.nn.Identity()
     layer = SimpleNamespace(self_attn=attention)

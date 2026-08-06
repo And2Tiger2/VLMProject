@@ -49,7 +49,7 @@ def main() -> None:
         for condition, intervene in decisions.items():
             with projected_head_scaling(runtime.model, {head: 0.0 for head in driving} if intervene else {}): margin, scores = candidate_margin(runtime, inputs, positive_answer=pair.bias_answer, negative_answer=pair.correct_answer)
             rows.append({"condition": condition, "pair_id": pair.pair_id, "intervened": int(intervene), "detector_probability": probability, "pairwise_confidence": pairwise_confidence, "hallucination_advantage": margin, "logp_hallucinated": scores["positive"], "logp_factual": scores["negative"], "margin_shift": margin-baseline_margin})
-    write_tsv(output, rows); summary = summarize(rows); summary.update({"valid": True, "label": "instrumentation smoke test" if args.smoke else "locked confirmation", "architecture": vars(runtime.architecture)})
+    write_tsv(output, rows); summary = summarize(rows); claim_checks = gated_claim_checks(summary["conditions"]); summary.update({"valid": True, "label": "instrumentation smoke test" if args.smoke else ("locked confirmation" if claim_checks["all_pass"] else "failed calibration"), "calibration_result": "not assessed in smoke" if args.smoke else ("passed" if claim_checks["all_pass"] else "failed calibration"), "claim_checks": claim_checks, "claim_gate": "Detector gating must lower hallucination advantage versus never intervening and beat a random intervention with exactly the same budget.", "architecture": vars(runtime.architecture)})
     summary_path = args.output_dir / "summary.json"; summary_path.write_text(json.dumps(summary, indent=2), encoding="utf-8")
     write_run_manifest(args.output_dir, config={**config, "architecture": vars(runtime.architecture)}, seeds={"global": args.seed}, inputs=[args.config, Path(config["paired_dataset"]), audit_path, Path(config["head_scores"]), Path(config["detector"])], outputs=[output, summary_path], status="complete", repo_root=Path.cwd()); print(json.dumps(summary, indent=2))
 
@@ -61,6 +61,28 @@ def summarize(rows: list[dict]) -> dict:
     for condition in sorted({row["condition"] for row in rows}):
         group=[row for row in rows if row["condition"]==condition]; result["conditions"][condition]={"n":len(group),"intervention_rate":sum(row["intervened"] for row in group)/len(group),"mean_hallucination_advantage":sum(row["hallucination_advantage"] for row in group)/len(group),"mean_margin_shift":sum(row["margin_shift"] for row in group)/len(group)}
     return result
+
+
+def gated_claim_checks(conditions: dict) -> dict:
+    required = ("never", "always", "detector_gated", "confidence_gated", "random_budget_matched")
+    missing = [name for name in required if name not in conditions]
+    if missing:
+        return {"all_pass": False, "missing_conditions": missing}
+    never = float(conditions["never"]["mean_hallucination_advantage"])
+    always = float(conditions["always"]["mean_hallucination_advantage"])
+    detector = float(conditions["detector_gated"]["mean_hallucination_advantage"])
+    random_control = float(conditions["random_budget_matched"]["mean_hallucination_advantage"])
+    detector_rate = float(conditions["detector_gated"]["intervention_rate"])
+    random_rate = float(conditions["random_budget_matched"]["intervention_rate"])
+    checks = {
+        "always_suppression_lowers_hallucination_advantage": always < never,
+        "detector_lowers_hallucination_advantage": detector < never,
+        "detector_beats_random_budget_matched": detector < random_control,
+        "random_budget_exactly_matched": abs(detector_rate - random_rate) < 1e-12,
+    }
+    return {**checks, "all_pass": all(checks.values())}
+
+
 def read_tsv(path: Path) -> list[dict]:
     with path.open("r",encoding="utf-8") as handle:return list(csv.DictReader(handle,delimiter="\t"))
 def write_tsv(path: Path,rows:list[dict])->None:

@@ -34,7 +34,7 @@ family has been found.
 | Fixed-eight color and shape controls | Implemented | Exact target/distractor/change masks; sham edits, relocation, multiple deterministic renderer seeds, and truly randomized answer codebooks. |
 | Top 10/25/50, gaze, repeated matched controls, low-score controls | Implemented; GPU pending | At least 20 draws for each requested matching family. |
 | Necessity/sufficiency/reverse/sham/position/code/renderer validation | Implemented; GPU pending | Zero, mean, resample, donor and reverse patches on locked examples. |
-| Split-half and cross-seed stability | Split-half implemented; cross-seed runs pending | The report refuses to declare count heads while repeat score files are absent. |
+| Split-half and cross-seed stability | Implemented; cross-seed GPU runs pending | Two independently rendered 100-pair repeat datasets and two 36-layer repeat scans are scheduled. The report requires all three pairwise rank correlations plus split-half stability before declaring count heads. |
 | Required TSVs and plots | Implemented; rendering pending | VAP, scores, controls, overlap, heatmap, gaze scatter, stability, and double-dissociation outputs. |
 
 ## Study B — point search and Waldo-like verification
@@ -45,12 +45,12 @@ family has been found.
 | Base/direct/length-matched/point/shuffled-point training | Implemented; PEFT smoke pending | LoRA is labeled modified replication; optional full-weight AdamW/cosine/200-warmup config is documented and not auto-launched. |
 | Coordinate-token centroid tracing | Implemented; GPU pending | Per-layer denoised centroids and point RMSE. |
 | Per-head attention transplantation and top/bottom/random validation | Implemented; GPU pending | Uses complete emitted localization-sequence likelihood and explicit visual-slice normalization. |
-| Non-copyright four-feature target and strong distractors | Implemented | Position, scale, clutter, similarity, occlusion, background, presence, and prompt wording vary; exact masks are saved. |
+| Non-copyright four-feature target and strong distractors | Implemented | Position, scale, full-scene zoom, clutter, similarity, occlusion, background, presence, and prompt wording vary; images, masks, centers, boxes, and cells remain aligned. |
 | Localization, visible-grid, normalized point, verification, four-candidate, presence tasks | Implemented; behavioral calibration pending | Candidate order is deterministically randomized to prevent target-slot leakage. |
 | Search relocation pairs | Implemented | Only the identical target moves; all distractors remain pixel/metadata matched. |
 | True versus impostor verification pairs | Implemented | Location and every distractor are fixed; only one target feature changes. |
 | Distractor-suppression pairs | Implemented | Target and background are fixed; exactly one distractor becomes a strong incorrect-binding decoy. Discovery uses correct-versus-decoy likelihood; locked generation is required before interpreting selection rates. |
-| Gaze/count/OCR/random/matched controls and double dissociation | Implemented; GPU pending | Cross-task head sets are applied to all three locked tasks with at least 20 matched draws. |
+| Gaze/count/OCR/random/matched controls and double dissociation | Implemented; GPU pending | Cross-task head sets are applied to all three locked tasks with at least 20 matched draws. Locked claims fail unless own-task effects beat bottom, cross-task, and jointly matched controls; distractor claims additionally require increased generated decoy selections. |
 | Real Waldo transfer | Optional loader only; not executed | Documented Kaggle command, license/class/page audit, page-level split refusal, boxes, and six zoom/crop conditions. No real images are downloaded automatically. |
 
 ## Study C — MACI, VLMBias, and the atlas
@@ -63,9 +63,9 @@ family has been found.
 | Signed last-prefill and aligned-prefill scans | Implemented; GPU pending | Unequal aligned-prefill lengths are explicitly excluded, never truncated. |
 | Top-30 driving, top-40 resisting, joint-30, five random seeds, k sweep | Implemented; GPU pending | Full validation refuses to run unless the requested number of correctly signed heads exists. |
 | Sign/rank stability and locked causal directions | Implemented; GPU pending | Failed gates produce `failed calibration`, not a head-family claim. |
-| L1 conflict detector and gating comparisons | Implemented; GPU pending | Threshold selected on validation F1; AUROC/AUPRC/F1 and never/always/confidence/random-budget policies are reported. |
+| L1 conflict detector and gating comparisons | Implemented; GPU pending | Threshold selected on validation F1; AUROC/AUPRC/F1 and never/always/confidence/random-budget policies are reported. The locked gate requires detector benefit over never and an exactly budget-matched random policy. |
 | VLMBias semantic-prior/context/detail contrasts | Semantic/context implemented; detail data pending | Detail is emitted only when external factual originals exist and processed visual spans align exactly. Rankings stay contrast-specific. |
-| Locked role-aware VLMBias validation and NaturalBench retention | Implemented; GPU pending | Reports requested rates, likelihood margin, four transition types, intervention rate, matched controls, and NaturalBench metrics. |
+| Locked role-aware VLMBias validation and NaturalBench retention | Implemented; GPU pending | Reports requested rates, likelihood margin, four transition types, intervention rate, matched controls, and NaturalBench metrics. A result is labeled failed calibration unless all role-aware directions, matched controls, bias-transition checks, and NaturalBench retention gates pass. |
 | 1,152-head atlas and plots | Implemented; rendering pending | Joins gaze, count, search, verification, distractor, MACI, three VLMBias scores, norm, and direct attribution; missing families remain explicitly pending. |
 
 ## Operational audit findings
@@ -75,6 +75,10 @@ family has been found.
 - The current instrumentation revision passed all twelve checks on an L40.
 - Subsequent smoke jobs exposed three independent issues now fixed in code:
   union-field TSV output, dense post-`W_O` capture OOM, and missing PEFT setup.
+- The full DAG now separates scientific prerequisites from resource ordering:
+  independent scan families are serialized with `afterany`, while true inputs
+  and calibration gates use `afterok`. One study can fail without erasing the
+  diagnostic value of later independent studies.
 - A new current-SHA instrumentation plus downstream smoke DAG is mandatory.
   Full scans must remain dependency-blocked until every smoke succeeds.
 

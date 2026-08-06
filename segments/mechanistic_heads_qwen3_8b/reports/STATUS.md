@@ -16,7 +16,12 @@
 - Verification pairs hold every distractor fixed while changing one target
   feature; distractor-suppression pairs change exactly one decoy. Counting
   answer-code controls use per-group randomized codebooks and record distinct
-  renderer seeds.
+  renderer seeds. Two additional deterministic 100-pair counting sets are
+  scheduled for genuine cross-seed rank stability.
+- Waldo-like scenes include same-canvas full-scene zoom transforms with masks,
+  centers, boxes, and cells transformed together. Locked distractor validation
+  measures generated target/decoy selections rather than naming a likelihood
+  proxy a selection rate.
 - Counting VAP/head scan/controls/locked validation; point training, behavior,
   centroid/search/verification/distractor scans and ablations; MMMC preparation,
   MACI scan/ablation/detector/gating; signed VLMBias contrasts/validation and
@@ -27,6 +32,10 @@
   now wait for the general-importance artifact they consume. Failed branches
   are killed as invalid dependencies, while an `afterany` final status job
   records failures and computationally pending work.
+- Cross-study scan serialization uses `afterany`, so failure in counting,
+  point search, or MACI does not suppress scientifically independent later
+  scans. Within-study datasets, calibrations, aggregation, and validation
+  dependencies remain strict `afterok` gates.
 - Every derived ranking, detector, validation, control table, and atlas input
   is bound to a completed manifest, exact file hash, and the current Git SHA;
   an older run can no longer be silently mixed into a new scientific result.
@@ -52,11 +61,12 @@
 
 ## Passed
 
-- The complete CPU unit/integration suite passes in the audited checkout (212
+- The complete CPU unit/integration suite passes in the audited checkout (219
   tests in the final local audit).
 - Both synthetic generator smokes write real schemas, images, masks, pairs,
   grouped splits, manifests, input/output hashes, and resume markers.
-- Python compilation, every JSON config, all 26 task CLI imports/help routes,
+- Python compilation, every JSON config, all 30 standard task CLI imports/help routes
+  plus the orchestration/report helpers,
   shell syntax, dry-run DAG generation, checkpoint context rejection, and
   output-hash validation.
 - Resume contexts bind exact datasets, source images, MMMC split fingerprints,
@@ -85,7 +95,7 @@
 - VLMBias detail contrast unless external original factual images are supplied;
   semantic-prior and context contrasts are prepared.
 - Point-model LoRA pilots; optional full-weight training is opt-in.
-- All head scans, cross-seed repeats, matched-control distributions, locked
+- All head scans, scheduled cross-seed repeats, matched-control distributions, locked
   behavioral confirmations, conflict detector, NaturalBench retention, atlas,
   and result PNGs.
 

@@ -4,6 +4,7 @@
   "syndot_train": 4000,
   "syndot_test": 2000,
   "mechanistic_pairs": 100,
+  "mechanistic_repeat_seeds": [260318524, 260318525],
   "constant_complexity_pairs": 100,
   "canvas_size": 336,
   "placement_grid": 28,

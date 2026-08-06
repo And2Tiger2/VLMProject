@@ -75,18 +75,40 @@ def main() -> None:
         raise RuntimeError(f"configured count-score repeats are missing: {missing_repeats}")
     for path in configured_repeats: require_current_artifact(path)
     repeat_paths = configured_repeats
-    repeat_rankings = [aggregate_head_scores(read_tsv(path)) for path in repeat_paths]
-    for left in range(len(repeat_rankings)):
-        for right in range(left + 1, len(repeat_rankings)):
-            common = sorted(set(repeat_rankings[left]) & set(repeat_rankings[right]))
-            stability.append({"comparison": f"cross_seed_{left}_{right}", "n_pairs_half_1": "", "n_pairs_half_2": "", "n_heads": len(common), "spearman_rho": correlation(ranks([repeat_rankings[left][head] for head in common]), ranks([repeat_rankings[right][head] for head in common])) if common else None})
+    seed_rankings = [aggregate_head_scores(rows)] + [
+        aggregate_head_scores(read_tsv(path)) for path in repeat_paths
+    ]
+    for left in range(len(seed_rankings)):
+        for right in range(left + 1, len(seed_rankings)):
+            common = sorted(set(seed_rankings[left]) & set(seed_rankings[right]))
+            stability.append(
+                stability_row(
+                    f"cross_seed_{left}_{right}",
+                    [seed_rankings[left][head] for head in common],
+                    [seed_rankings[right][head] for head in common],
+                    n_pairs_left="",
+                    n_pairs_right="",
+                )
+            )
     write_tsv(outputs[3], stability)
     figures = render(ranking, stability, args.output_dir, n_layers=n_layers, n_heads=n_heads)
-    status = {"valid": True, "label": "methods-based reproduction", "n_heads": len(ranking), "control_draws": control_draws, "cross_seed_repeats": len(repeat_rankings), "cross_seed_status": "computed" if len(repeat_rankings) >= 2 else "computationally pending", "general_causal_importance": "provided" if general_path and Path(general_path).is_file() else "unavailable; fully matched controls intentionally withheld", "figures": [str(path) for path in figures]}
+    minimum_stability = float(config.get("minimum_stability_spearman", 0.5))
+    finite_stability = [
+        float(row["spearman_rho"])
+        for row in stability
+        if row.get("spearman_rho") not in (None, "")
+    ]
+    passes_stability = (
+        len(seed_rankings) >= 3
+        and len(finite_stability) == len(stability)
+        and all(value >= minimum_stability for value in finite_stability)
+    )
+    status = {"valid": True, "label": "methods-based reproduction" if passes_stability else "failed calibration", "n_heads": len(ranking), "control_draws": control_draws, "cross_seed_runs": len(seed_rankings), "cross_seed_repeats": len(repeat_paths), "cross_seed_status": "computed" if len(seed_rankings) >= 3 else "computationally pending", "minimum_stability_spearman": minimum_stability, "passes_stability_gate": passes_stability, "general_causal_importance": "provided" if general_path and Path(general_path).is_file() else "unavailable; fully matched controls intentionally withheld", "figures": [str(path) for path in figures]}
     status_path = args.output_dir / "summary.json"; status_path.write_text(json.dumps(status, indent=2), encoding="utf-8")
-    report_path=args.output_dir/"report.md";report_path.write_text("\n".join(["# Counting-head discovery report","","- Label: methods-based reproduction","- Heads are ranked by symmetric bidirectional candidate-margin shift, not attention mass.",f"- Runtime-verified architecture: {n_layers} layers × {n_heads} heads.",f"- Matched-control draws per family: {control_draws}.",f"- Cross-seed rank status: {status['cross_seed_status']}.","- Do not declare count heads until locked necessity/sufficiency, constant-complexity, answer-code, sham, relocation, renderer-transfer, and matched-control gates pass.","","## PNG files","",*[f"- `{path.name}`" for path in figures]]),encoding="utf-8")
+    report_path=args.output_dir/"report.md";report_path.write_text("\n".join(["# Counting-head discovery report","",f"- Label: {status['label']}","- Heads are ranked by symmetric bidirectional candidate-margin shift, not attention mass.",f"- Runtime-verified architecture: {n_layers} layers × {n_heads} heads.",f"- Matched-control draws per family: {control_draws}.",f"- Cross-seed rank status: {status['cross_seed_status']}.","- Do not declare count heads until locked necessity/sufficiency, constant-complexity, answer-code, sham, relocation, renderer-transfer, and matched-control gates pass.","","## PNG files","",*[f"- `{path.name}`" for path in figures]]),encoding="utf-8")
     manifest_inputs=[args.config, source, Path(config["gaze_ranking"])]
     if general_path and Path(general_path).is_file(): manifest_inputs.append(Path(general_path))
+    manifest_inputs.extend(repeat_paths)
     write_run_manifest(args.output_dir, config=config, seeds={"controls": args.seed}, inputs=manifest_inputs, outputs=[*outputs, *figures, status_path,report_path], status="complete", repo_root=Path.cwd())
     print(json.dumps(status, indent=2))
 
@@ -100,9 +122,42 @@ def split_half_stability(rows: list[dict]) -> list[dict]:
             if row["pair_id"] in half: grouped[(int(row["layer"]), int(row["head"]))].append(float(row["symmetric_causal_score"]))
         scores.append({head: sum(values) / len(values) for head, values in grouped.items()})
     common = sorted(set(scores[0]) & set(scores[1]))
-    rank0 = ranks([scores[0][head] for head in common]); rank1 = ranks([scores[1][head] for head in common])
-    rho = correlation(rank0, rank1) if common else None
-    return [{"comparison": "split_half", "n_pairs_half_1": len(halves[0]), "n_pairs_half_2": len(halves[1]), "n_heads": len(common), "spearman_rho": rho}]
+    return [
+        stability_row(
+            "split_half",
+            [scores[0][head] for head in common],
+            [scores[1][head] for head in common],
+            n_pairs_left=len(halves[0]),
+            n_pairs_right=len(halves[1]),
+        )
+    ]
+
+
+def stability_row(
+    comparison: str,
+    left: list[float],
+    right: list[float],
+    *,
+    n_pairs_left: int | str,
+    n_pairs_right: int | str,
+) -> dict:
+    signed = correlation(ranks(left), ranks(right)) if left else None
+    magnitude = correlation(
+        ranks([abs(value) for value in left]),
+        ranks([abs(value) for value in right]),
+    ) if left else None
+    return {
+        "comparison": comparison,
+        "n_pairs_half_1": n_pairs_left,
+        "n_pairs_half_2": n_pairs_right,
+        "n_heads": len(left),
+        # The discovery ranking is magnitude-based, so this is the primary
+        # stability statistic. Preserve signed stability separately to expose
+        # role reversals rather than hiding them.
+        "spearman_rho": magnitude,
+        "spearman_rho_magnitude": magnitude,
+        "spearman_rho_signed": signed,
+    }
 
 
 def aggregate_head_scores(rows: list[dict]) -> dict[tuple[int, int], float]:

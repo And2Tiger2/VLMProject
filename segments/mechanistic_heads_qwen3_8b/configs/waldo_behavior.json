@@ -4,5 +4,11 @@
   "adapter_path": "segments/mechanistic_heads_qwen3_8b/checkpoints/point-answer-lora",
   "dataset": "segments/mechanistic_heads_qwen3_8b/data/generated/point_search/waldo_like.jsonl",
   "split": "locked_test",
-  "max_new_tokens": 32
+  "max_new_tokens": 32,
+  "minimum_calibration_accuracy": {
+    "invisible_grid": 0.1,
+    "normalized_point": 0.1,
+    "four_candidate_selection": 0.35,
+    "presence": 0.6
+  }
 }

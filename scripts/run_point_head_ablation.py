@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import csv
 import json
+import re
 from collections import defaultdict
 from pathlib import Path
 from typing import Any
@@ -85,14 +86,55 @@ def main() -> None:
             else:
                 correct, alternative = pair.recipient_answer, pair.donor_answer
             baseline, _ = candidate_margin(runtime, model_inputs, positive_answer=correct, negative_answer=alternative)
-            rows.append({"study": study["name"], "pair_id": pair.pair_id, "head_set": "baseline", "n_heads": 0, "baseline_margin": baseline, "ablated_margin": baseline, "margin_change": 0.0, "preference_flip": 0})
+            generation = (
+                generate_selection(
+                    runtime,
+                    model_inputs,
+                    target_answer=correct,
+                    decoy_answer=alternative,
+                    max_new_tokens=int(config.get("generation_max_new_tokens", 8)),
+                )
+                if should_generate_selection(study["name"], "baseline", config)
+                else {}
+            )
+            rows.append({"study": study["name"], "pair_id": pair.pair_id, "head_set": "baseline", "n_heads": 0, "baseline_margin": baseline, "ablated_margin": baseline, "margin_change": 0.0, "preference_flip": 0, **generation})
             for set_name, heads in sets.items():
                 with projected_head_scaling(runtime.model, {head: 0.0 for head in heads}):
                     ablated, _ = candidate_margin(runtime, model_inputs, positive_answer=correct, negative_answer=alternative)
-                rows.append({"study": study["name"], "pair_id": pair.pair_id, "head_set": set_name, "n_heads": len(heads), "baseline_margin": baseline, "ablated_margin": ablated, "margin_change": ablated - baseline, "preference_flip": int(baseline >= 0 and ablated < 0)})
+                    generation = (
+                        generate_selection(
+                            runtime,
+                            model_inputs,
+                            target_answer=correct,
+                            decoy_answer=alternative,
+                            max_new_tokens=int(config.get("generation_max_new_tokens", 8)),
+                        )
+                        if should_generate_selection(study["name"], set_name, config)
+                        else {}
+                    )
+                rows.append({"study": study["name"], "pair_id": pair.pair_id, "head_set": set_name, "n_heads": len(heads), "baseline_margin": baseline, "ablated_margin": ablated, "margin_change": ablated - baseline, "preference_flip": int(baseline >= 0 and ablated < 0), **generation})
     write_tsv(output, rows)
     aggregate = summarize(rows)
-    summary = {"valid": True, "label": "instrumentation smoke test" if args.smoke else "locked confirmation", "architecture": vars(runtime.architecture), "aggregate": aggregate, "cross_task_head_sets": sorted(cross_task_sets), "control_policy": "Every discovered point-function set is ablated on every locked task; each task also uses 20 joint matches on layer, image attention, projected norm, entropy, gaze, and general causal importance in full mode"}
+    claim_checks = point_claim_checks(aggregate)
+    summary = {
+        "valid": True,
+        "label": (
+            "instrumentation smoke test"
+            if args.smoke
+            else ("locked confirmation" if claim_checks["all_pass"] else "failed calibration")
+        ),
+        "calibration_result": (
+            "not assessed in smoke"
+            if args.smoke
+            else ("passed" if claim_checks["all_pass"] else "failed calibration")
+        ),
+        "architecture": vars(runtime.architecture),
+        "aggregate": aggregate,
+        "claim_checks": claim_checks,
+        "cross_task_head_sets": sorted(cross_task_sets),
+        "control_policy": "Every discovered point-function set is ablated on every locked task; each task also uses 20 joint matches on layer, image attention, projected norm, entropy, gaze, and general causal importance in full mode",
+        "claim_gate": "Each named head family must harm its own task under ablation, exceed bottom/cross-task/jointly matched controls, and distractor-head ablation must increase generated decoy selections.",
+    }
     summary_path = args.output_dir / "summary.json"; summary_path.write_text(json.dumps(summary, indent=2), encoding="utf-8")
     write_run_manifest(args.output_dir, config={**config, "architecture": vars(runtime.architecture)}, seeds={"global": args.seed}, inputs=inputs, outputs=[output, summary_path], status="complete", repo_root=Path.cwd())
     print(json.dumps(summary, indent=2))
@@ -116,7 +158,171 @@ def aggregate_diagnostics(rows,gaze,general):
 def summarize(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
     grouped: dict[tuple[str, str], list[dict[str, Any]]] = defaultdict(list)
     for row in rows: grouped[(row["study"], row["head_set"])].append(row)
-    return [{"study": study, "head_set": head_set, "n": len(group), "mean_baseline_margin": sum(float(row["baseline_margin"]) for row in group)/len(group), "mean_ablated_margin": sum(float(row["ablated_margin"]) for row in group)/len(group), "mean_margin_change": sum(float(row["margin_change"]) for row in group)/len(group), "preference_flip_rate": sum(int(row["preference_flip"]) for row in group)/len(group)} for (study, head_set), group in sorted(grouped.items())]
+    output = []
+    for (study, head_set), group in sorted(grouped.items()):
+        row = {"study": study, "head_set": head_set, "n": len(group), "mean_baseline_margin": sum(float(value["baseline_margin"]) for value in group)/len(group), "mean_ablated_margin": sum(float(value["ablated_margin"]) for value in group)/len(group), "mean_margin_change": sum(float(value["margin_change"]) for value in group)/len(group), "preference_flip_rate": sum(int(value["preference_flip"]) for value in group)/len(group)}
+        generated = [value for value in group if int(value.get("generation_scored", 0))]
+        if generated:
+            row.update(
+                {
+                    "target_selection_rate": sum(int(value["selected_target"]) for value in generated) / len(generated),
+                    "decoy_selection_rate": sum(int(value["selected_decoy"]) for value in generated) / len(generated),
+                    "invalid_generation_rate": sum(value["selection_state"] == "invalid" for value in generated) / len(generated),
+                }
+            )
+        output.append(row)
+    return output
+
+
+def point_claim_checks(aggregate: list[dict[str, Any]]) -> dict[str, Any]:
+    """Conservative locked gate for the three proposed point-head functions."""
+
+    lookup = {
+        (str(row["study"]), str(row["head_set"])): row for row in aggregate
+    }
+    studies = ("search", "verification", "distractor_suppression")
+    per_study: dict[str, Any] = {}
+    for study in studies:
+        top = lookup.get((study, f"{study}_top"))
+        bottom = lookup.get((study, f"{study}_bottom"))
+        cross = [
+            lookup.get((study, f"{other}_top"))
+            for other in studies
+            if other != study
+        ]
+        controls = [
+            row
+            for (row_study, head_set), row in lookup.items()
+            if row_study == study and head_set.startswith(f"{study}_fully_random_")
+        ]
+        top_change = float(top["mean_margin_change"]) if top is not None else None
+        bottom_change = float(bottom["mean_margin_change"]) if bottom is not None else None
+        cross_changes = [
+            float(row["mean_margin_change"]) for row in cross if row is not None
+        ]
+        control_changes = [float(row["mean_margin_change"]) for row in controls]
+        checks = {
+            "own_top_harms_margin": top_change is not None and top_change < 0,
+            "top_exceeds_bottom": (
+                top_change is not None
+                and bottom_change is not None
+                and abs(top_change) > abs(bottom_change)
+            ),
+            "double_dissociation": (
+                top_change is not None
+                and len(cross_changes) == len(studies) - 1
+                and top_change < min(cross_changes)
+            ),
+            "beats_fully_matched_controls": (
+                top_change is not None
+                and len(control_changes) >= 20
+                and top_change < empirical_quantile(control_changes, 0.05)
+            ),
+        }
+        if study == "distractor_suppression":
+            baseline = lookup.get((study, "baseline"))
+            generated_controls = [
+                row
+                for row in controls
+                if row.get("decoy_selection_rate") is not None
+            ]
+            top_decoy = top.get("decoy_selection_rate") if top is not None else None
+            baseline_decoy = (
+                baseline.get("decoy_selection_rate") if baseline is not None else None
+            )
+            checks["increases_generated_decoy_selections"] = (
+                top_decoy is not None
+                and baseline_decoy is not None
+                and float(top_decoy) > float(baseline_decoy)
+            )
+            checks["decoy_effect_exceeds_generated_controls"] = (
+                top_decoy is not None
+                and len(generated_controls) >= 5
+                and float(top_decoy)
+                > max(float(row["decoy_selection_rate"]) for row in generated_controls)
+            )
+        per_study[study] = {
+            **checks,
+            "all_pass": all(checks.values()),
+            "top_mean_margin_change": top_change,
+            "bottom_mean_margin_change": bottom_change,
+            "fully_matched_control_count": len(control_changes),
+        }
+    return {
+        "per_study": per_study,
+        "all_pass": all(row["all_pass"] for row in per_study.values()),
+    }
+
+
+def empirical_quantile(values: list[float], quantile: float) -> float:
+    if not values:
+        raise ValueError("cannot compute an empirical quantile of no values")
+    ordered = sorted(values)
+    index = int((len(ordered) - 1) * quantile)
+    return ordered[index]
+
+
+def generate_selection(
+    runtime: Any,
+    model_inputs: Any,
+    *,
+    target_answer: str,
+    decoy_answer: str,
+    max_new_tokens: int,
+) -> dict[str, Any]:
+    generated = runtime.model.generate(
+        **model_inputs,
+        do_sample=False,
+        max_new_tokens=max_new_tokens,
+    )
+    text = runtime.processor.batch_decode(
+        generated[:, model_inputs.input_ids.shape[1] :],
+        skip_special_tokens=True,
+        clean_up_tokenization_spaces=False,
+    )[0].strip()
+    parsed = parse_cell(text)
+    target = parse_cell(target_answer)
+    decoy = parse_cell(decoy_answer)
+    if parsed is None:
+        state = "invalid"
+    elif parsed == target:
+        state = "target"
+    elif parsed == decoy:
+        state = "decoy"
+    else:
+        state = "other"
+    return {
+        "generation_scored": 1,
+        "generated_text": text,
+        "parsed_cell": parsed,
+        "selection_state": state,
+        "selected_target": int(state == "target"),
+        "selected_decoy": int(state == "decoy"),
+    }
+
+
+def should_generate_selection(study: str, head_set: str, config: dict[str, Any]) -> bool:
+    if study != "distractor_suppression":
+        return False
+    if head_set in {
+        "baseline",
+        "distractor_suppression_top",
+        "distractor_suppression_bottom",
+    }:
+        return True
+    prefix = "distractor_suppression_fully_random_"
+    if not head_set.startswith(prefix):
+        return False
+    draw = int(head_set.removeprefix(prefix))
+    return draw < int(config.get("generation_random_control_draws", 5))
+
+
+def parse_cell(text: str) -> int | None:
+    match = re.search(r"\bcell\s*=\s*(\d{1,2})\b", text, flags=re.IGNORECASE)
+    if match is None:
+        return None
+    value = int(match.group(1))
+    return value if 0 <= value < 100 else None
 
 
 def read_tsv(path: Path) -> list[dict[str, str]]:

@@ -161,6 +161,31 @@ def test_waldo_decoy_pair_changes_only_one_distractor() -> None:
     assert high.objects[1]["class"] == "distractor-incorrect-binding"
 
 
+def test_waldo_full_scene_zoom_transforms_image_masks_and_geometry() -> None:
+    native = render_waldo_like_scene(
+        seed=14,
+        scene_id="zoom",
+        target_present=True,
+        target_cell=44,
+        clutter=8,
+        scene_zoom=1.0,
+    )
+    zoomed = render_waldo_like_scene(
+        seed=14,
+        scene_id="zoom",
+        target_present=True,
+        target_cell=44,
+        clutter=8,
+        scene_zoom=1.1,
+    )
+    assert native.image.size == zoomed.image.size == (400, 400)
+    assert native.image.tobytes() != zoomed.image.tobytes()
+    assert native.masks["target"].tobytes() != zoomed.masks["target"].tobytes()
+    assert native.objects[0]["center"] != zoomed.objects[0]["center"]
+    assert zoomed.objects[0]["scene_zoom"] == 1.1
+    assert all(0 <= value < 400 for value in zoomed.objects[0]["center"])
+
+
 def test_length_matched_direct_answer_is_exact_and_nonspatial() -> None:
     class Tokenizer:
         def __call__(self, text, add_special_tokens=False):

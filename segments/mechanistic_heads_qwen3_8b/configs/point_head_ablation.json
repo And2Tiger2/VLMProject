@@ -5,6 +5,8 @@
   "random_draws": 20,
   "diagnostic_single_feature_controls": false,
   "max_examples_per_study": 50,
+  "generation_max_new_tokens": 8,
+  "generation_random_control_draws": 5,
   "gaze_ranking": "segments/gaze_heads_qwen3_8b/runs/gaze_discovery_seed42_merged/gaze_head_ranking.json",
   "general_causal_importance": "segments/mechanistic_heads_qwen3_8b/reports/general_importance/general_head_importance.tsv",
   "instrumentation_report": "segments/mechanistic_heads_qwen3_8b/reports/instrumentation/instrumentation_validation.json",

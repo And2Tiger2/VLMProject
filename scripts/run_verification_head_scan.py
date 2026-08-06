@@ -24,7 +24,7 @@ def main() -> None:
     args = parser.parse_args()
     config = load_json_config(args.config)
     if not args.smoke:
-        require_scientific_validation(validation_path_from_config(config));require_calibration_report(Path(config["point_calibration"]),boolean_key="calibration_passed")
+        require_scientific_validation(validation_path_from_config(config));require_calibration_report(Path(config["point_calibration"]),boolean_key="calibration_passed");require_calibration_report(Path(config["waldo_calibration"]),boolean_key="calibration_passed")
     output = args.output_dir / "verification_head_scores.tsv"
     checkpoint_path=args.output_dir/"verification_head_scores.checkpoint.jsonl"
     prepare_output_directory(args.output_dir, resume=args.resume, overwrite=args.overwrite, known_outputs=(output.name,checkpoint_path.name))
@@ -60,7 +60,7 @@ def main() -> None:
             row["verification_causal_score"] = row.pop("symmetric_causal_score")
     with output.open("w", encoding="utf-8", newline="") as handle:
         writer = csv.DictWriter(handle, fieldnames=sorted({key for row in rows for key in row}) or ["pair_id"], delimiter="\t"); writer.writeheader(); writer.writerows(rows)
-    if not args.smoke:manifest_inputs.append(Path(config["point_calibration"]))
+    if not args.smoke:manifest_inputs.extend([Path(config["point_calibration"]),Path(config["waldo_calibration"])])
     write_run_manifest(args.output_dir, config={**config, "layers": layers, "smoke": args.smoke, "architecture": vars(runtime.architecture)}, seeds={"global": args.seed}, inputs=manifest_inputs, outputs=[output,checkpoint_path,checkpoint.meta_path], status="complete", repo_root=Path.cwd())
     print(json.dumps({"valid": True, "rows": len(rows), "output": str(output)}, indent=2))
 

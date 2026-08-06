@@ -162,10 +162,13 @@ def make_conditions(
 ) -> dict[str, list[tuple[int, int]]]:
     driving = [head for head, score in ranking if score > 0][:30]
     resisting = [head for head, score in reversed(ranking) if score < 0][:40]
-    if require_full_sets and (len(driving) != 30 or len(resisting) != 40):
+    positive_count = sum(score > 0 for _, score in ranking)
+    negative_count = sum(score < 0 for _, score in ranking)
+    if require_full_sets and (positive_count < 50 or negative_count < 50):
         raise RuntimeError(
-            "paper-style MACI validation requires 30 positive driving heads and "
-            f"40 negative resisting heads; found {len(driving)} and {len(resisting)}"
+            "MACI validation requires at least 50 positive driving and 50 negative "
+            "resisting heads so the paper-style 30/40 sets and complete k sweep exist; "
+            f"found {positive_count} and {negative_count}"
         )
     conditions = {
         "baseline": [],

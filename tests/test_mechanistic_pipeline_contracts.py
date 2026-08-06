@@ -67,27 +67,62 @@ def test_full_dag_orders_general_importance_before_matched_validations(tmp_path:
     module = load_script("submit_neuronic_mechanistic_overnight.py")
     submitter = module.Submitter(repo=tmp_path, dry_run=True)
     module.submit_full_suite(submitter, smoke_barrier=["smoke-ok"])
-    assert len(submitter.jobs) == 34
-    assert len(submitter.commands) == 34
-    assert len(set(submitter.jobs.values())) == 34
+    assert len(submitter.jobs) == 38
+    assert len(submitter.commands) == 38
+    assert len(set(submitter.jobs.values())) == 38
+
+    def dependencies_by_mode(job_name: str) -> dict[str, set[str]]:
+        command = submitter.commands[list(submitter.jobs).index(job_name)]
+        argument = next(value for value in command if value.startswith("--dependency="))
+        result = {}
+        for specification in argument.removeprefix("--dependency=").split(","):
+            mode, values = specification.split(":", 1)
+            result[mode] = set(values.split(":"))
+        return result
 
     def dependency_ids(job_name: str) -> set[str]:
-        job_id = submitter.jobs[job_name]
-        command = submitter.commands[list(submitter.jobs).index(job_name)]
-        del job_id
-        argument = next(value for value in command if value.startswith("--dependency="))
-        return set(argument.split(":", 1)[1].split(":"))
+        return dependencies_by_mode(job_name).get("afterok", set())
 
     general = submitter.jobs["general_importance"]
     assert general in dependency_ids("point_ablation")
     assert general in dependency_ids("maci_confirmation")
     assert general in dependency_ids("vlmbias_validation")
-    assert submitter.jobs["maci_stability"] in dependency_ids("head_atlas")
+    assert submitter.jobs["maci_stability"] in dependencies_by_mode("head_atlas")["afterany"]
     assert submitter.jobs["maci_stability"] in dependency_ids("maci_detector")
     assert submitter.jobs["maci_ablation"] in dependency_ids("maci_detector")
     assert submitter.jobs["full_point_behavior"] in dependency_ids("point_centroids_layers")
-    assert submitter.jobs["maci_heads_aggregate"] in dependency_ids(
+    assert submitter.jobs["maci_heads_aggregate"] in dependencies_by_mode(
         "vlmbias_heads_layers"
+    )["afterany"]
+    assert submitter.jobs["counting_heads_repeat2_aggregate"] in dependencies_by_mode(
+        "point_centroids_layers"
+    )["afterany"]
+    assert submitter.jobs["point_centroids_aggregate"] in dependencies_by_mode(
+        "search_heads_layers"
+    )["afterany"]
+    assert submitter.jobs["search_heads_aggregate"] in dependencies_by_mode(
+        "verification_heads_layers"
+    )["afterany"]
+    assert submitter.jobs["verification_heads_aggregate"] in dependencies_by_mode(
+        "distractor_heads_layers"
+    )["afterany"]
+    assert submitter.jobs["distractor_heads_aggregate"] in dependencies_by_mode(
+        "maci_heads_layers"
+    )["afterany"]
+    assert submitter.jobs["counting_vap_aggregate"] in dependencies_by_mode(
+        "counting_heads_layers"
+    )["afterany"]
+    assert submitter.jobs["full_point_training"] in dependency_ids(
+        "point_centroids_layers"
+    )
+    assert submitter.jobs["full_waldo_behavior"] in dependency_ids(
+        "search_heads_layers"
+    )
+    assert submitter.jobs["counting_heads_repeat1_aggregate"] in dependency_ids(
+        "counting_controls"
+    )
+    assert submitter.jobs["counting_heads_repeat2_aggregate"] in dependency_ids(
+        "counting_controls"
     )
     assert submitter.jobs["vlmbias_heads_aggregate"] in dependency_ids(
         "maci_heads_aligned_layers"
@@ -152,7 +187,7 @@ def test_paper_style_maci_sets_require_signed_head_counts() -> None:
     incomplete = [((0, head), 1.0) for head in range(29)] + [
         ((1, head), -1.0) for head in range(32)
     ]
-    with pytest.raises(RuntimeError, match="30 positive driving heads"):
+    with pytest.raises(RuntimeError, match="at least 50 positive driving"):
         module.make_conditions(
             incomplete,
             n_layers=2,
@@ -161,9 +196,11 @@ def test_paper_style_maci_sets_require_signed_head_counts() -> None:
             require_full_sets=True,
         )
 
-    complete = [((0, head), 1.0) for head in range(30)] + [
-        ((1, head), -1.0) for head in range(32)
-    ] + [((2, head), -1.0) for head in range(8)]
+    complete = [((0, head), 1.0) for head in range(32)] + [
+        ((1, head), 1.0) for head in range(18)
+    ] + [((2, head), -1.0) for head in range(32)] + [
+        ((3, head), -1.0) for head in range(18)
+    ]
     conditions = module.make_conditions(
         complete,
         n_layers=4,
@@ -192,6 +229,235 @@ def test_detector_refuses_unsigned_resisting_heads(tmp_path: Path) -> None:
     assert len(module.load_resisting_heads(score_path, k=3)) == 3
     with pytest.raises(RuntimeError, match="4 negative resisting heads"):
         module.load_resisting_heads(score_path, k=4)
+
+
+def test_count_claim_gate_requires_all_scientific_controls() -> None:
+    module = load_script("run_counting_head_validation.py")
+    rows = []
+    real_specs = [
+        ("real-color", "color", "standard", 101),
+        ("real-shape", "shape", "target_relocation", 102),
+    ]
+    for pair_id, variant, position, renderer_seed in real_specs:
+        for intervention in (
+            "zero",
+            "mean",
+            "resample",
+            "donor_patch",
+            "reverse_donor_patch",
+        ):
+            rows.append(
+                {
+                    "pair_id": pair_id,
+                    "pair_type": "constant-complexity",
+                    "variant": variant,
+                    "position_variant": position,
+                    "renderer_seed": renderer_seed,
+                    "head_set": "count_top10",
+                    "intervention": intervention,
+                    "margin_shift": -2.0,
+                }
+            )
+    rows.extend(
+        [
+            {
+                "pair_id": "code",
+                "pair_type": "randomized-answer-code",
+                "variant": "color",
+                "position_variant": "standard",
+                "renderer_seed": 101,
+                "head_set": "count_top10",
+                "intervention": "donor_patch",
+                "margin_shift": -1.5,
+            },
+            {
+                "pair_id": "sham",
+                "pair_type": "matched-sham",
+                "variant": "color",
+                "position_variant": "standard",
+                "renderer_seed": 101,
+                "head_set": "count_top10",
+                "intervention": "donor_patch",
+                "margin_shift": -0.1,
+            },
+        ]
+    )
+    for draw in range(20):
+        rows.append(
+            {
+                "pair_id": f"control-{draw}",
+                "pair_type": "constant-complexity",
+                "variant": "color",
+                "position_variant": "standard",
+                "renderer_seed": 101,
+                "head_set": f"fully_matched_k10_draw{draw:02d}",
+                "intervention": "donor_patch",
+                "margin_shift": -0.2,
+            }
+        )
+    passed = module.count_claim_checks(
+        rows,
+        stability_passed=True,
+        matched_control_quantile=0.95,
+    )
+    assert passed["all_pass"]
+    assert passed["per_k"]["10"]["n_matched_control_draws"] == 20
+    assert not module.count_claim_checks(
+        rows,
+        stability_passed=False,
+        matched_control_quantile=0.95,
+    )["all_pass"]
+
+
+def test_distractor_validation_parses_and_reports_decoy_selections() -> None:
+    module = load_script("run_point_head_ablation.py")
+    assert module.parse_cell("The answer is cell=07.") == 7
+    assert module.parse_cell("cell=100") is None
+    assert module.should_generate_selection(
+        "distractor_suppression", "distractor_suppression_top", {}
+    )
+    assert module.should_generate_selection(
+        "distractor_suppression", "distractor_suppression_fully_random_04", {}
+    )
+    assert not module.should_generate_selection(
+        "distractor_suppression", "distractor_suppression_fully_random_05", {}
+    )
+    aggregate = module.summarize(
+        [
+            {
+                "study": "distractor_suppression",
+                "head_set": "baseline",
+                "baseline_margin": 1.0,
+                "ablated_margin": 1.0,
+                "margin_change": 0.0,
+                "preference_flip": 0,
+                "generation_scored": 1,
+                "selected_target": 0,
+                "selected_decoy": 1,
+                "selection_state": "decoy",
+            }
+        ]
+    )
+    assert aggregate[0]["decoy_selection_rate"] == 1.0
+
+
+def test_point_locked_claim_gate_requires_double_dissociation_and_decoy_effect() -> None:
+    module = load_script("run_point_head_ablation.py")
+    studies = ("search", "verification", "distractor_suppression")
+    aggregate = []
+    for study in studies:
+        aggregate.extend(
+            [
+                {
+                    "study": study,
+                    "head_set": "baseline",
+                    "mean_margin_change": 0.0,
+                    **({"decoy_selection_rate": 0.1} if study == "distractor_suppression" else {}),
+                },
+                {
+                    "study": study,
+                    "head_set": f"{study}_top",
+                    "mean_margin_change": -2.0,
+                    **({"decoy_selection_rate": 0.6} if study == "distractor_suppression" else {}),
+                },
+                {
+                    "study": study,
+                    "head_set": f"{study}_bottom",
+                    "mean_margin_change": -0.1,
+                },
+            ]
+        )
+        for other in studies:
+            if other != study:
+                aggregate.append(
+                    {
+                        "study": study,
+                        "head_set": f"{other}_top",
+                        "mean_margin_change": -0.3,
+                    }
+                )
+        for draw in range(20):
+            aggregate.append(
+                {
+                    "study": study,
+                    "head_set": f"{study}_fully_random_{draw:02d}",
+                    "mean_margin_change": -0.5,
+                    **(
+                        {"decoy_selection_rate": 0.2}
+                        if study == "distractor_suppression" and draw < 5
+                        else {}
+                    ),
+                }
+            )
+    checks = module.point_claim_checks(aggregate)
+    assert checks["all_pass"]
+    failed = [dict(row) for row in aggregate]
+    next(
+        row
+        for row in failed
+        if row["study"] == "search" and row["head_set"] == "search_top"
+    )["mean_margin_change"] = 0.1
+    assert not module.point_claim_checks(failed)["all_pass"]
+
+
+def test_vlmbias_locked_claim_gate_requires_direction_controls_and_retention() -> None:
+    module = load_script("run_vlmbias_head_validation.py")
+    summaries = {
+        "baseline": {
+            "unconditional_bias_answer_rate": 0.4,
+            "mean_margin_shift": 0.0,
+        },
+        "driving_suppress": {
+            "unconditional_bias_answer_rate": 0.2,
+            "mean_margin_shift": -2.0,
+        },
+        "resisting_amplify": {
+            "unconditional_bias_answer_rate": 0.2,
+            "mean_margin_shift": -2.0,
+        },
+        "joint_role_aware": {
+            "unconditional_bias_answer_rate": 0.1,
+            "mean_margin_shift": -2.5,
+        },
+    }
+    for role in ("driving", "resisting"):
+        for draw in range(20):
+            summaries[f"control_{role}_fully_{draw:02d}"] = {
+                "unconditional_bias_answer_rate": 0.4,
+                "mean_margin_shift": -0.2,
+            }
+    transitions = {
+        condition: {"bias->correct": 4, "correct->bias": 1}
+        for condition in ("driving_suppress", "resisting_amplify", "joint_role_aware")
+    }
+    naturalbench = {
+        "baseline": {"Acc": 0.7, "G_Acc": 0.5},
+        "driving_suppress": {"Acc": 0.69, "G_Acc": 0.48},
+        "resisting_amplify": {"Acc": 0.68, "G_Acc": 0.47},
+        "joint_role_aware": {"Acc": 0.67, "G_Acc": 0.46},
+    }
+    checks = module.vlmbias_claim_checks(
+        summaries, transitions, naturalbench, naturalbench_tolerance=0.05
+    )
+    assert checks["all_pass"]
+    naturalbench["joint_role_aware"]["G_Acc"] = 0.1
+    assert not module.vlmbias_claim_checks(
+        summaries, transitions, naturalbench, naturalbench_tolerance=0.05
+    )["all_pass"]
+
+
+def test_maci_gated_claim_requires_budget_matched_detector_benefit() -> None:
+    module = load_script("run_maci_gated_intervention.py")
+    conditions = {
+        "never": {"mean_hallucination_advantage": 1.0, "intervention_rate": 0.0},
+        "always": {"mean_hallucination_advantage": 0.3, "intervention_rate": 1.0},
+        "detector_gated": {"mean_hallucination_advantage": 0.4, "intervention_rate": 0.4},
+        "confidence_gated": {"mean_hallucination_advantage": 0.7, "intervention_rate": 0.5},
+        "random_budget_matched": {"mean_hallucination_advantage": 0.8, "intervention_rate": 0.4},
+    }
+    assert module.gated_claim_checks(conditions)["all_pass"]
+    conditions["random_budget_matched"]["intervention_rate"] = 0.3
+    assert not module.gated_claim_checks(conditions)["all_pass"]
 
 
 def test_mechanistic_shell_entrypoints_parse() -> None:
@@ -416,6 +682,7 @@ def test_counting_answer_codebooks_vary_and_shams_are_declared_controls(
             "syndot_train": 1,
             "syndot_test": 1,
             "mechanistic_pairs": 1,
+            "mechanistic_repeat_seeds": [20, 21],
             "constant_complexity_pairs": 12,
         },
         seed=19,
@@ -440,6 +707,21 @@ def test_counting_answer_codebooks_vary_and_shams_are_declared_controls(
         row for row in rows if row["metadata"]["pair_type"] == "constant-complexity"
     )
     assert standard["metadata"]["renderer_seed"] != 19
+    primary = json.loads(
+        (tmp_path / "mechanistic_pairs.jsonl")
+        .read_text(encoding="utf-8")
+        .splitlines()[0]
+    )
+    repeats = [
+        json.loads(
+            (tmp_path / f"mechanistic_pairs_repeat{index}.jsonl")
+            .read_text(encoding="utf-8")
+            .splitlines()[0]
+        )
+        for index in (1, 2)
+    ]
+    assert {row["generator_seed"] for row in repeats} == {20, 21}
+    assert all(row["donor_image"] != primary["donor_image"] for row in repeats)
 
 
 def test_waldo_four_candidate_target_position_is_not_constant(tmp_path: Path) -> None:

@@ -34,7 +34,7 @@ def main() -> None:
     args = parser.parse_args()
     config = load_json_config(args.config)
     if not args.smoke:
-        require_scientific_validation(validation_path_from_config(config));require_calibration_report(Path(config["point_calibration"]),boolean_key="calibration_passed")
+        require_scientific_validation(validation_path_from_config(config));require_calibration_report(Path(config["point_calibration"]),boolean_key="calibration_passed");require_calibration_report(Path(config["waldo_calibration"]),boolean_key="calibration_passed")
     output = args.output_dir / "search_head_scores.tsv"
     checkpoint_path=args.output_dir/"search_head_scores.checkpoint.jsonl"
     prepare_output_directory(args.output_dir, resume=args.resume, overwrite=args.overwrite, known_outputs=(output.name,checkpoint_path.name))
@@ -59,7 +59,7 @@ def main() -> None:
     checkpoint=JsonlCheckpoint(checkpoint_path,key=lambda row:(row["pair_id"],row["layer"],row["head"]),resume=args.resume,context={"config":config,"seed":args.seed,"smoke":args.smoke,"layers":layers,"input_sha256":hash_paths(manifest_inputs)})
     rows = scan(runtime, pairs=pairs, layers=layers, head_microbatch=args.head_microbatch,checkpoint=checkpoint)
     _write_tsv(output, rows)
-    if not args.smoke:manifest_inputs.append(Path(config["point_calibration"]))
+    if not args.smoke:manifest_inputs.extend([Path(config["point_calibration"]),Path(config["waldo_calibration"])])
     write_run_manifest(args.output_dir, config={**config, "layers": layers, "smoke": args.smoke, "head_microbatch": args.head_microbatch, "architecture": vars(runtime.architecture), "normalization_rule": "donor visual pattern, recipient visual mass, unchanged nonvisual keys"}, seeds={"global": args.seed}, inputs=manifest_inputs, outputs=[output,checkpoint_path,checkpoint.meta_path], status="complete", repo_root=Path.cwd())
     print(json.dumps({"valid": True, "rows": len(rows), "output": str(output)}, indent=2))
 

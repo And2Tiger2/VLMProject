@@ -209,6 +209,7 @@ def render_waldo_like_scene(
     background: tuple[int, int, int] = (225, 235, 220),
     distractor_centers: list[tuple[int, int]] | None = None,
     similarity_overrides: dict[int, int] | None = None,
+    scene_zoom: float = 1.0,
 ) -> RenderedScene:
     """Render an original four-feature conjunction-search character scene."""
 
@@ -275,7 +276,77 @@ def render_waldo_like_scene(
                 "binding_correct": not incorrect_binding,
             }
         )
+    if scene_zoom <= 0:
+        raise ValueError("scene zoom must be positive")
+    if scene_zoom != 1.0:
+        image, masks, objects = _zoom_scene(
+            image,
+            masks,
+            objects,
+            zoom=float(scene_zoom),
+            background=background,
+        )
     return RenderedScene(image=image, masks=masks, objects=objects)
+
+
+def _zoom_scene(
+    image: Image.Image,
+    masks: dict[str, Image.Image],
+    objects: list[dict[str, Any]],
+    *,
+    zoom: float,
+    background: tuple[int, int, int],
+) -> tuple[Image.Image, dict[str, Image.Image], list[dict[str, Any]]]:
+    width, height = image.size
+    center_x = (width - 1) / 2
+    center_y = (height - 1) / 2
+    inverse = (
+        1.0 / zoom,
+        0.0,
+        center_x - center_x / zoom,
+        0.0,
+        1.0 / zoom,
+        center_y - center_y / zoom,
+    )
+    zoomed_image = image.transform(
+        image.size,
+        Image.Transform.AFFINE,
+        inverse,
+        resample=Image.Resampling.BICUBIC,
+        fillcolor=background,
+    )
+    zoomed_masks = {
+        name: mask.transform(
+            mask.size,
+            Image.Transform.AFFINE,
+            inverse,
+            resample=Image.Resampling.NEAREST,
+            fillcolor=0,
+        )
+        for name, mask in masks.items()
+    }
+
+    def coordinate(value: float, center: float, maximum: int) -> int:
+        return max(0, min(maximum, int(round(center + (value - center) * zoom))))
+
+    zoomed_objects = []
+    for value in objects:
+        row = dict(value)
+        x, y = value["center"]
+        new_x = coordinate(x, center_x, width - 1)
+        new_y = coordinate(y, center_y, height - 1)
+        x0, y0, x1, y1 = value["box"]
+        row["center"] = [new_x, new_y]
+        row["box"] = [
+            coordinate(x0, center_x, width - 1),
+            coordinate(y0, center_y, height - 1),
+            coordinate(x1, center_x, width - 1),
+            coordinate(y1, center_y, height - 1),
+        ]
+        row["cell"] = (new_y // 40) * 10 + new_x // 40
+        row["scene_zoom"] = zoom
+        zoomed_objects.append(row)
+    return zoomed_image, zoomed_masks, zoomed_objects
 
 
 def waldo_distractor_centers(

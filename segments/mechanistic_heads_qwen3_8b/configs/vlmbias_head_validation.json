@@ -14,6 +14,7 @@
   "resisting_k": 40,
   "resisting_scale": 2.0,
   "control_draws": 20
+  ,"naturalbench_retention_tolerance": 0.05
   ,"diagnostic_single_feature_controls": false
   ,"naturalbench_condition_prefixes": [
     "baseline",

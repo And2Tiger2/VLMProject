@@ -76,12 +76,12 @@ case "$ACTION" in
       --output-dir segments/mechanistic_heads_qwen3_8b/reports/atlas \
       --seed 0 --resume
     ;;
-  instrumentation|counting-behavior|counting-vap|counting-heads|counting-validation|waldo-behavior|point-centroids|search-heads|verification-heads|distractor-heads|point-ablation|maci-heads|maci-heads-aligned|maci-ablation|maci-confirm|maci-detector|maci-gated|vlmbias-heads|vlmbias-validation)
+  instrumentation|counting-behavior|counting-vap|counting-heads|counting-heads-repeat1|counting-heads-repeat2|counting-validation|waldo-behavior|point-centroids|search-heads|verification-heads|distractor-heads|point-ablation|maci-heads|maci-heads-aligned|maci-ablation|maci-confirm|maci-detector|maci-gated|vlmbias-heads|vlmbias-validation)
     if [[ "$MODE" != "smoke" && "$MODE" != "full" ]]; then
       echo "mode must be smoke or full" >&2
       exit 2
     fi
-    if [[ "$MODE" == "full" && "$ACTION" =~ ^(counting-vap|counting-heads|point-centroids|search-heads|verification-heads|distractor-heads|maci-heads|maci-heads-aligned|vlmbias-heads)$ ]]; then
+    if [[ "$MODE" == "full" && "$ACTION" =~ ^(counting-vap|counting-heads|counting-heads-repeat1|counting-heads-repeat2|point-centroids|search-heads|verification-heads|distractor-heads|maci-heads|maci-heads-aligned|vlmbias-heads)$ ]]; then
       run_job=$(sbatch --parsable --array=0-35%4 \
         --export "ALL,REPO=$REPO,TASK=$ACTION,MODE=$MODE" \
         scripts/slurm_neuronic_mechanistic_heads.sh)
@@ -96,6 +96,6 @@ case "$ACTION" in
     fi
     ;;
   help|*)
-    echo "usage: $0 {archive-stale|overnight-smoke|overnight-all|overnight-all-resume|prepare-synthetic|download-mmmc|instrumentation|counting-behavior|counting-vap|counting-heads|general-importance|counting-controls|counting-validation|waldo-behavior|point-centroids|search-heads|verification-heads|distractor-heads|point-ablation|maci-heads|maci-heads-aligned|maci-stability|maci-ablation|maci-confirm|maci-detector|maci-gated|vlmbias-heads|vlmbias-validation|atlas} [smoke|full]"
+    echo "usage: $0 {archive-stale|overnight-smoke|overnight-all|overnight-all-resume|prepare-synthetic|download-mmmc|instrumentation|counting-behavior|counting-vap|counting-heads|counting-heads-repeat1|counting-heads-repeat2|general-importance|counting-controls|counting-validation|waldo-behavior|point-centroids|search-heads|verification-heads|distractor-heads|point-ablation|maci-heads|maci-heads-aligned|maci-stability|maci-ablation|maci-confirm|maci-detector|maci-gated|vlmbias-heads|vlmbias-validation|atlas} [smoke|full]"
     ;;
 esac

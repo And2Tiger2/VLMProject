@@ -6,5 +6,6 @@
   "split": "prototype",
   "ablation": "zero projected head output",
   "metric": "increase in decoy-vs-correct sequence likelihood"
-  ,"point_calibration": "segments/mechanistic_heads_qwen3_8b/runs/point_behavior/point_answer/summary.json"
+  ,"point_calibration": "segments/mechanistic_heads_qwen3_8b/runs/point_behavior/point_answer/summary.json",
+  "waldo_calibration": "segments/mechanistic_heads_qwen3_8b/runs/waldo_behavior/full/summary.json"
 }

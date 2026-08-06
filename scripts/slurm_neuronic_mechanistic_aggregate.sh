@@ -13,6 +13,8 @@ cd "$REPO"
 case "$SOURCE_TASK" in
   counting-vap) ROOT=counting_vap ;;
   counting-heads) ROOT=counting_head_scan ;;
+  counting-heads-repeat1) ROOT=counting_head_scan_repeat1 ;;
+  counting-heads-repeat2) ROOT=counting_head_scan_repeat2 ;;
   point-centroids) ROOT=point_attention_centroids ;;
   search-heads) ROOT=search_head_scan ;;
   verification-heads) ROOT=verification_head_scan ;;

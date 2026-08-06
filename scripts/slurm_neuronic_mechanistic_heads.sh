@@ -76,11 +76,20 @@ case "$TASK" in
       --output-dir "segments/mechanistic_heads_qwen3_8b/runs/counting_vap/$OUT_SUFFIX" \
       --seed "$SEED" --device-map cuda --resume "${layer_args[@]}" "${smoke_args[@]}"
     ;;
-  counting-heads)
-    VERIFY_DIR="segments/mechanistic_heads_qwen3_8b/runs/counting_head_scan/$OUT_SUFFIX"
+  counting-heads|counting-heads-repeat1|counting-heads-repeat2)
+    COUNT_SCAN_ROOT="counting_head_scan"
+    COUNT_SCAN_CONFIG="segments/mechanistic_heads_qwen3_8b/configs/counting_head_scan.json"
+    if [[ "$TASK" == "counting-heads-repeat1" ]]; then
+      COUNT_SCAN_ROOT="counting_head_scan_repeat1"
+      COUNT_SCAN_CONFIG="segments/mechanistic_heads_qwen3_8b/configs/counting_head_scan_repeat1.json"
+    elif [[ "$TASK" == "counting-heads-repeat2" ]]; then
+      COUNT_SCAN_ROOT="counting_head_scan_repeat2"
+      COUNT_SCAN_CONFIG="segments/mechanistic_heads_qwen3_8b/configs/counting_head_scan_repeat2.json"
+    fi
+    VERIFY_DIR="segments/mechanistic_heads_qwen3_8b/runs/$COUNT_SCAN_ROOT/$OUT_SUFFIX"
     uv run python scripts/run_counting_head_scan.py \
-      --config segments/mechanistic_heads_qwen3_8b/configs/counting_head_scan.json \
-      --output-dir "segments/mechanistic_heads_qwen3_8b/runs/counting_head_scan/$OUT_SUFFIX" \
+      --config "$COUNT_SCAN_CONFIG" \
+      --output-dir "$VERIFY_DIR" \
       --seed "$SEED" --device-map cuda --resume "${layer_args[@]}" "${smoke_args[@]}"
     ;;
   counting-validation)

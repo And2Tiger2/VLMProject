@@ -86,7 +86,13 @@ def main() -> None:
                 text=runtime.processor.batch_decode(generated[:,inputs.input_ids.shape[1]:],skip_special_tokens=True,clean_up_tokenization_spaces=False)[0].strip(); parsed=extract_naturalbench_answer(text,call.question_type); predictions.append(NaturalBenchPrediction(call.group_id,call.call_id,call.question_id,call.image_id,call.question_type,call.prompt,call.ground_truth,text,parsed,normalize_naturalbench_answer(parsed)==normalize_naturalbench_answer(call.ground_truth),call.source))
             naturalbench[condition]=summarize_naturalbench(predictions)
     normalized_transitions={condition:{key.replace("other_wrong","other-wrong"):value for key,value in values.items()} for condition,values in transitions.items()}
-    summary={"valid":True,"label":"instrumentation smoke test" if args.smoke else "locked confirmation","selection_contrast":contrast,"n_locked_examples":len(examples),"head_sets":{"driving":driving,"resisting":resisting},"vlmbias":summaries,"transitions":normalized_transitions,"naturalbench":naturalbench,"control_policy":"20 joint matches on layer, image attention, projected norm, entropy, gaze, and general causal importance; NaturalBench retention is evaluated on core interventions only","architecture":vars(runtime.architecture)}
+    claim_checks = vlmbias_claim_checks(
+        summaries,
+        normalized_transitions,
+        naturalbench,
+        naturalbench_tolerance=float(config.get("naturalbench_retention_tolerance", 0.05)),
+    )
+    summary={"valid":True,"label":"instrumentation smoke test" if args.smoke else ("locked confirmation" if claim_checks["all_pass"] else "failed calibration"),"calibration_result":"not assessed in smoke" if args.smoke else ("passed" if claim_checks["all_pass"] else "failed calibration"),"selection_contrast":contrast,"n_locked_examples":len(examples),"head_sets":{"driving":driving,"resisting":resisting},"vlmbias":summaries,"transitions":normalized_transitions,"naturalbench":naturalbench,"claim_checks":claim_checks,"claim_gate":"Role-aware heads are confirmed only if driving suppression, resisting amplification, and their joint intervention all lower the bias-vs-correct margin without increasing generated bias answers, beat their matched controls where available, and retain NaturalBench within tolerance.","control_policy":"20 joint matches on layer, image attention, projected norm, entropy, gaze, and general causal importance; NaturalBench retention is evaluated on core interventions only","architecture":vars(runtime.architecture)}
     summary_path=args.output_dir/"summary.json";summary_path.write_text(json.dumps(summary,indent=2),encoding="utf-8")
     manifest_inputs=[args.config,Path(config["head_scores"]),Path(config["paired_contrasts"]),Path(config["vlmbias_dataset"]),*[Path(example.image_path) for example in examples if example.image_path],*naturalbench_input_paths]
     for key in ("naturalbench_dataset","gaze_ranking","conflict_detector","general_causal_importance"):
@@ -129,6 +135,69 @@ def dict_to_prediction(row):
     fields=Prediction.__dataclass_fields__;return Prediction(**{key:row[key] for key in fields})
 def avg(rows,key):return sum(float(row[key]) for row in rows)/len(rows)
 def should_run_naturalbench(condition,config):return condition.startswith(tuple(config.get("naturalbench_condition_prefixes",("baseline","driving_suppress","resisting_amplify","joint_role_aware","conflict_gated"))))
+
+
+def vlmbias_claim_checks(summaries, transitions, naturalbench, *, naturalbench_tolerance):
+    baseline = summaries.get("baseline")
+    if baseline is None:
+        return {"all_pass": False, "error": "missing baseline"}
+    core = ("driving_suppress", "resisting_amplify", "joint_role_aware")
+    per_condition = {}
+    for condition in core:
+        result = summaries.get(condition)
+        if result is None:
+            per_condition[condition] = {"all_pass": False, "missing": True}
+            continue
+        role = "driving" if condition == "driving_suppress" else "resisting"
+        controls = [
+            value
+            for name, value in summaries.items()
+            if name.startswith(f"control_{role}_fully_")
+        ]
+        selected_shift = float(result["mean_margin_shift"])
+        control_shifts = [float(value["mean_margin_shift"]) for value in controls]
+        movement = transitions.get(condition, {})
+        checks = {
+            "lowers_bias_margin": selected_shift < 0,
+            "does_not_increase_bias_answers": float(result["unconditional_bias_answer_rate"])
+            <= float(baseline["unconditional_bias_answer_rate"]),
+            "bias_to_correct_exceeds_correct_to_bias": int(movement.get("bias->correct", 0))
+            > int(movement.get("correct->bias", 0)),
+        }
+        if condition != "joint_role_aware":
+            checks["beats_fully_matched_controls"] = (
+                len(control_shifts) >= 20
+                and selected_shift < empirical_quantile(control_shifts, 0.05)
+            )
+        per_condition[condition] = {**checks, "all_pass": all(checks.values())}
+
+    retention = {}
+    baseline_nb = naturalbench.get("baseline")
+    if baseline_nb is not None:
+        for condition in core:
+            result = naturalbench.get(condition)
+            retention[condition] = bool(result) and all(
+                float(result[metric]) >= float(baseline_nb[metric]) - naturalbench_tolerance
+                for metric in ("Acc", "G_Acc")
+            )
+    else:
+        retention = {condition: False for condition in core}
+    return {
+        "per_condition": per_condition,
+        "naturalbench_retention": retention,
+        "naturalbench_tolerance": naturalbench_tolerance,
+        "all_pass": all(value["all_pass"] for value in per_condition.values())
+        and all(retention.values()),
+    }
+
+
+def empirical_quantile(values, quantile):
+    if not values:
+        raise ValueError("cannot compute an empirical quantile of no values")
+    ordered = sorted(values)
+    return ordered[int((len(ordered) - 1) * quantile)]
+
+
 def read_tsv(path):
     with path.open("r",encoding="utf-8") as handle:return list(csv.DictReader(handle,delimiter="\t"))
 if __name__=="__main__":main()

@@ -141,18 +141,26 @@ def generate_point_search_datasets(
         target_present = index % 2 == 0
         scales = (0.75, 1.0, 1.25)
         backgrounds = ((225, 235, 220), (235, 225, 220), (218, 228, 240))
-        scale = scales[index % len(scales)]
-        background = backgrounds[(index // len(scales)) % len(backgrounds)]
+        zooms = (0.9, 1.0, 1.1)
+        scale = scales[stable_seed(seed, scene_id, "scale") % len(scales)]
+        background = backgrounds[
+            stable_seed(seed, scene_id, "background") % len(backgrounds)
+        ]
+        zoom = zooms[stable_seed(seed, scene_id, "zoom") % len(zooms)]
+        clutter = 24 + stable_seed(seed, scene_id, "clutter") % 12
+        similarity = 1 + stable_seed(seed, scene_id, "similarity") % 3
+        occluded = stable_seed(seed, scene_id, "occlusion") % 7 == 0
         scene = render_waldo_like_scene(
             seed=seed,
             scene_id=scene_id,
             target_present=target_present,
-            clutter=24 + index % 12,
-            similarity=1 + index % 3,
+            clutter=clutter,
+            similarity=similarity,
             target_cell=stable_seed(seed, scene_id) % 100,
-            occluded=index % 7 == 0,
+            occluded=occluded,
             target_scale=scale,
             background=background,
+            scene_zoom=zoom,
         )
         image_path = output_dir / "waldo_like" / "images" / f"{scene_id}.png"
         image_path.parent.mkdir(parents=True, exist_ok=True)
@@ -227,8 +235,12 @@ def generate_point_search_datasets(
                     "four_candidate_cells": candidate_cells,
                     "target_scale": scale,
                     "background_rgb": list(background),
-                    "zoom_condition": "native" if index % 2 == 0 else "target-scale variant",
-                    "prompt_wording_variant": index % 3,
+                    "scene_zoom": zoom,
+                    "zoom_condition": f"{zoom:.1f}x full-scene zoom",
+                    "clutter": clutter,
+                    "distractor_similarity": similarity,
+                    "occluded": occluded,
+                    "prompt_wording_variant": stable_seed(seed, scene_id, "prompt") % 3,
                 },
             }
         )

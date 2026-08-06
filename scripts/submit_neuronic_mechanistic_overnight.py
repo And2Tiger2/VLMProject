@@ -34,6 +34,7 @@ class Submitter:
         *,
         exports: dict[str, str],
         dependencies: Iterable[str] = (),
+        afterany_dependencies: Iterable[str] = (),
         array: str | None = None,
         dependency_mode: str = "afterok",
     ) -> str:
@@ -44,8 +45,14 @@ class Submitter:
             raise ValueError(f"unsupported dependency mode: {dependency_mode}")
         command.append("--kill-on-invalid-dep=yes")
         deps = [str(value) for value in dependencies if value]
+        afterany = [str(value) for value in afterany_dependencies if value]
+        dependency_specs = []
         if deps:
-            command.append(f"--dependency={dependency_mode}:" + ":".join(deps))
+            dependency_specs.append(f"{dependency_mode}:" + ":".join(deps))
+        if afterany:
+            dependency_specs.append("afterany:" + ":".join(afterany))
+        if dependency_specs:
+            command.append("--dependency=" + ",".join(dependency_specs))
         if array is not None:
             command.append(f"--array={array}")
         exported = {"REPO": str(self.repo), **exports}
@@ -78,6 +85,7 @@ class Submitter:
         mode: str,
         *,
         dependencies: Iterable[str],
+        afterany_dependencies: Iterable[str] = (),
         array: str | None = None,
     ) -> str:
         return self.submit(
@@ -85,6 +93,7 @@ class Submitter:
             GPU_SCRIPT,
             exports={"TASK": task, "MODE": mode},
             dependencies=dependencies,
+            afterany_dependencies=afterany_dependencies,
             array=array,
         )
 
@@ -94,12 +103,14 @@ class Submitter:
         task: str,
         *,
         dependencies: Iterable[str],
+        afterany_dependencies: Iterable[str] = (),
     ) -> str:
         run = self.gpu(
             f"{name}_layers",
             task,
             "full",
             dependencies=dependencies,
+            afterany_dependencies=afterany_dependencies,
             array="0-35%4",
         )
         return self.submit(
@@ -169,16 +180,63 @@ def submit_full_suite(
         dependencies=[point_train],
     )
 
-    # Discovery arrays are serialized so this suite requests at most four scan
-    # GPUs at once. Each array still evaluates four layers concurrently.
-    count_vap = submitter.scan("counting_vap", "counting-vap", dependencies=[point_train])
-    count_heads = submitter.scan("counting_heads", "counting-heads", dependencies=[count_vap])
+    # Discovery arrays are resource-serialized so this suite requests at most
+    # four scan GPUs at once. Cross-study serialization uses ``afterany``:
+    # failure in one scientifically independent study must not invalidate all
+    # later studies. True data/calibration prerequisites remain ``afterok``.
+    count_vap = submitter.scan(
+        "counting_vap",
+        "counting-vap",
+        dependencies=smoke_barrier,
+        afterany_dependencies=[point_train],
+    )
+    count_heads = submitter.scan(
+        "counting_heads",
+        "counting-heads",
+        dependencies=smoke_barrier,
+        afterany_dependencies=[count_vap],
+    )
+    count_heads_repeat1 = submitter.scan(
+        "counting_heads_repeat1",
+        "counting-heads-repeat1",
+        dependencies=[count_heads],
+    )
+    count_heads_repeat2 = submitter.scan(
+        "counting_heads_repeat2",
+        "counting-heads-repeat2",
+        dependencies=[count_heads_repeat1],
+    )
 
-    point_centroids = submitter.scan("point_centroids", "point-centroids", dependencies=[count_heads, point_train, point_behavior])
-    search = submitter.scan("search_heads", "search-heads", dependencies=[point_centroids])
-    verification = submitter.scan("verification_heads", "verification-heads", dependencies=[search])
-    distractor = submitter.scan("distractor_heads", "distractor-heads", dependencies=[verification])
-    maci = submitter.scan("maci_heads", "maci-heads", dependencies=[distractor])
+    point_centroids = submitter.scan(
+        "point_centroids",
+        "point-centroids",
+        dependencies=[point_train, point_behavior],
+        afterany_dependencies=[count_heads_repeat2],
+    )
+    search = submitter.scan(
+        "search_heads",
+        "search-heads",
+        dependencies=[point_train, point_behavior, waldo_behavior],
+        afterany_dependencies=[point_centroids],
+    )
+    verification = submitter.scan(
+        "verification_heads",
+        "verification-heads",
+        dependencies=[point_train, point_behavior, waldo_behavior],
+        afterany_dependencies=[search],
+    )
+    distractor = submitter.scan(
+        "distractor_heads",
+        "distractor-heads",
+        dependencies=[point_train, point_behavior, waldo_behavior],
+        afterany_dependencies=[verification],
+    )
+    maci = submitter.scan(
+        "maci_heads",
+        "maci-heads",
+        dependencies=smoke_barrier,
+        afterany_dependencies=[distractor],
+    )
     maci_stability = submitter.submit(
         "maci_stability",
         POST_SCRIPT,
@@ -193,7 +251,12 @@ def submit_full_suite(
     # branch. Run the core VLMBias scan first, then serialize the secondary
     # aligned scan behind it so a legitimate unequal-length exclusion cannot
     # invalidate the core path or increase scan concurrency above four GPUs.
-    vlmbias = submitter.scan("vlmbias_heads", "vlmbias-heads", dependencies=[maci])
+    vlmbias = submitter.scan(
+        "vlmbias_heads",
+        "vlmbias-heads",
+        dependencies=smoke_barrier,
+        afterany_dependencies=[maci],
+    )
     maci_aligned = submitter.scan(
         "maci_heads_aligned", "maci-heads-aligned", dependencies=[vlmbias]
     )
@@ -237,7 +300,7 @@ def submit_full_suite(
         "counting_controls",
         POST_SCRIPT,
         exports={"TASK": "counting-controls"},
-        dependencies=[general],
+        dependencies=[general, count_heads_repeat1, count_heads_repeat2],
     )
     count_validation = submitter.gpu(
         "counting_validation",
@@ -333,7 +396,9 @@ def main() -> None:
 def require_valid_prepared_data(repo: Path) -> None:
     groups = {
         "segments/mechanistic_heads_qwen3_8b/data/generated/counting": (
-            "mechanistic_pairs.jsonl", "constant_complexity_pairs.jsonl", "syndot.jsonl", "dataset_manifest.json"
+            "mechanistic_pairs.jsonl", "mechanistic_pairs_repeat1.jsonl",
+            "mechanistic_pairs_repeat2.jsonl", "constant_complexity_pairs.jsonl",
+            "syndot.jsonl", "dataset_manifest.json"
         ),
         "segments/mechanistic_heads_qwen3_8b/data/generated/point_search": (
             "point_search.jsonl", "waldo_like.jsonl", "search_pairs.jsonl",
@@ -423,6 +488,12 @@ def require_valid_prepared_data(repo: Path) -> None:
     mmmc = json.loads(audit_path.read_text(encoding="utf-8"))
     if counting.get("counts", {}).get("mechanistic_pairs") != 100:
         raise RuntimeError("prepared counting data does not contain the required 100 mechanistic pairs")
+    if counting.get("counts", {}).get("mechanistic_repeat_pairs_each") != 100 or len(
+        counting.get("counts", {}).get("mechanistic_repeat_seeds", [])
+    ) < 2:
+        raise RuntimeError(
+            "prepared counting data does not contain two 100-pair cross-seed repeats"
+        )
     if point.get("counts", {}).get("point_search_train") != 2000:
         raise RuntimeError("prepared point-search data does not contain the required 2,000 training scenes")
     expected_pair_splits = {"prototype": 300, "validation": 100, "locked_test": 100}

@@ -40,6 +40,7 @@ def main() -> None:
     config = load_json_config(args.config)
     require_current_artifact(Path(config["count_ranking"]))
     require_current_artifact(Path(config["controls"]))
+    require_current_artifact(Path(config["stability_summary"]))
     if not args.smoke:
         require_scientific_validation(validation_path_from_config(config))
     output = args.output_dir / "count_head_validation.tsv"
@@ -125,11 +126,20 @@ def main() -> None:
             rows.append(result_row(pair, set_name, len(heads), "reverse_donor_patch", reverse_baseline, reverse_margin))
 
     write_tsv(output, rows)
-    summary = summarize(rows, head_sets, runtime)
+    stability_summary = json.loads(
+        Path(config["stability_summary"]).read_text(encoding="utf-8")
+    )
+    summary = summarize(
+        rows,
+        head_sets,
+        runtime,
+        stability_summary=stability_summary,
+        matched_control_quantile=float(config.get("matched_control_quantile", 0.95)),
+    )
     figure_path=args.output_dir/"count_head_double_dissociation.png";render_validation(summary["aggregate"],figure_path)
     summary_path = args.output_dir / "summary.json"
     summary_path.write_text(json.dumps(summary, indent=2), encoding="utf-8")
-    write_run_manifest(args.output_dir, config={**config, "architecture": vars(runtime.architecture), "head_sets": {key: value for key, value in head_sets.items()}}, seeds={"global": args.seed}, inputs=[args.config, Path(config["count_ranking"]), Path(config["controls"]), Path(config["paired_dataset"]), Path(config["gaze_ranking"]), *referenced_image_paths(pairs)], outputs=[output, summary_path,figure_path], status="complete", repo_root=Path.cwd())
+    write_run_manifest(args.output_dir, config={**config, "architecture": vars(runtime.architecture), "head_sets": {key: value for key, value in head_sets.items()}}, seeds={"global": args.seed}, inputs=[args.config, Path(config["count_ranking"]), Path(config["controls"]), Path(config["stability_summary"]), Path(config["paired_dataset"]), Path(config["gaze_ranking"]), *referenced_image_paths(pairs)], outputs=[output, summary_path,figure_path], status="complete", repo_root=Path.cwd())
     print(json.dumps(summary, indent=2))
 
 
@@ -171,10 +181,17 @@ def build_head_sets(ranking: list[dict[str, str]], gaze: list[tuple[int, int]], 
 
 
 def result_row(pair: Any, set_name: str, n_heads: int, intervention: str, baseline: float, margin: float) -> dict[str, Any]:
-    return {"pair_id": pair.pair_id, "pair_type": pair.metadata.get("pair_type"), "variant": pair.metadata.get("variant"), "position_variant": pair.metadata.get("position_variant"), "head_set": set_name, "n_heads": n_heads, "intervention": intervention, "baseline_correct_minus_donor_margin": baseline, "intervened_correct_minus_donor_margin": margin, "margin_shift": margin - baseline, "answer_flip": int(baseline >= 0 and margin < 0)}
+    return {"pair_id": pair.pair_id, "group_id": pair.group_id, "pair_type": pair.metadata.get("pair_type"), "variant": pair.metadata.get("variant"), "position_variant": pair.metadata.get("position_variant"), "renderer_seed": pair.metadata.get("renderer_seed"), "head_set": set_name, "n_heads": n_heads, "intervention": intervention, "baseline_correct_minus_donor_margin": baseline, "intervened_correct_minus_donor_margin": margin, "margin_shift": margin - baseline, "answer_flip": int(baseline >= 0 and margin < 0)}
 
 
-def summarize(rows: list[dict[str, Any]], head_sets: dict[str, list[tuple[int, int]]], runtime: Any) -> dict[str, Any]:
+def summarize(
+    rows: list[dict[str, Any]],
+    head_sets: dict[str, list[tuple[int, int]]],
+    runtime: Any,
+    *,
+    stability_summary: dict[str, Any],
+    matched_control_quantile: float,
+) -> dict[str, Any]:
     grouped: dict[tuple[str, str], list[float]] = defaultdict(list)
     for row in rows:
         grouped[(row["head_set"], row["intervention"])].append(float(row["margin_shift"]))
@@ -182,7 +199,143 @@ def summarize(rows: list[dict[str, Any]], head_sets: dict[str, list[tuple[int, i
     for row in rows:
         flip_grouped[(row["head_set"], row["intervention"])].append(int(row["answer_flip"]))
     aggregate = [{"head_set": head_set, "intervention": intervention, "n": len(values), "mean_margin_shift": sum(values) / len(values), "answer_flip_rate": sum(flip_grouped[(head_set, intervention)]) / len(values)} for (head_set, intervention), values in sorted(grouped.items())]
-    return {"valid": True, "label": "locked confirmation", "architecture": vars(runtime.architecture), "n_head_sets": len(head_sets), "n_rows": len(rows), "aggregate": aggregate, "control_policy": "Locked behavioral validation uses 20 jointly matched draws per k; separate single-feature control distributions remain in count_head_controls.tsv.", "claim_gate": "Count heads must additionally pass split-half/cross-seed stability and matched-control criteria before declaration."}
+    claim_checks = count_claim_checks(
+        rows,
+        stability_passed=stability_summary.get("passes_stability_gate") is True,
+        matched_control_quantile=matched_control_quantile,
+    )
+    return {"valid": True, "label": "locked confirmation" if claim_checks["all_pass"] else "failed calibration", "architecture": vars(runtime.architecture), "n_head_sets": len(head_sets), "n_rows": len(rows), "aggregate": aggregate, "control_policy": "Locked behavioral validation uses 20 jointly matched draws per k; separate single-feature control distributions remain in count_head_controls.tsv.", "claim_checks": claim_checks, "claim_gate": "Count heads are declared only when stability, bidirectionality, necessity, sufficiency, sham, relocation, answer-code, renderer-transfer, and matched-control checks all pass."}
+
+
+def count_claim_checks(
+    rows: list[dict[str, Any]],
+    *,
+    stability_passed: bool,
+    matched_control_quantile: float,
+) -> dict[str, Any]:
+    if not 0 < matched_control_quantile < 1:
+        raise ValueError("matched-control quantile must lie strictly between zero and one")
+
+    def shifts(
+        group: list[dict[str, Any]],
+        *,
+        intervention: str,
+        pair_type: str | None = None,
+        variant: str | None = None,
+        position_variant: str | None = None,
+        renderer_seeds: set[int] | None = None,
+    ) -> list[float]:
+        values = []
+        for row in group:
+            if row["intervention"] != intervention:
+                continue
+            if pair_type is not None and row.get("pair_type") != pair_type:
+                continue
+            if variant is not None and row.get("variant") != variant:
+                continue
+            if position_variant is not None and row.get("position_variant") != position_variant:
+                continue
+            if renderer_seeds is not None and int(row["renderer_seed"]) not in renderer_seeds:
+                continue
+            values.append(float(row["margin_shift"]))
+        return values
+
+    def negative(values: list[float]) -> bool:
+        return bool(values) and sum(values) / len(values) < 0
+
+    per_k: dict[str, Any] = {}
+    selected_names = sorted(
+        {row["head_set"] for row in rows if row["head_set"].startswith("count_top")},
+        key=lambda value: int(value.removeprefix("count_top")),
+    )
+    for selected_name in selected_names:
+        k = int(selected_name.removeprefix("count_top"))
+        selected = [row for row in rows if row["head_set"] == selected_name]
+        real = [row for row in selected if row.get("pair_type") == "constant-complexity"]
+        sham = [row for row in selected if row.get("pair_type") == "matched-sham"]
+        code = [row for row in selected if row.get("pair_type") == "randomized-answer-code"]
+        renderer_seeds = sorted({int(row["renderer_seed"]) for row in real})
+        renderer_halves = [set(renderer_seeds[::2]), set(renderer_seeds[1::2])]
+        selected_donor = shifts(real, intervention="donor_patch")
+        selected_effect = abs(sum(selected_donor) / len(selected_donor)) if selected_donor else 0.0
+        control_effects = []
+        control_prefix = f"fully_matched_k{k}_draw"
+        for control_name in sorted(
+            {row["head_set"] for row in rows if row["head_set"].startswith(control_prefix)}
+        ):
+            control = [
+                row
+                for row in rows
+                if row["head_set"] == control_name
+                and row.get("pair_type") == "constant-complexity"
+            ]
+            values = shifts(control, intervention="donor_patch")
+            if values:
+                control_effects.append(abs(sum(values) / len(values)))
+        threshold = empirical_quantile(control_effects, matched_control_quantile)
+        real_sham = shifts(sham, intervention="donor_patch")
+        sham_effect = abs(sum(real_sham) / len(real_sham)) if real_sham else float("inf")
+        checks = {
+            "necessity_zero": negative(shifts(real, intervention="zero")),
+            "necessity_mean": negative(shifts(real, intervention="mean")),
+            "necessity_resample": negative(shifts(real, intervention="resample")),
+            "sufficiency_donor_patch": negative(selected_donor),
+            "bidirectional_reverse_patch": negative(
+                shifts(real, intervention="reverse_donor_patch")
+            ),
+            "color_transfer": negative(
+                shifts(real, intervention="donor_patch", variant="color")
+            ),
+            "shape_transfer": negative(
+                shifts(real, intervention="donor_patch", variant="shape")
+            ),
+            "standard_position": negative(
+                shifts(real, intervention="donor_patch", position_variant="standard")
+            ),
+            "relocated_position": negative(
+                shifts(
+                    real,
+                    intervention="donor_patch",
+                    position_variant="target_relocation",
+                )
+            ),
+            "randomized_answer_code": negative(shifts(code, intervention="donor_patch")),
+            "sham_smaller_than_real": bool(real_sham) and selected_effect > sham_effect,
+            "renderer_seed_transfer": len(renderer_seeds) >= 2
+            and all(
+                negative(
+                    shifts(real, intervention="donor_patch", renderer_seeds=half)
+                )
+                for half in renderer_halves
+            ),
+            "beats_matched_controls": threshold is not None
+            and selected_effect > threshold,
+        }
+        per_k[str(k)] = {
+            **checks,
+            "all_pass": all(checks.values()),
+            "selected_absolute_donor_effect": selected_effect,
+            "sham_absolute_donor_effect": sham_effect if real_sham else None,
+            "matched_control_quantile": matched_control_quantile,
+            "matched_control_threshold": threshold,
+            "n_matched_control_draws": len(control_effects),
+            "n_renderer_seeds": len(renderer_seeds),
+        }
+    any_k_passes = any(value["all_pass"] for value in per_k.values())
+    return {
+        "stability_passed": stability_passed,
+        "any_k_passes_locked_checks": any_k_passes,
+        "all_pass": stability_passed and any_k_passes,
+        "per_k": per_k,
+    }
+
+
+def empirical_quantile(values: list[float], quantile: float) -> float | None:
+    if not values:
+        return None
+    ordered = sorted(values)
+    index = max(0, min(len(ordered) - 1, int(quantile * len(ordered) + 0.999999) - 1))
+    return ordered[index]
 
 
 def render_validation(rows,path):

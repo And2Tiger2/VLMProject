@@ -218,9 +218,15 @@ def batched_single_head_patches(
     if donor_projected_heads.shape != recipient_projected_heads.shape:
         raise ValueError("donor and recipient projected-head tensors differ")
     indices = head_indices or list(range(donor_projected_heads.shape[-2]))
-    return recipient_output.unsqueeze(0) + donor_projected_heads[..., indices, :].movedim(
+    donor_selected = donor_projected_heads[..., indices, :]
+    recipient_selected = recipient_projected_heads[..., indices, :]
+    if isinstance(donor_selected, LazyProjectedHeads):
+        donor_selected = donor_selected.materialize()
+    if isinstance(recipient_selected, LazyProjectedHeads):
+        recipient_selected = recipient_selected.materialize()
+    return recipient_output.unsqueeze(0) + donor_selected.movedim(
         -2, 0
-    ) - recipient_projected_heads[..., indices, :].movedim(-2, 0)
+    ) - recipient_selected.movedim(-2, 0)
 
 
 @dataclass(frozen=True)

@@ -32,11 +32,21 @@ def main() -> None:
     add_standard_run_arguments(parser)
     args = parser.parse_args()
     config = load_json_config(args.config)
+    repeat_output_names = tuple(
+        f"mechanistic_pairs_repeat{index}.jsonl"
+        for index, _ in enumerate(config.get("mechanistic_repeat_seeds", []), start=1)
+    )
     prepare_output_directory(
         args.output_dir,
         resume=args.resume,
         overwrite=args.overwrite,
-        known_outputs=("dataset_manifest.json", "syndot.jsonl", "mechanistic_pairs.jsonl", "constant_complexity_pairs.jsonl"),
+        known_outputs=(
+            "dataset_manifest.json",
+            "syndot.jsonl",
+            "mechanistic_pairs.jsonl",
+            "constant_complexity_pairs.jsonl",
+            *repeat_output_names,
+        ),
     )
     seed_everything(args.seed)
     result = generate_counting_datasets(
@@ -127,42 +137,30 @@ def generate_counting_datasets(
             )
     _write_jsonl(syndot_path, syndot_rows)
 
-    pairs: list[PairedExample] = []
-    for index in range(pair_n):
-        pair_id = f"syndot-pair-{index:04d}"
-        rng = random.Random(stable_seed(seed, "mechanistic-pair", index))
-        donor_count, recipient_count = rng.sample(range(1, 11), 2)
-        positions = syndot_positions(seed, pair_id)
-        pair_paths = {}
-        for role, answer in (("donor", donor_count), ("recipient", recipient_count)):
-            image_path = output_dir / "mechanistic" / "images" / f"{pair_id}-{role}.png"
-            mask_path = output_dir / "mechanistic" / "masks" / f"{pair_id}-{role}.png"
-            image_path.parent.mkdir(parents=True, exist_ok=True)
-            mask_path.parent.mkdir(parents=True, exist_ok=True)
-            if not resume or not image_path.exists():
-                render_syndot(answer, positions).save(image_path)
-                render_syndot_mask(answer, positions).save(mask_path)
-            pair_paths[role] = (image_path, mask_path)
-        pairs.append(
-            PairedExample(
-                pair_id=pair_id,
-                group_id=pair_id,
-                donor_image=str(pair_paths["donor"][0].resolve()),
-                recipient_image=str(pair_paths["recipient"][0].resolve()),
-                donor_prompt=SYNDOT_PROMPT,
-                recipient_prompt=SYNDOT_PROMPT,
-                donor_answer=str(donor_count),
-                recipient_answer=str(recipient_count),
-                donor_mask=str(pair_paths["donor"][1].resolve()),
-                recipient_mask=str(pair_paths["recipient"][1].resolve()),
-                metadata={"pair_type": "controlled-count", "positions_shared": True},
-                split="mechanistic",
-                generator_seed=seed,
-                source_id=pair_id,
-            )
-        )
     pair_path = output_dir / "mechanistic_pairs.jsonl"
-    write_paired_jsonl(pair_path, pairs)
+    _write_mechanistic_pairs(
+        output_dir,
+        dataset_seed=seed,
+        pair_n=pair_n,
+        relative_root=Path("mechanistic"),
+        output_path=pair_path,
+        resume=resume,
+    )
+    repeat_paths: list[Path] = []
+    repeat_seeds = [int(value) for value in config.get("mechanistic_repeat_seeds", [])]
+    if smoke:
+        repeat_seeds = repeat_seeds[:2]
+    for repeat_index, repeat_seed in enumerate(repeat_seeds, start=1):
+        repeat_path = output_dir / f"mechanistic_pairs_repeat{repeat_index}.jsonl"
+        _write_mechanistic_pairs(
+            output_dir,
+            dataset_seed=repeat_seed,
+            pair_n=pair_n,
+            relative_root=Path("mechanistic_repeats") / f"seed-{repeat_seed}",
+            output_path=repeat_path,
+            resume=resume,
+        )
+        repeat_paths.append(repeat_path)
 
     constant_rows: list[dict[str, Any]] = []
     for index in range(constant_pairs):
@@ -262,11 +260,69 @@ def generate_counting_datasets(
             "syndot_train": train_n,
             "syndot_test": test_n,
             "mechanistic_pairs": pair_n,
+            "mechanistic_repeat_seeds": repeat_seeds,
+            "mechanistic_repeat_pairs_each": pair_n,
             "constant_complexity_rows": len(constant_rows),
         },
-        "artifacts": [str(syndot_path), str(pair_path), str(constant_path), str(constant_pair_path)],
+        "artifacts": [
+            str(syndot_path),
+            str(pair_path),
+            *(str(path) for path in repeat_paths),
+            str(constant_path),
+            str(constant_pair_path),
+        ],
         "errors": [],
     }
+
+
+def _write_mechanistic_pairs(
+    output_dir: Path,
+    *,
+    dataset_seed: int,
+    pair_n: int,
+    relative_root: Path,
+    output_path: Path,
+    resume: bool,
+) -> None:
+    pairs: list[PairedExample] = []
+    for index in range(pair_n):
+        pair_id = f"syndot-pair-{index:04d}"
+        rng = random.Random(stable_seed(dataset_seed, "mechanistic-pair", index))
+        donor_count, recipient_count = rng.sample(range(1, 11), 2)
+        positions = syndot_positions(dataset_seed, pair_id)
+        pair_paths = {}
+        for role, answer in (("donor", donor_count), ("recipient", recipient_count)):
+            image_path = output_dir / relative_root / "images" / f"{pair_id}-{role}.png"
+            mask_path = output_dir / relative_root / "masks" / f"{pair_id}-{role}.png"
+            image_path.parent.mkdir(parents=True, exist_ok=True)
+            mask_path.parent.mkdir(parents=True, exist_ok=True)
+            if not resume or not image_path.exists():
+                render_syndot(answer, positions).save(image_path)
+                render_syndot_mask(answer, positions).save(mask_path)
+            pair_paths[role] = (image_path, mask_path)
+        pairs.append(
+            PairedExample(
+                pair_id=pair_id,
+                group_id=f"seed-{dataset_seed}-{pair_id}",
+                donor_image=str(pair_paths["donor"][0].resolve()),
+                recipient_image=str(pair_paths["recipient"][0].resolve()),
+                donor_prompt=SYNDOT_PROMPT,
+                recipient_prompt=SYNDOT_PROMPT,
+                donor_answer=str(donor_count),
+                recipient_answer=str(recipient_count),
+                donor_mask=str(pair_paths["donor"][1].resolve()),
+                recipient_mask=str(pair_paths["recipient"][1].resolve()),
+                metadata={
+                    "pair_type": "controlled-count",
+                    "positions_shared": True,
+                    "renderer_seed": dataset_seed,
+                },
+                split="mechanistic",
+                generator_seed=dataset_seed,
+                source_id=f"seed-{dataset_seed}-{pair_id}",
+            )
+        )
+    write_paired_jsonl(output_path, pairs)
 
 
 def _write_jsonl(path: Path, rows: list[dict[str, Any]]) -> None:

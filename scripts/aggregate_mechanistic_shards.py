@@ -14,6 +14,8 @@ from vlm_eval.mechanistic_heads.reproducibility import write_run_manifest
 ARTIFACTS = {
     "counting-vap": ["layerwise_vap.tsv"],
     "counting-heads": ["count_head_scores.tsv"],
+    "counting-heads-repeat1": ["count_head_scores.tsv"],
+    "counting-heads-repeat2": ["count_head_scores.tsv"],
     "point-centroids": ["centroid_rmse_by_layer.tsv", "attention_centroids_per_point.tsv"],
     "search-heads": ["search_head_scores.tsv"],
     "verification-heads": ["verification_head_scores.tsv"],
