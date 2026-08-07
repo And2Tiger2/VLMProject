@@ -84,6 +84,10 @@ family has been found.
   path validated bounded smoke manifests against full-run cardinalities. Resume
   validation now receives the requested profile, accepts valid smoke-sized data
   only for smoke jobs, and continues to reject it for full scientific runs.
+- Prepared-image integrity checks now hash every image referenced by the active
+  JSONLs while ignoring stale, unreferenced PNGs intentionally retained by safe
+  overwrite semantics. This removes the silent full-image-tree NFS scan and
+  reports validation progress without weakening active-input verification.
 - The launcher is the sole frozen dependency-sync owner. Preparation, GPU,
   aggregation, and report jobs run frozen/no-sync, preventing concurrent
   processes from racing to change the shared virtual environment.

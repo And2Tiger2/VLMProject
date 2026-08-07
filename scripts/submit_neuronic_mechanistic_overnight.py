@@ -560,8 +560,19 @@ def require_valid_prepared_data(repo: Path, *, profile: str = "all") -> None:
         outputs = tuple(root / name for name in names)
         missing.extend(str(path.relative_to(repo)) for path in outputs if not path.is_file())
         if all(path.is_file() for path in outputs):
+            print(f"validating prepared manifest: {root_value}", flush=True)
             manifests[root_value] = require_completed_manifest(
-                root, expected_outputs=outputs
+                root,
+                expected_outputs=outputs,
+                # Old smoke runs can share a directory with thousands of
+                # unreferenced PNGs retained from full generation. Validate
+                # the current JSONLs here and hash their referenced images
+                # below instead of repeatedly reading every stale PNG on NFS.
+                validate_all_outputs=root_value
+                not in {
+                    "segments/mechanistic_heads_qwen3_8b/data/generated/counting",
+                    "segments/mechanistic_heads_qwen3_8b/data/generated/point_search",
+                },
             )
     audit_path = repo / "segments/mechanistic_heads_qwen3_8b/data/mmmc/prepared/audit.json"
     if audit_path.is_file() and not json.loads(audit_path.read_text(encoding="utf-8")).get("valid"):
@@ -598,8 +609,10 @@ def require_valid_prepared_data(repo: Path, *, profile: str = "all") -> None:
     ):
         root = repo / root_value
         declared = {
-            str(Path(value).resolve())
-            for value in manifests[root_value].get("output_sha256", {})
+            str(Path(value).resolve()): digest
+            for value, digest in manifests[root_value].get(
+                "output_sha256", {}
+            ).items()
         }
         referenced: set[str] = set()
 
@@ -619,12 +632,29 @@ def require_valid_prepared_data(repo: Path, *, profile: str = "all") -> None:
                     collect_paths(json.loads(line))
         if not referenced:
             raise RuntimeError(f"prepared dataset contains no referenced PNGs: {root}")
-        untracked = sorted(referenced - declared)
+        untracked = sorted(referenced - set(declared))
         if untracked:
             raise RuntimeError(
                 f"prepared dataset has {len(untracked)} unhashed referenced PNGs under {root}; "
                 "rerun preparation with the current pipeline"
             )
+        print(
+            f"validating {len(referenced)} referenced PNGs: {root_value}",
+            flush=True,
+        )
+        changed = [
+            value
+            for value in sorted(referenced)
+            if not Path(value).is_file()
+            or sha256_file(Path(value))
+            != declared[value]
+        ]
+        if changed:
+            raise RuntimeError(
+                f"prepared dataset has {len(changed)} missing or changed referenced PNGs "
+                f"under {root}; rerun preparation with the current pipeline"
+            )
+    print("prepared-data hash validation complete", flush=True)
     counting = json.loads((repo / "segments/mechanistic_heads_qwen3_8b/data/generated/counting/dataset_manifest.json").read_text(encoding="utf-8"))
     point = json.loads((repo / "segments/mechanistic_heads_qwen3_8b/data/generated/point_search/dataset_manifest.json").read_text(encoding="utf-8"))
     vlmbias = json.loads((repo / "segments/mechanistic_heads_qwen3_8b/data/generated/vlmbias_contrasts/audit.json").read_text(encoding="utf-8"))

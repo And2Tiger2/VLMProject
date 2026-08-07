@@ -942,6 +942,38 @@ def test_completed_manifest_binds_current_sha_inputs_and_outputs(tmp_path: Path)
         )
 
 
+def test_completed_manifest_can_skip_unrequested_stale_outputs(tmp_path: Path) -> None:
+    current = tmp_path / "current.jsonl"
+    stale = tmp_path / "stale.png"
+    current.write_text("{}\n", encoding="utf-8")
+    stale.write_bytes(b"original")
+
+    def digest(path: Path) -> str:
+        return hashlib.sha256(path.read_bytes()).hexdigest()
+
+    (tmp_path / "run_manifest.json").write_text(
+        json.dumps(
+            {
+                "status": "complete",
+                "input_sha256": {},
+                "output_sha256": {
+                    str(current): digest(current),
+                    str(stale): digest(stale),
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+    stale.write_bytes(b"changed but unreferenced")
+    require_completed_manifest(
+        tmp_path,
+        expected_outputs=(current,),
+        validate_all_outputs=False,
+    )
+    with pytest.raises(RuntimeError, match="output is missing or changed"):
+        require_completed_manifest(tmp_path, expected_outputs=(current,))
+
+
 def test_current_artifact_requires_parent_manifest_and_exact_hash(tmp_path: Path) -> None:
     artifact = tmp_path / "scores.tsv"
     artifact.write_text("layer\thead\n0\t0\n", encoding="utf-8")

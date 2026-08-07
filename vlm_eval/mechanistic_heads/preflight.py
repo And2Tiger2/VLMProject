@@ -57,7 +57,11 @@ def validation_path_from_config(config: dict) -> Path:
 
 
 def require_completed_manifest(
-    run_dir: Path, *, expected_outputs: tuple[Path, ...] = (), require_current_git: bool = False
+    run_dir: Path,
+    *,
+    expected_outputs: tuple[Path, ...] = (),
+    require_current_git: bool = False,
+    validate_all_outputs: bool = True,
 ) -> dict:
     manifest_path = run_dir / "run_manifest.json"
     if not manifest_path.is_file():
@@ -71,10 +75,11 @@ def require_completed_manifest(
     if not isinstance(hashes, dict) or not hashes:
         raise RuntimeError(f"run manifest has no output hashes: {manifest_path}")
     normalized = {str(Path(key).resolve()): value for key, value in hashes.items()}
-    for value, expected in hashes.items():
-        artifact = Path(value).resolve()
-        if not artifact.is_file() or sha256_file(artifact) != expected:
-            raise RuntimeError(f"completed-run output is missing or changed: {value}")
+    if validate_all_outputs:
+        for value, expected in hashes.items():
+            artifact = Path(value).resolve()
+            if not artifact.is_file() or sha256_file(artifact) != expected:
+                raise RuntimeError(f"completed-run output is missing or changed: {value}")
     for value, expected in manifest.get("input_sha256", {}).items():
         source = Path(value).resolve()
         if not source.is_file() or sha256_file(source) != expected:
