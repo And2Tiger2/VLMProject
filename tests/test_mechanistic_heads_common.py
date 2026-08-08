@@ -399,6 +399,25 @@ def test_multihead_exact_replacement_keeps_shared_bias_and_sums_deltas() -> None
     torch.testing.assert_close(actual, expected, rtol=1e-5, atol=1e-6)
 
 
+def test_zero_head_replacement_moves_cpu_capture_to_active_device() -> None:
+    attention = torch.nn.Identity()
+    layer = SimpleNamespace(self_attn=attention)
+    model = SimpleNamespace(
+        model=SimpleNamespace(language_model=SimpleNamespace(layers=[layer]))
+    )
+    current = torch.empty(1, 3, 5, device="meta")
+    contributions = torch.randn(1, 3, 1, 5, device="cpu")
+    with projected_head_set_replacement(
+        model,
+        replacements={(0, 0): None},
+        recipient_projected={0: contributions},
+        positions=[2],
+    ):
+        actual = attention(current)
+    assert actual.device.type == "meta"
+    assert actual.shape == current.shape
+
+
 def test_batched_visual_map_transplant_assigns_one_head_per_batch_row() -> None:
     attention = torch.nn.Identity()
     layer = SimpleNamespace(self_attn=attention)

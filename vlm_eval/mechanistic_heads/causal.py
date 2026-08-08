@@ -445,11 +445,11 @@ def projected_head_set_replacement(
                     new = replacement
                     if new.ndim == 3:
                         new = new[0]
-                    new = new.to(device=current.device, dtype=current.dtype)
-                    if new.shape != old.shape:
-                        raise ValueError(
-                            f"replacement shape {tuple(new.shape)} != {tuple(old.shape)}"
-                        )
+                new = new.to(device=current.device, dtype=current.dtype)
+                if new.shape != old.shape:
+                    raise ValueError(
+                        f"replacement shape {tuple(new.shape)} != {tuple(old.shape)}"
+                    )
                 delta = delta + new - old.to(device=current.device, dtype=current.dtype)
             patched[0, current_index, :] = current[0, current_index, :] + delta
             return (patched, *rest) if isinstance(output, tuple) else patched

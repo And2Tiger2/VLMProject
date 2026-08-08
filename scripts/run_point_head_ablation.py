@@ -227,12 +227,39 @@ def bidirectional_positive_heads(
     }
 
 
-def aggregate_diagnostics(rows,gaze,general):
-    grouped=defaultdict(list)
-    for row in rows:grouped[(int(row["layer"]),int(row["head"]))].append(row)
-    result={}
-    for head,group in grouped.items():
-        result[head]={name:sum(float(row[name]) for row in group)/len(group) for name in ("image_attention","projected_output_norm","attention_entropy")};result[head]["gaze_score"]=gaze.get(head,0.0);result[head]["general_causal_importance"]=general[head]
+def aggregate_diagnostics(rows, gaze, general):
+    grouped = defaultdict(list)
+    for row in rows:
+        grouped[(int(row["layer"]), int(row["head"]))].append(row)
+    aliases = {
+        # Post-W_O scans historically call this an attention "ratio", while
+        # attention-map scans call the identical control feature attention.
+        "image_attention": ("image_attention", "image_attention_ratio"),
+        "projected_output_norm": ("projected_output_norm",),
+        "attention_entropy": ("attention_entropy",),
+    }
+    result = {}
+    for head, group in grouped.items():
+        if head not in general:
+            raise RuntimeError(
+                f"general causal importance is missing for head {head}"
+            )
+        result[head] = {}
+        for name, candidates in aliases.items():
+            values = []
+            for row in group:
+                value = next(
+                    (row.get(candidate) for candidate in candidates if row.get(candidate) not in {None, ""}),
+                    None,
+                )
+                if value is None:
+                    raise RuntimeError(
+                        f"point-head diagnostic {name} is missing for head {head}"
+                    )
+                values.append(float(value))
+            result[head][name] = sum(values) / len(values)
+        result[head]["gaze_score"] = gaze.get(head, 0.0)
+        result[head]["general_causal_importance"] = general[head]
     return result
 
 

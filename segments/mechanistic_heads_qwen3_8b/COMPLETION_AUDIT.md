@@ -88,6 +88,11 @@ family has been found.
   JSONLs while ignoring stale, unreferenced PNGs intentionally retained by safe
   overwrite semantics. This removes the silent full-image-tree NFS scan and
   reports validation progress without weakening active-input verification.
+- The first complete downstream smoke exposed two cross-stage integration bugs:
+  verification scans name the common attention diagnostic
+  `image_attention_ratio`, and zero ablations originated in CPU-offloaded
+  capture storage. Point controls now normalize the diagnostic alias, and all
+  replacement tensors are moved to the active model device before arithmetic.
 - The launcher is the sole frozen dependency-sync owner. Preparation, GPU,
   aggregation, and report jobs run frozen/no-sync, preventing concurrent
   processes from racing to change the shared virtual environment.

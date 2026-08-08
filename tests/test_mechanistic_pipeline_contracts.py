@@ -120,6 +120,31 @@ def test_functional_head_rankings_preserve_expected_causal_sign() -> None:
     assert "key=lambda head: abs(ranking[head]), reverse=True" not in point_validation
 
 
+def test_point_diagnostics_normalize_post_wo_attention_ratio_schema() -> None:
+    module = load_script("run_point_head_ablation.py")
+    head = (3, 7)
+    result = module.aggregate_diagnostics(
+        [
+            {
+                "layer": "3",
+                "head": "7",
+                "image_attention_ratio": "0.25",
+                "projected_output_norm": "2.0",
+                "attention_entropy": "1.5",
+            }
+        ],
+        {head: 0.75},
+        {head: 0.5},
+    )
+    assert result[head] == {
+        "image_attention": 0.25,
+        "projected_output_norm": 2.0,
+        "attention_entropy": 1.5,
+        "gaze_score": 0.75,
+        "general_causal_importance": 0.5,
+    }
+
+
 def test_count_stability_uses_average_ranks_for_ties() -> None:
     module = load_script("analyze_count_head_controls.py")
     assert module.ranks([2.0, 1.0, 1.0, 3.0]) == [2.0, 0.5, 0.5, 3.0]
