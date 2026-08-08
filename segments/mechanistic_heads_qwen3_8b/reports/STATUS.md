@@ -94,7 +94,7 @@
 
 ## Passed
 
-- The complete CPU unit/integration suite passes in the audited checkout (271
+- The complete CPU unit/integration suite passes in the audited checkout (272
   tests in the final local audit).
 - Both synthetic generator smokes write real schemas, images, masks, pairs,
   grouped splits, manifests, input/output hashes, and resume markers.
@@ -131,6 +131,9 @@
 - Downstream smoke fixes normalize the post-`W_O` `image_attention_ratio`
   diagnostic into the point-control schema and move zero-ablation tensors from
   CPU capture storage onto the active model device before applying deltas.
+- The smoke-to-full transition recoverably archives current smoke results and
+  checkpoints before full preparation changes dataset manifests; prepared data
+  remain in place and full-resume retains compatible full checkpoints.
 - The old Slurm DAG is not resumable: its VAP, MACI, VLMBias, and point-training
   smoke failures correctly prevented all dependent scientific jobs.
 - No scientific calibration result exists yet; no replication success is

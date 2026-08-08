@@ -153,6 +153,10 @@ bash scripts/run_neuronic_mechanistic_heads.sh overnight-all
 `overnight-all` is deliberately explicit because it is a large run. Discovery
 arrays are serialized and use `0-35%4`, so no more than four layer-scan GPUs are
 requested simultaneously; independent behavioral/training jobs may overlap.
+Before full preparation replaces the smoke-sized JSONLs, the launcher
+recoverably archives current smoke result/checkpoint directories. Prepared data
+are not moved. This forces the mandatory smoke barrier to validate the full
+manifests rather than resuming checkpoints tied to the smaller smoke inputs.
 Queue time and full Point-Answer training mean the complete DAG is not
 guaranteed to finish in one night. Any failed smoke causes its dependent full
 jobs to remain unrun through Slurm's `afterok` dependencies. Independent full

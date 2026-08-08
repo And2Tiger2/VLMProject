@@ -1044,6 +1044,32 @@ def test_preparation_regenerates_outputs_after_generator_changes() -> None:
     assert 'prepare_mode_args+=(--smoke)' in source
 
 
+def test_full_transition_archives_current_smoke_results_but_not_data(
+    tmp_path: Path,
+) -> None:
+    module = load_script("archive_stale_mechanistic_runs.py")
+    segment = tmp_path / "segments/mechanistic_heads_qwen3_8b"
+    smoke_run = segment / "runs/example/smoke"
+    full_run = segment / "runs/example/full"
+    smoke_data = segment / "data/generated/example"
+    for path, smoke in (
+        (smoke_run, True),
+        (full_run, False),
+        (smoke_data, True),
+    ):
+        path.mkdir(parents=True)
+        (path / "run_manifest.json").write_text(
+            json.dumps({"config": {"smoke": smoke}}), encoding="utf-8"
+        )
+
+    assert module.smoke_output_dirs(tmp_path) == [smoke_run]
+    source = (ROOT / "scripts/run_neuronic_mechanistic_heads.sh").read_text(
+        encoding="utf-8"
+    )
+    assert 'if [[ "$ACTION" == "overnight-all" ]]' in source
+    assert "archive_args+=(--include-current-smoke)" in source
+
+
 def test_refresh_generated_data_rebuilds_every_source_bound_changed_dataset() -> None:
     source = (ROOT / "scripts/run_neuronic_mechanistic_heads.sh").read_text(
         encoding="utf-8"

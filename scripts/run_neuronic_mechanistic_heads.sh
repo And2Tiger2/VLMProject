@@ -16,7 +16,15 @@ if [[ "$ACTION" == "overnight-smoke" || "$ACTION" == "overnight-smoke-resume" ||
   export UV_FROZEN=1
   # Previous revisions' reports/checkpoints cannot be resumed safely. Move
   # them into a recoverable archive before constructing the new DAG.
-  uv run python scripts/archive_stale_mechanistic_runs.py --repo "$REPO" --execute
+  archive_args=(--repo "$REPO" --execute)
+  if [[ "$ACTION" == "overnight-all" ]]; then
+    # Full preparation replaces the smoke-sized JSONLs. Current-SHA smoke
+    # checkpoints are therefore incompatible even though the code is current.
+    # Move them recoverably before constructing the mandatory full-data smoke
+    # barrier; full-resume intentionally retains compatible full checkpoints.
+    archive_args+=(--include-current-smoke)
+  fi
+  uv run python scripts/archive_stale_mechanistic_runs.py "${archive_args[@]}"
 fi
 
 case "$ACTION" in

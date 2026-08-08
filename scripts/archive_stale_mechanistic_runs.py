@@ -54,6 +54,37 @@ def stale_output_dirs(repo: Path) -> list[Path]:
     )
 
 
+def smoke_output_dirs(repo: Path) -> list[Path]:
+    """Find current smoke results that cannot survive full-data replacement.
+
+    Prepared data live under ``data`` and are deliberately excluded. Full
+    preparation owns replacing those manifests. Only result/checkpoint trees
+    are moved so the mandatory full-data smoke barrier starts from a clean
+    context instead of resuming checkpoints bound to smoke-sized JSONLs.
+    """
+
+    segment = repo / "segments/mechanistic_heads_qwen3_8b"
+    candidates: set[Path] = set()
+    for root_name in ("runs", "reports", "checkpoints"):
+        root = segment / root_name
+        if not root.is_dir():
+            continue
+        for manifest_path in root.rglob("run_manifest.json"):
+            if "archive" in manifest_path.parts or "slurm" in manifest_path.parts:
+                continue
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            if manifest.get("config", {}).get("smoke") is True:
+                candidates.add(manifest_path.parent)
+    return sorted(
+        [
+            path
+            for path in candidates
+            if not any(parent in candidates for parent in path.parents)
+        ],
+        key=lambda path: str(path),
+    )
+
+
 def archive(repo: Path, paths: list[Path], *, execute: bool) -> Path | None:
     if not paths:
         return None
@@ -79,9 +110,19 @@ def main() -> None:
     )
     parser.add_argument("--repo", type=Path, default=Path.cwd())
     parser.add_argument("--execute", action="store_true", help="Perform moves; default is a dry run.")
+    parser.add_argument(
+        "--include-current-smoke",
+        action="store_true",
+        help=(
+            "Also archive current-SHA smoke result/checkpoint directories before "
+            "replacing smoke-sized prepared data with full data."
+        ),
+    )
     args = parser.parse_args()
     repo = args.repo.resolve()
-    paths = stale_output_dirs(repo)
+    stale_paths = stale_output_dirs(repo)
+    smoke_paths = smoke_output_dirs(repo) if args.include_current_smoke else []
+    paths = sorted(set(stale_paths) | set(smoke_paths), key=lambda path: str(path))
     destination = archive(repo, paths, execute=args.execute)
     print(
         json.dumps(
@@ -89,6 +130,8 @@ def main() -> None:
                 "valid": True,
                 "execute": args.execute,
                 "n_stale_directories": len(paths),
+                "n_revision_stale_directories": len(stale_paths),
+                "n_current_smoke_directories": len(smoke_paths),
                 "archive_root": str(destination) if destination else None,
             },
             indent=2,

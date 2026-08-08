@@ -93,6 +93,11 @@ family has been found.
   `image_attention_ratio`, and zero ablations originated in CPU-offloaded
   capture storage. Point controls now normalize the diagnostic alias, and all
   replacement tensors are moved to the active model device before arithmetic.
+- Full submission now treats smoke-to-full as a dataset-context transition:
+  current smoke outputs are recoverably archived before full preparation, so
+  the required smoke barrier cannot reuse checkpoints tied to smaller JSONLs.
+  Prepared datasets are left for the full preparation job to replace, and the
+  separate full-resume path preserves compatible full checkpoints.
 - The launcher is the sole frozen dependency-sync owner. Preparation, GPU,
   aggregation, and report jobs run frozen/no-sync, preventing concurrent
   processes from racing to change the shared virtual environment.
