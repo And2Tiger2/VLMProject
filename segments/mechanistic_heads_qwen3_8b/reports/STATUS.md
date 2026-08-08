@@ -82,8 +82,9 @@
   The grouped split contains 256 prototype, 512 validation, and 12,678 locked
   test image IDs. One identical-candidate pair was excluded; pairing success
   was 99.993%. External images/cache remain ignored by Git.
-- The real Qwen instrumentation gate passed all 12 checks on an L40 at commit
-  `9dbf9d0`. The repaired final revision remains pending a new SHA-bound gate.
+- The real Qwen instrumentation gate passed all 12 checks on an L40, and the
+  complete current-SHA smoke DAG passed at `891ed92` (33 Slurm tasks including
+  array children, all exit code 0).
 - Smoke counting behavior and counting-head scan completed on the earlier DAG.
   Other smokes either failed safely or never ran; no full scientific stage ran.
 - The current-SHA smoke reached all independent discovery branches. Point LoRA
@@ -91,10 +92,14 @@
   optimizer step: the removed `overwrite_output_dir` keyword. Output cleanup
   was already owned by repository preflight, so the duplicate Trainer keyword
   was removed and is now covered by a real locked-version construction test.
+- Full-data preparation at `8d67c75` passed and wrote hash-valid manifests for
+  counting (18,007 outputs), point search (123,481), VLMBias (116), and MMMC.
+  The full-data smoke barrier passed every branch except detector-gated MACI;
+  therefore all expensive full jobs were correctly cancelled before starting.
 
 ## Passed
 
-- The complete CPU unit/integration suite passes in the audited checkout (272
+- The complete CPU unit/integration suite passes in the audited checkout (273
   tests in the final local audit).
 - Both synthetic generator smokes write real schemas, images, masks, pairs,
   grouped splits, manifests, input/output hashes, and resume markers.
@@ -134,6 +139,10 @@
 - The smoke-to-full transition recoverably archives current smoke results and
   checkpoints before full preparation changes dataset manifests; prepared data
   remain in place and full-resume retains compatible full checkpoints.
+- Detector-gated MACI no longer retains processor outputs (including CUDA
+  pixel/token tensors) for every example. It retains CPU scalars only and
+  recreates one input at a time during scoring, bounding device residency for
+  both the four-example smoke and the 500-example locked run.
 - The old Slurm DAG is not resumable: its VAP, MACI, VLMBias, and point-training
   smoke failures correctly prevented all dependent scientific jobs.
 - No scientific calibration result exists yet; no replication success is
@@ -143,8 +152,9 @@
 
 ## Computationally pending
 
-- Mandatory rerun of the one-GPU instrumentation smoke for the final Git SHA.
-- Full synthetic dataset generation on Neuronic and Qwen behavioral calibration.
+- Mandatory current-SHA smoke rerun of the gated-MACI device-residency fix.
+- Qwen behavioral calibration and all full scientific stages; full synthetic
+  and MMMC preparation is complete and reusable by the resume launcher.
 - VLMBias detail contrast unless external original factual images are supplied;
   semantic-prior and context contrasts are prepared.
 - Point-model LoRA pilots; optional full-weight training is opt-in.

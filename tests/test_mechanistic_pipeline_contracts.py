@@ -847,6 +847,15 @@ def test_maci_gated_claim_requires_budget_matched_detector_benefit() -> None:
     assert not module.gated_claim_checks(conditions)["all_pass"]
 
 
+def test_maci_gated_does_not_retain_device_inputs_between_examples() -> None:
+    source = (ROOT / "scripts/run_maci_gated_intervention.py").read_text(
+        encoding="utf-8"
+    )
+    assert "prepared.append((pair, inputs" not in source
+    assert "prepared.append((pair, margin, probability))" in source
+    assert "del capture, inputs, image" in source
+
+
 def test_mechanistic_shell_entrypoints_parse() -> None:
     scripts = [
         "run_neuronic_mechanistic_heads.sh",

@@ -48,16 +48,27 @@ def main() -> None:
     audit_path = Path(config["paired_dataset"]).with_name("audit.json")
     images = MMMCImages(args.cache_dir, audit_path=audit_path); prepared = []
     for pair in pairs:
-        image = images.resolve(pair.recipient_image); inputs = runtime.prepare(image, pair.recipient_prompt, prompt_mode="raw"); margin, scores = candidate_margin(runtime, inputs, positive_answer=pair.bias_answer, negative_answer=pair.correct_answer)
-        capture = capture_prefill(runtime, image_path=image, prompt=pair.recipient_prompt, layers=sorted({layer for layer, _ in resisting}), to_cpu=True); vectors = [capture.store.raw_heads[layer][0, capture.prompt_length-1, head, :].float().detach().cpu().numpy() for layer, head in resisting]; feature = np.stack(vectors).mean(0); probability = detector_probability(feature, detector); prepared.append((pair, inputs, margin, scores, probability))
+        image = images.resolve(pair.recipient_image); inputs = runtime.prepare(image, pair.recipient_prompt, prompt_mode="raw"); margin, _ = candidate_margin(runtime, inputs, positive_answer=pair.bias_answer, negative_answer=pair.correct_answer)
+        capture = capture_prefill(runtime, image_path=image, prompt=pair.recipient_prompt, layers=sorted({layer for layer, _ in resisting}), to_cpu=True); vectors = [capture.store.raw_heads[layer][0, capture.prompt_length-1, head, :].float().detach().cpu().numpy() for layer, head in resisting]; feature = np.stack(vectors).mean(0); probability = detector_probability(feature, detector)
+        # Never retain processor outputs between examples. They contain CUDA
+        # pixel/token tensors, so collecting them here grows device residency
+        # with the dataset (up to 500 full examples) and can corrupt a later
+        # asynchronous vision forward. Only scalar/CPU metadata is needed to
+        # choose the intervention budget; recreate one input in the scoring
+        # pass below.
+        prepared.append((pair, margin, probability))
+        del capture, inputs, image
     detector_budget = sum(probability >= float(detector["threshold"]) for *_, probability in prepared); random_indices = set(random.Random(args.seed).sample(range(len(prepared)), detector_budget))
     rows = []
-    for index, (pair, inputs, baseline_margin, baseline_scores, probability) in enumerate(prepared):
+    for index, (pair, baseline_margin, probability) in enumerate(prepared):
+        image = images.resolve(pair.recipient_image)
+        inputs = runtime.prepare(image, pair.recipient_prompt, prompt_mode="raw")
         pairwise_confidence = 1 / (1 + math.exp(-abs(baseline_margin)))
         decisions = {"never": False, "always": True, "detector_gated": probability >= float(detector["threshold"]), "confidence_gated": pairwise_confidence < float(config.get("confidence_threshold", 0.6)), "random_budget_matched": index in random_indices}
         for condition, intervene in decisions.items():
             with projected_head_scaling(runtime.model, {head: 0.0 for head in driving} if intervene else {}): margin, scores = candidate_margin(runtime, inputs, positive_answer=pair.bias_answer, negative_answer=pair.correct_answer)
             rows.append({"condition": condition, "pair_id": pair.pair_id, "intervened": int(intervene), "detector_probability": probability, "pairwise_confidence": pairwise_confidence, "hallucination_advantage": margin, "logp_hallucinated": scores["positive"], "logp_factual": scores["negative"], "margin_shift": margin-baseline_margin})
+        del inputs, image
     write_tsv(output, rows); summary = summarize(rows); claim_checks = gated_claim_checks(summary["conditions"]); summary.update({"valid": True, "label": "instrumentation smoke test" if args.smoke else ("locked confirmation" if claim_checks["all_pass"] else "failed calibration"), "calibration_result": "not assessed in smoke" if args.smoke else ("passed" if claim_checks["all_pass"] else "failed calibration"), "claim_checks": claim_checks, "claim_gate": "Detector gating must lower hallucination advantage versus never intervening and beat a random intervention with exactly the same budget.", "architecture": vars(runtime.architecture)})
     summary_path = args.output_dir / "summary.json"; summary_path.write_text(json.dumps(summary, indent=2), encoding="utf-8")
     write_run_manifest(args.output_dir, config={**config, "architecture": vars(runtime.architecture)}, seeds={"global": args.seed}, inputs=[args.config, Path(config["paired_dataset"]), audit_path, Path(config["head_scores"]), Path(config["detector"])], outputs=[output, summary_path], status="complete", repo_root=Path.cwd()); print(json.dumps(summary, indent=2))

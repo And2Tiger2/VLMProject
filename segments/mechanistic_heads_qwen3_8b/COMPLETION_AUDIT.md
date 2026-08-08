@@ -98,6 +98,12 @@ family has been found.
   the required smoke barrier cannot reuse checkpoints tied to smaller JSONLs.
   Prepared datasets are left for the full preparation job to replace, and the
   separate full-resume path preserves compatible full checkpoints.
+- The first full-data smoke barrier completed every branch except gated MACI.
+  That job retained one CUDA processor batch per example while first computing
+  the detector intervention budget, then surfaced a misaligned-address error
+  in a later vision forward. Gated MACI now stores only CPU metadata between
+  passes and rebuilds/releases one device input at a time. The failed barrier
+  correctly prevented every expensive full scan from starting.
 - The launcher is the sole frozen dependency-sync owner. Preparation, GPU,
   aggregation, and report jobs run frozen/no-sync, preventing concurrent
   processes from racing to change the shared virtual environment.
