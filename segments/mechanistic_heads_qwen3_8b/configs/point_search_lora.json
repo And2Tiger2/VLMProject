@@ -11,7 +11,10 @@
   "warmup_steps": 50,
   "epochs": 1,
   "batch_size": 1,
-  "gradient_accumulation_steps": 8
-  ,"save_steps": 50
-  ,"save_total_limit": 2
+  "gradient_accumulation_steps": 8,
+  "max_steps": 438,
+  "search_image_size": 224,
+  "spatial_contract_examples_per_task": 500,
+  "save_steps": 50,
+  "save_total_limit": 2
 }

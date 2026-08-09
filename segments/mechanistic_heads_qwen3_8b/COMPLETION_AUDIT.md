@@ -43,11 +43,11 @@ family has been found.
 | Requirement | Status | Evidence / limitation |
 |---|---|---|
 | Six colors × six shapes; 50 objects; disjoint conjunctions; 2,000 train; six OOD counts × 50 | Implemented | Uses the paper's exact color names, glyph set, six train conjunctions, and ten test conjunctions; generator stores centers, boxes, classes, masks, template IDs, and grouped splits. |
-| Base/direct/length-matched/point/shuffled-point training | Implemented; PEFT smoke pending | Matched scenes use condition-specific instructions: direct asks only for a count, the length control forbids coordinates, and Point-Answer requests coordinates. LoRA is labeled modified replication; optional full-weight AdamW/cosine/200-warmup config is documented and not auto-launched. LoRA disables cache and uses non-reentrant gradient checkpointing to bound activation memory. |
+| Base/direct/length-matched/point/shuffled-point training | Implemented; strengthened rerun pending | Matched scenes use condition-specific instructions: direct asks only for a count, the length control forbids coordinates, and Point-Answer requests coordinates. Point and shuffled-point additionally receive matched normalized-point, grid-cell, and presence contracts built only from point-search training scenes; shuffled spatial labels use distractors. Direct controls repeat ordinary examples so every trained condition receives 3,500 examples and 438 optimizer steps. Locked Waldo scenes never enter training. LoRA is labeled modified replication; optional full-weight AdamW/cosine/200-warmup config is documented and not auto-launched. |
 | Coordinate-token centroid tracing | Implemented; GPU pending | Per-layer denoised centroids and point RMSE; the trace uses the same Point-Answer prompt as training/evaluation. |
 | Per-head attention transplantation and top/bottom/random validation | Implemented; GPU pending | Uses complete emitted localization-sequence likelihood and explicit visual-slice normalization. |
 | Non-copyright four-feature target and strong distractors | Implemented | Position, scale, full-scene zoom, clutter, similarity, occlusion, background, presence, and prompt wording vary; images, masks, centers, boxes, and cells remain aligned. |
-| Localization, visible-grid, normalized point, verification, four-candidate, presence tasks | Implemented; behavioral calibration pending | Candidate order is deterministically randomized to prevent target-slot leakage. |
+| Localization, visible-grid, normalized point, verification, four-candidate, presence tasks | Implemented; Waldo recalibration pending | Candidate order is deterministically randomized to prevent target-slot leakage. The first correctly supervised Point-Answer run passed count/parse calibration but Waldo failed grid, normalized-point, and presence gates; contract-aligned retraining is pending and thresholds are not lowered. |
 | Search relocation pairs | Implemented | Only the identical target moves; all distractors remain pixel/metadata matched. |
 | True versus impostor verification pairs | Implemented | Location and every distractor are fixed; only one target feature changes. |
 | Distractor-suppression pairs | Implemented | Target and background are fixed; exactly one distractor becomes a strong incorrect-binding decoy. Discovery uses the matched high-decoy minus low-decoy difference in correct-versus-decoy ablation harm; locked generation is required before interpreting selection rates. |
@@ -111,6 +111,12 @@ family has been found.
   answer tokens, and rejects zero/non-finite loss. Point/Waldo behavioral
   failures from those unsupervised adapters are instrumentation failures, not
   evidence against the method.
+- The corrected rerun produced nonzero losses and passed the initial
+  Point-Answer count/parse gate, but failed Waldo grid, normalized-point, and
+  presence transfer. The next preregistered attempt aligns these output
+  contracts using point-search training scenes only and strengthens the point
+  gate with a 40-pixel RMSE ceiling. Thresholds and locked Waldo scenes remain
+  unchanged.
 - Full MACI stability independently failed its preregistered scientific gate
   (split-half rho 0.372; sign agreement 0.445). That result is retained as a
   failed calibration and the conflict detector remains scientifically blocked.

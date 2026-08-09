@@ -149,14 +149,25 @@
   suffix from an exact multimodal prompt-token prefix, refuses empty labels,
   and refuses non-finite or non-positive training loss. The prior point and
   Waldo outputs are invalid as trained-model calibrations and must be rerun.
+- The corrected full LoRA rerun produced nonzero losses for all four trained
+  conditions and raised Point-Answer count/parse calibration to 0.96, with
+  32.97-pixel point RMSE. Synthetic Waldo transfer still failed the grid,
+  normalized-point, and presence gates. Training now teaches those three text
+  and coordinate contracts on point-search *training* scenes only, never on
+  locked Waldo scenes; the shuffled-point control receives the same prompts
+  with distractor coordinates. The point calibration now also requires RMSE
+  <= 40 pixels, and point-centroid submission no longer depends on the
+  separate Waldo gate.
 - Full MACI split-half stability was a genuine failed calibration rather than
   an execution error: Spearman rho was 0.372 and global sign agreement was
   0.445 against preregistered minima of 0.5 and 0.7. Detector/gating claims
   remain blocked; the observed top-40 overlaps are descriptive only.
 - The old Slurm DAG is not resumable: its VAP, MACI, VLMBias, and point-training
   smoke failures correctly prevented all dependent scientific jobs.
-- No scientific calibration result exists yet; no replication success is
-  claimed.
+- Point-Answer's first corrected calibration passed its original count/parse
+  gate, while Waldo transfer failed. The strengthened calibration and
+  contract-aligned retraining remain computationally pending; no replication
+  success is claimed.
 - The requirement-by-requirement distinction between implemented code and
   pending empirical evidence is recorded in `../COMPLETION_AUDIT.md`.
 

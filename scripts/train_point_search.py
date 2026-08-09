@@ -176,28 +176,36 @@ def train_condition(
             gradient_checkpointing_kwargs={"use_reentrant": False}
         )
 
-    answer_key = CONDITIONS[condition]
+    training_examples = build_training_examples(
+        rows,
+        condition=condition,
+        auxiliary_examples_per_task=int(
+            config.get("spatial_contract_examples_per_task", 500)
+        ),
+        image_size=int(config.get("search_image_size", 224)),
+    )
 
     class Dataset(torch.utils.data.Dataset):
         def __len__(self) -> int:
-            return len(rows)
+            return len(training_examples)
 
         def __getitem__(self, index: int) -> dict[str, Any]:
-            return rows[index]
+            return training_examples[index]
 
     def collate(batch: list[dict[str, Any]]) -> dict[str, Any]:
         messages = []
         prompt_messages = []
-        for row in batch:
-            answer = str(row["answers"][answer_key])
-            if condition == "direct_length_matched":
+        for example in batch:
+            row = example["row"]
+            answer = str(example["answer"])
+            if example["format"] == "direct_length_matched":
                 answer = length_matched_nonspatial_answer(
                     processor.tokenizer,
                     direct_answer=str(row["target_count"]),
                     point_answer=str(row["answers"]["point"]),
                 )
             image = Image.open(row["image_path"]).convert("RGB")
-            prompt = point_condition_prompt(row, condition)
+            prompt = str(example["prompt"])
             user = {
                 "role": "user",
                 "content": [
@@ -236,9 +244,9 @@ def train_condition(
         )
         return encoded
 
-    if not rows:
+    if not training_examples:
         raise RuntimeError("point training dataset has no rows")
-    probe = collate(rows[:1])
+    probe = collate(training_examples[:1])
     probe_supervised_tokens = int(probe["labels"].ne(-100).sum().item())
     if probe_supervised_tokens <= 0:
         raise RuntimeError("point training produced no supervised assistant tokens")
@@ -270,7 +278,12 @@ def train_condition(
         "label": "instrumentation smoke test" if smoke else replication_label,
         "condition": condition,
         "training_mode": training_mode,
-        "n_rows": len(rows),
+        "n_rows": len(training_examples),
+        "n_source_rows": len(rows),
+        "training_formats": {
+            name: sum(example["format"] == name for example in training_examples)
+            for name in sorted({example["format"] for example in training_examples})
+        },
         "metrics": train_output.metrics,
         "label_policy": "verified multimodal prompt-prefix boundary",
         "probe_supervised_tokens": probe_supervised_tokens,
@@ -285,6 +298,122 @@ def train_condition(
             else "deterministic text point format replaces paper HTML boxes"
         ),
     }
+
+
+def build_training_examples(
+    rows: list[dict[str, Any]],
+    *,
+    condition: str,
+    auxiliary_examples_per_task: int,
+    image_size: int,
+) -> list[dict[str, Any]]:
+    """Build matched point training plus training-only output-contract tasks.
+
+    Waldo locked-test images remain a true domain transfer. Instead, teach the
+    normalized-point, grid-cell, and presence response contracts on ordinary
+    point-search training scenes. The shuffled-point control receives the same
+    prompts and number of examples, but uses distractor locations for positive
+    spatial labels.
+    """
+
+    if condition not in CONDITIONS:
+        raise ValueError(f"unknown point training condition: {condition}")
+    if auxiliary_examples_per_task < 0:
+        raise ValueError("spatial_contract_examples_per_task must be nonnegative")
+    if image_size <= 1:
+        raise ValueError("search_image_size must exceed one pixel")
+    answer_key = CONDITIONS[condition]
+    examples = [
+        {
+            "row": row,
+            "prompt": point_condition_prompt(row, condition),
+            "answer": str(row["answers"][answer_key]),
+            "format": (
+                "direct_length_matched"
+                if condition == "direct_length_matched"
+                else "standard"
+            ),
+        }
+        for row in rows
+    ]
+    auxiliary_rows = rows[: min(len(rows), auxiliary_examples_per_task)]
+    if condition not in {"point_answer", "shuffled_point_answer"}:
+        # Keep optimizer exposure matched across all trained conditions. The
+        # direct controls repeat ordinary examples while the spatial
+        # conditions use the same number of contract-alignment examples.
+        if examples:
+            examples.extend(
+                dict(examples[index % len(examples)])
+                for index in range(3 * len(auxiliary_rows))
+            )
+        return examples
+
+    for task in ("normalized_point", "grid_cell", "presence"):
+        examples.extend(
+            spatial_contract_example(
+                row,
+                condition=condition,
+                task=task,
+                image_size=image_size,
+            )
+            for row in auxiliary_rows
+        )
+    return examples
+
+
+def spatial_contract_example(
+    row: dict[str, Any],
+    *,
+    condition: str,
+    task: str,
+    image_size: int,
+) -> dict[str, Any]:
+    """Materialize one domain-independent spatial output-contract example."""
+
+    if row.get("split") != "train":
+        raise RuntimeError("spatial contract supervision may use only training rows")
+    targets = [value for value in row["objects"] if value.get("class") == "target"]
+    if len(targets) != int(row["target_count"]) or len(targets) > 1:
+        raise RuntimeError("spatial contract rows require zero or one declared target")
+    point = tuple(targets[0]["center"]) if targets else None
+    if condition == "shuffled_point_answer" and point is not None:
+        distractors = [
+            value for value in row["objects"] if value.get("class") != "target"
+        ]
+        if not distractors:
+            raise RuntimeError("shuffled spatial contract requires a distractor")
+        point = tuple(distractors[0]["center"])
+    color = str(row["target"]["color"])
+    shape = str(row["target"]["shape"])
+
+    if task == "normalized_point":
+        prompt = (
+            f"Give the normalized center of the {color} {shape}. "
+            "Answer point=(x,y), or absent."
+        )
+        answer = (
+            "absent"
+            if point is None
+            else f"point=({point[0] / (image_size - 1):.3f},"
+            f"{point[1] / (image_size - 1):.3f})"
+        )
+    elif task == "grid_cell":
+        prompt = (
+            f"Which 10x10 cell contains the {color} {shape}? "
+            "Answer cell=NN, or absent."
+        )
+        if point is None:
+            answer = "absent"
+        else:
+            column = min(9, int(point[0]) * 10 // image_size)
+            row_index = min(9, int(point[1]) * 10 // image_size)
+            answer = f"cell={row_index * 10 + column:02d}"
+    elif task == "presence":
+        prompt = f"Is a {color} {shape} present? Answer present or absent."
+        answer = "present" if targets else "absent"
+    else:
+        raise ValueError(f"unsupported spatial contract task: {task}")
+    return {"row": row, "prompt": prompt, "answer": answer, "format": task}
 
 
 def labels_after_prompt_prefix(

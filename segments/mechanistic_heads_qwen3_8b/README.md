@@ -242,6 +242,14 @@ The base/direct conditions ask for a number only, the length-matched condition
 asks for non-spatial filler and explicitly forbids coordinates, and the two
 Point-Answer conditions request the deterministic coordinate syntax. They use
 the same rendered scenes and targets; only the output protocol changes.
+To make the synthetic Waldo transfer test about visual generalization rather
+than unfamiliar answer syntax, point and shuffled-point also receive matched
+normalized-point, 10x10-cell, and presence prompts on point-search training
+scenes. Shuffled spatial labels use distractor locations. No locked Waldo image
+or template is used for training, and the point gate requires coordinate RMSE
+in addition to count accuracy and parse rate. Direct controls repeat ordinary
+training examples so every trained condition retains the same 3,500-example,
+438-optimizer-step exposure.
 
 ```bash
 uv run python scripts/train_point_search.py \

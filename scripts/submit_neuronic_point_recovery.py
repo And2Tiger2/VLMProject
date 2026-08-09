@@ -157,18 +157,22 @@ def submit_point_recovery(submitter: Submitter) -> list[str]:
         dependencies=[full_training],
     )
 
-    # These four layer scans are independent once both behavioral calibration
-    # gates pass, so run them concurrently instead of serializing them.
-    calibration_barrier = [full_behavior, full_waldo]
+    # Point centroids test the point calibration alone. The three Waldo causal
+    # families additionally require Waldo calibration and remain fail-closed.
     full_scans = [
+        submitter.scan(
+            "point_centroids", "point-centroids", dependencies=[full_behavior]
+        )
+    ]
+    calibration_barrier = [full_behavior, full_waldo]
+    full_scans.extend(
         submitter.scan(name, task, dependencies=calibration_barrier)
         for name, task in (
-            ("point_centroids", "point-centroids"),
             ("search_heads", "search-heads"),
             ("verification_heads", "verification-heads"),
             ("distractor_heads", "distractor-heads"),
         )
-    ]
+    )
     return full_scans
 
 

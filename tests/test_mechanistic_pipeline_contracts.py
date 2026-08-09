@@ -532,7 +532,10 @@ def test_point_recovery_dry_run_is_minimal_and_dependency_safe(tmp_path: Path) -
         command = submitter.commands[list(submitter.jobs).index(name)]
         dependency = next(value for value in command if value.startswith("--dependency="))
         assert submitter.jobs["full_point_behavior"] in dependency
-        assert submitter.jobs["full_waldo_behavior"] in dependency
+        if name == "point_centroids_layers":
+            assert submitter.jobs["full_waldo_behavior"] not in dependency
+        else:
+            assert submitter.jobs["full_waldo_behavior"] in dependency
     assert all("--kill-on-invalid-dep=yes" in command for command in submitter.commands)
 
 
@@ -1518,6 +1521,39 @@ def test_point_behavior_count_parser_handles_every_declared_protocol() -> None:
     assert module.parse_count_answer("points=[(037,064)]") is None
 
 
+def test_point_calibration_requires_actual_coordinate_quality() -> None:
+    module = load_script("evaluate_point_search.py")
+    config = {
+        "minimum_calibration_count_accuracy": 0.8,
+        "minimum_calibration_point_parse_rate": 0.8,
+        "maximum_calibration_point_rmse": 40.0,
+    }
+    passed, checks, thresholds = module.point_calibration_result(
+        condition="point_answer",
+        calibration={
+            "count_accuracy": 0.96,
+            "point_parse_rate": 0.96,
+            "point_rmse": 32.9,
+        },
+        config=config,
+    )
+    assert passed
+    assert all(checks.values())
+    assert thresholds["maximum_point_rmse"] == 40.0
+
+    failed, checks, _ = module.point_calibration_result(
+        condition="point_answer",
+        calibration={
+            "count_accuracy": 0.96,
+            "point_parse_rate": 0.96,
+            "point_rmse": 40.1,
+        },
+        config=config,
+    )
+    assert not failed
+    assert checks["point_rmse"] is False
+
+
 def test_point_centroid_trace_uses_the_point_answer_instruction() -> None:
     source = (ROOT / "scripts/run_point_attention_centroids.py").read_text(
         encoding="utf-8"
@@ -1601,6 +1637,96 @@ def test_point_training_labels_reject_empty_or_mismatched_suffix() -> None:
             torch.tensor([[1, 9, 3]]),
             mask,
         )
+
+
+def test_point_training_aligns_spatial_contracts_without_waldo_leakage() -> None:
+    module = load_script("train_point_search.py")
+    row = {
+        "id": "train-0",
+        "split": "train",
+        "image_path": "unused.png",
+        "target_count": 1,
+        "target": {"color": "red", "shape": "L"},
+        "objects": [
+            {"class": "target", "center": [112, 56]},
+            {"class": "distractor", "center": [20, 200]},
+        ],
+        "prompts": {
+            "direct": "count",
+            "direct_length_matched": "count with filler",
+            "point": "report points",
+        },
+        "answers": {
+            "base": "1",
+            "direct": "1",
+            "direct_length_matched": "1",
+            "point": "points=[(112,056)]; answer=1",
+            "shuffled_point": "points=[(020,200)]; answer=1",
+        },
+    }
+    point = module.build_training_examples(
+        [row],
+        condition="point_answer",
+        auxiliary_examples_per_task=1,
+        image_size=224,
+    )
+    shuffled = module.build_training_examples(
+        [row],
+        condition="shuffled_point_answer",
+        auxiliary_examples_per_task=1,
+        image_size=224,
+    )
+    direct = module.build_training_examples(
+        [row],
+        condition="direct_answer",
+        auxiliary_examples_per_task=1,
+        image_size=224,
+    )
+
+    assert [example["format"] for example in point] == [
+        "standard",
+        "normalized_point",
+        "grid_cell",
+        "presence",
+    ]
+    point_answers = {example["format"]: example["answer"] for example in point}
+    shuffled_answers = {
+        example["format"]: example["answer"] for example in shuffled
+    }
+    assert point_answers["normalized_point"] == "point=(0.502,0.251)"
+    assert point_answers["grid_cell"] == "cell=25"
+    assert point_answers["presence"] == "present"
+    assert shuffled_answers["normalized_point"] == "point=(0.090,0.897)"
+    assert shuffled_answers["grid_cell"] == "cell=80"
+    assert shuffled_answers["presence"] == "present"
+    assert len(direct) == len(point) == len(shuffled) == 4
+    assert {example["format"] for example in direct} == {"standard"}
+
+    locked = dict(row, split="locked_test")
+    with pytest.raises(RuntimeError, match="only training rows"):
+        module.spatial_contract_example(
+            locked,
+            condition="point_answer",
+            task="normalized_point",
+            image_size=224,
+        )
+
+
+def test_point_training_contract_alignment_keeps_optimizer_exposure_matched() -> None:
+    config = json.loads(
+        (
+            ROOT
+            / "segments/mechanistic_heads_qwen3_8b/configs/point_search_lora.json"
+        ).read_text(encoding="utf-8")
+    )
+    total_examples = 2000 + 3 * int(config["spatial_contract_examples_per_task"])
+    consumed_slots = int(config["max_steps"]) * int(
+        config["gradient_accumulation_steps"]
+    )
+    assert total_examples == 3500
+    assert total_examples <= consumed_slots < total_examples + int(
+        config["gradient_accumulation_steps"]
+    )
 
 
 def test_every_mechanistic_slurm_entrypoint_refuses_tracked_dirty_code() -> None:

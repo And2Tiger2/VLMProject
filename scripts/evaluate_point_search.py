@@ -52,7 +52,8 @@ def main() -> None:
     rows = read_jsonl(Path(config["dataset"]))
     rows = [row for row in rows if row.get("split") != "train"]
     limit = effective_limit(args)
-    if limit is not None: rows = rows[:limit]
+    if limit is not None:
+        rows = rows[:limit]
     runtime = runtime_from_config(config, device_map=args.device_map, checkpoint_override=args.checkpoint)
     answer_key = CONDITION_KEYS[args.condition]
     records = []
@@ -77,18 +78,55 @@ def main() -> None:
         rmses = [float(row["point_rmse"]) for row in group if row["point_rmse"] != ""]
         positive = [row for row in group if int(row["target_count"]) > 0]
         by_split[split] = {"n": len(group), "count_accuracy": sum(row["count_correct"] for row in group) / len(group), "sequence_exact": sum(row["sequence_exact"] for row in group) / len(group), "point_parse_rate": sum(row["point_rmse"] != "" for row in positive) / len(positive) if positive else None, "point_rmse": sum(rmses) / len(rmses) if rmses else None}
-    calibration_split=str(config.get("calibration_split","ood_target_count_1"));calibration=by_split.get(calibration_split,{})
-    calibration_passed=(args.condition!="point_answer") or (float(calibration.get("count_accuracy",0))>=float(config.get("minimum_calibration_count_accuracy",0.5)) and float(calibration.get("point_parse_rate",0))>=float(config.get("minimum_calibration_point_parse_rate",0.5)))
-    summary = {"valid": True, "label": "instrumentation smoke test" if args.smoke else ("modified replication" if calibration_passed else "failed calibration"), "condition": args.condition, "n": len(records), "by_split": by_split, "calibration_split":calibration_split,"calibration_passed":calibration_passed,"architecture": vars(runtime.architecture), "deviation": "deterministic textual coordinates replace paper HTML point boxes"}
-    summary_path = args.output_dir / "summary.json"; summary_path.write_text(json.dumps(summary, indent=2), encoding="utf-8")
+    calibration_split = str(config.get("calibration_split", "ood_target_count_1"))
+    calibration = by_split.get(calibration_split, {})
+    calibration_passed, calibration_checks, calibration_thresholds = point_calibration_result(
+        condition=args.condition,
+        calibration=calibration,
+        config=config,
+    )
+    summary = {"valid": True, "label": "instrumentation smoke test" if args.smoke else ("modified replication" if calibration_passed else "failed calibration"), "condition": args.condition, "n": len(records), "by_split": by_split, "calibration_split":calibration_split,"calibration_thresholds":calibration_thresholds,"calibration_checks":calibration_checks,"calibration_passed":calibration_passed,"architecture": vars(runtime.architecture), "deviation": "deterministic textual coordinates replace paper HTML point boxes"}
+    summary_path = args.output_dir / "summary.json"
+    summary_path.write_text(json.dumps(summary, indent=2), encoding="utf-8")
     write_run_manifest(args.output_dir, config={**config, "condition": args.condition, "smoke": args.smoke, "architecture": vars(runtime.architecture)}, seeds={"global": args.seed}, inputs=[args.config, Path(config["dataset"]), *referenced_image_paths(rows), *checkpoint_manifest_inputs(config, checkpoint_override=args.checkpoint)], outputs=[output, summary_path], status="complete", repo_root=Path.cwd())
     print(json.dumps(summary, indent=2))
     if not args.smoke and not calibration_passed:
         raise SystemExit("Point-Answer behavioral calibration failed; causal scans are blocked")
 
 
+def point_calibration_result(
+    *, condition: str, calibration: dict, config: dict
+) -> tuple[bool, dict[str, bool], dict[str, float]]:
+    """Require both parse/count behavior and actual coordinate quality."""
+
+    thresholds = {
+        "minimum_count_accuracy": float(
+            config.get("minimum_calibration_count_accuracy", 0.8)
+        ),
+        "minimum_point_parse_rate": float(
+            config.get("minimum_calibration_point_parse_rate", 0.8)
+        ),
+        "maximum_point_rmse": float(
+            config.get("maximum_calibration_point_rmse", 40.0)
+        ),
+    }
+    if condition != "point_answer":
+        return True, {}, thresholds
+    rmse = calibration.get("point_rmse")
+    checks = {
+        "count_accuracy": float(calibration.get("count_accuracy", 0.0))
+        >= thresholds["minimum_count_accuracy"],
+        "point_parse_rate": float(calibration.get("point_parse_rate", 0.0))
+        >= thresholds["minimum_point_parse_rate"],
+        "point_rmse": rmse is not None
+        and float(rmse) <= thresholds["maximum_point_rmse"],
+    }
+    return all(checks.values()), checks, thresholds
+
+
 def point_rmse(predicted: list[tuple[int, int]], expected: list[tuple[int, int]]) -> float | None:
-    if not expected or len(predicted) != len(expected): return None
+    if not expected or len(predicted) != len(expected):
+        return None
     predicted_array = np.asarray(predicted, dtype=np.float64)
     expected_array = np.asarray(expected, dtype=np.float64)
     squared_distances = (
@@ -106,7 +144,14 @@ def read_jsonl(path: Path) -> list[dict]:
 
 def write_tsv(path: Path, rows: list[dict]) -> None:
     with path.open("w", encoding="utf-8", newline="") as handle:
-        writer = csv.DictWriter(handle, fieldnames=sorted({key for row in rows for key in row}) or ["id"], delimiter="\t"); writer.writeheader(); writer.writerows(rows)
+        writer = csv.DictWriter(
+            handle,
+            fieldnames=sorted({key for row in rows for key in row}) or ["id"],
+            delimiter="\t",
+        )
+        writer.writeheader()
+        writer.writerows(rows)
 
 
-if __name__ == "__main__": main()
+if __name__ == "__main__":
+    main()
