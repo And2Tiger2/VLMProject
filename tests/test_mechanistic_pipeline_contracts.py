@@ -450,6 +450,92 @@ def test_submission_graph_refuses_duplicate_receipt_keys(tmp_path: Path) -> None
         submitter.submit("same", "job.sh", exports={})
 
 
+def test_point_recovery_archives_only_invalid_point_branch(tmp_path: Path) -> None:
+    module = load_script("submit_neuronic_point_recovery.py")
+    segment = tmp_path / "segments/mechanistic_heads_qwen3_8b"
+    invalid = (
+        segment / "reports/instrumentation",
+        segment / "checkpoints/point-answer-lora",
+        segment / "runs/point_behavior/point_answer",
+    )
+    for path in invalid:
+        path.mkdir(parents=True)
+        (path / "invalid.txt").write_text("invalid\n", encoding="utf-8")
+    preserved = segment / "runs/counting_head_scan/full"
+    preserved.mkdir(parents=True)
+    (preserved / "keep.txt").write_text("keep\n", encoding="utf-8")
+
+    result = module.archive_invalid_point_outputs(
+        tmp_path,
+        execute=True,
+        stamp="20260809T000000Z",
+        revision="a" * 40,
+    )
+
+    archive = tmp_path / result["archive_root"]
+    assert result["n_archived"] == len(invalid)
+    assert all(not path.exists() for path in invalid)
+    assert (archive / "reports/instrumentation/invalid.txt").is_file()
+    assert (archive / "checkpoints/point-answer-lora/invalid.txt").is_file()
+    assert (archive / "runs/point_behavior/point_answer/invalid.txt").is_file()
+    assert (preserved / "keep.txt").read_text(encoding="utf-8") == "keep\n"
+
+
+def test_point_recovery_dry_run_is_minimal_and_dependency_safe(tmp_path: Path) -> None:
+    overnight = load_script("submit_neuronic_mechanistic_overnight.py")
+    module = load_script("submit_neuronic_point_recovery.py")
+    submitter = overnight.Submitter(repo=tmp_path, dry_run=True)
+    terminal_jobs = module.submit_point_recovery(submitter)
+
+    assert set(submitter.jobs) == {
+        "instrumentation",
+        "smoke_point_training",
+        "smoke_point_behavior",
+        "smoke_waldo_behavior",
+        "smoke_point_centroids",
+        "smoke_search_heads",
+        "smoke_verification_heads",
+        "smoke_distractor_heads",
+        "full_point_training",
+        "full_point_behavior",
+        "full_waldo_behavior",
+        "point_centroids_layers",
+        "point_centroids_aggregate",
+        "search_heads_layers",
+        "search_heads_aggregate",
+        "verification_heads_layers",
+        "verification_heads_aggregate",
+        "distractor_heads_layers",
+        "distractor_heads_aggregate",
+    }
+    assert not any(
+        value in " ".join(command)
+        for command in submitter.commands
+        for value in ("counting-heads", "maci-heads", "vlmbias-heads")
+    )
+    assert terminal_jobs == [
+        submitter.jobs["point_centroids_aggregate"],
+        submitter.jobs["search_heads_aggregate"],
+        submitter.jobs["verification_heads_aggregate"],
+        submitter.jobs["distractor_heads_aggregate"],
+    ]
+    full_train = submitter.commands[list(submitter.jobs).index("full_point_training")]
+    dependency = next(value for value in full_train if value.startswith("--dependency="))
+    assert submitter.jobs["smoke_point_behavior"] in dependency
+    assert submitter.jobs["smoke_waldo_behavior"] in dependency
+    for name in (
+        "point_centroids_layers",
+        "search_heads_layers",
+        "verification_heads_layers",
+        "distractor_heads_layers",
+    ):
+        command = submitter.commands[list(submitter.jobs).index(name)]
+        dependency = next(value for value in command if value.startswith("--dependency="))
+        assert submitter.jobs["full_point_behavior"] in dependency
+        assert submitter.jobs["full_waldo_behavior"] in dependency
+    assert all("--kill-on-invalid-dep=yes" in command for command in submitter.commands)
+
+
 def test_prepared_reuse_requires_current_generator_source(tmp_path: Path) -> None:
     module = load_script("submit_neuronic_mechanistic_overnight.py")
     source = tmp_path / "generator.py"

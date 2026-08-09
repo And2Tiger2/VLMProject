@@ -6,7 +6,7 @@ ACTION="${1:-help}"
 MODE="${2:-smoke}"
 cd "$REPO"
 
-if [[ "$ACTION" == "overnight-smoke" || "$ACTION" == "overnight-smoke-resume" || "$ACTION" == "overnight-all" || "$ACTION" == "overnight-all-resume" || "$ACTION" == "refresh-generated-data" ]]; then
+if [[ "$ACTION" == "overnight-smoke" || "$ACTION" == "overnight-smoke-resume" || "$ACTION" == "overnight-all" || "$ACTION" == "overnight-all-resume" || "$ACTION" == "refresh-generated-data" || "$ACTION" == "point-recovery" ]]; then
   # Resolve the shared environment once before submitting concurrent jobs.
   # Point-search training requires PEFT from the mechanistic extra.
   uv sync --frozen --extra qwen --extra mechanistic --extra dev
@@ -14,8 +14,11 @@ if [[ "$ACTION" == "overnight-smoke" || "$ACTION" == "overnight-smoke-resume" ||
   # Prevent concurrent ``uv run`` calls from trying to mutate it again.
   export UV_NO_SYNC=1
   export UV_FROZEN=1
-  # Previous revisions' reports/checkpoints cannot be resumed safely. Move
-  # them into a recoverable archive before constructing the new DAG.
+fi
+
+if [[ "$ACTION" == "overnight-smoke" || "$ACTION" == "overnight-smoke-resume" || "$ACTION" == "overnight-all" || "$ACTION" == "overnight-all-resume" || "$ACTION" == "refresh-generated-data" ]]; then
+  # Broad overnight runs archive every revision-stale output. The targeted
+  # point recovery action performs its own narrow archive in its submitter.
   archive_args=(--repo "$REPO" --execute)
   if [[ "$ACTION" == "overnight-all" ]]; then
     # Full preparation replaces the smoke-sized JSONLs. Current-SHA smoke
@@ -43,6 +46,9 @@ case "$ACTION" in
   overnight-all-resume)
     uv run python scripts/submit_neuronic_mechanistic_overnight.py \
       --repo "$REPO" --profile all --confirm-full --reuse-prepared
+    ;;
+  point-recovery)
+    uv run python scripts/submit_neuronic_point_recovery.py --repo "$REPO"
     ;;
   prepare-synthetic)
     uv run python scripts/generate_counting_data.py \
@@ -132,6 +138,6 @@ case "$ACTION" in
     fi
     ;;
   help|*)
-    echo "usage: $0 {archive-stale|refresh-generated-data|overnight-smoke|overnight-smoke-resume|overnight-all|overnight-all-resume|prepare-synthetic|download-mmmc|instrumentation|counting-behavior|counting-vap|counting-heads|counting-heads-repeat1|counting-heads-repeat2|general-importance|counting-controls|counting-validation|waldo-behavior|point-centroids|search-heads|verification-heads|distractor-heads|point-ablation|maci-heads|maci-heads-aligned|maci-stability|maci-ablation|maci-confirm|maci-detector|maci-gated|vlmbias-heads|vlmbias-validation|atlas} [smoke|full]"
+    echo "usage: $0 {point-recovery|archive-stale|refresh-generated-data|overnight-smoke|overnight-smoke-resume|overnight-all|overnight-all-resume|prepare-synthetic|download-mmmc|instrumentation|counting-behavior|counting-vap|counting-heads|counting-heads-repeat1|counting-heads-repeat2|general-importance|counting-controls|counting-validation|waldo-behavior|point-centroids|search-heads|verification-heads|distractor-heads|point-ablation|maci-heads|maci-heads-aligned|maci-stability|maci-ablation|maci-confirm|maci-detector|maci-gated|vlmbias-heads|vlmbias-validation|atlas} [smoke|full]"
     ;;
 esac
