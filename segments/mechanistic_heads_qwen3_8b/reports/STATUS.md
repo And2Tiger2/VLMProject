@@ -99,7 +99,7 @@
 
 ## Passed
 
-- The complete CPU unit/integration suite passes in the audited checkout (273
+- The complete CPU unit/integration suite passes in the audited checkout (275
   tests in the final local audit).
 - Both synthetic generator smokes write real schemas, images, masks, pairs,
   grouped splits, manifests, input/output hashes, and resume markers.
@@ -143,6 +143,16 @@
   pixel/token tensors) for every example. It retains CPU scalars only and
   recreates one input at a time during scoring, bounding device residency for
   both the four-example smoke and the 500-example locked run.
+- The first full Point-Answer pilot exposed an all-zero assistant-label mask in
+  the installed Qwen3-VL chat-template path: all four nominal training runs
+  reported exactly zero loss. Training now derives and verifies the assistant
+  suffix from an exact multimodal prompt-token prefix, refuses empty labels,
+  and refuses non-finite or non-positive training loss. The prior point and
+  Waldo outputs are invalid as trained-model calibrations and must be rerun.
+- Full MACI split-half stability was a genuine failed calibration rather than
+  an execution error: Spearman rho was 0.372 and global sign agreement was
+  0.445 against preregistered minima of 0.5 and 0.7. Detector/gating claims
+  remain blocked; the observed top-40 overlaps are descriptive only.
 - The old Slurm DAG is not resumable: its VAP, MACI, VLMBias, and point-training
   smoke failures correctly prevented all dependent scientific jobs.
 - No scientific calibration result exists yet; no replication success is
@@ -152,7 +162,7 @@
 
 ## Computationally pending
 
-- Mandatory current-SHA smoke rerun of the gated-MACI device-residency fix.
+- Mandatory current-SHA smoke rerun of the corrected Point-Answer supervision.
 - Qwen behavioral calibration and all full scientific stages; full synthetic
   and MMMC preparation is complete and reusable by the resume launcher.
 - VLMBias detail contrast unless external original factual images are supplied;

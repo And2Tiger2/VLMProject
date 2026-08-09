@@ -104,6 +104,16 @@ family has been found.
   in a later vision forward. Gated MACI now stores only CPU metadata between
   passes and rebuilds/releases one device input at a time. The failed barrier
   correctly prevented every expensive full scan from starting.
+- The subsequent full Point-Answer run revealed that Qwen3-VL returned an
+  assistant-mask field containing no positive tokens. All four LoRA conditions
+  consequently logged zero loss despite completing optimizer scheduling.
+  Training now verifies an exact prompt-prefix boundary, requires supervised
+  answer tokens, and rejects zero/non-finite loss. Point/Waldo behavioral
+  failures from those unsupervised adapters are instrumentation failures, not
+  evidence against the method.
+- Full MACI stability independently failed its preregistered scientific gate
+  (split-half rho 0.372; sign agreement 0.445). That result is retained as a
+  failed calibration and the conflict detector remains scientifically blocked.
 - The launcher is the sole frozen dependency-sync owner. Preparation, GPU,
   aggregation, and report jobs run frozen/no-sync, preventing concurrent
   processes from racing to change the shared virtual environment.

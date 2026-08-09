@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 from pathlib import Path
 import shutil
 from typing import Any
@@ -186,6 +187,7 @@ def train_condition(
 
     def collate(batch: list[dict[str, Any]]) -> dict[str, Any]:
         messages = []
+        prompt_messages = []
         for row in batch:
             answer = str(row["answers"][answer_key])
             if condition == "direct_length_matched":
@@ -194,18 +196,22 @@ def train_condition(
                     direct_answer=str(row["target_count"]),
                     point_answer=str(row["answers"]["point"]),
                 )
+            image = Image.open(row["image_path"]).convert("RGB")
+            prompt = point_condition_prompt(row, condition)
+            user = {
+                "role": "user",
+                "content": [
+                    {"type": "image", "image": image},
+                    {"type": "text", "text": prompt},
+                ],
+            }
             messages.append(
                 [
-                    {
-                        "role": "user",
-                        "content": [
-                            {"type": "image", "image": Image.open(row["image_path"]).convert("RGB")},
-                            {"type": "text", "text": point_condition_prompt(row, condition)},
-                        ],
-                    },
+                    user,
                     {"role": "assistant", "content": [{"type": "text", "text": answer}]},
                 ]
             )
+            prompt_messages.append([user])
         encoded = processor.apply_chat_template(
             messages,
             tokenize=True,
@@ -213,21 +219,30 @@ def train_condition(
             return_dict=True,
             return_tensors="pt",
             padding=True,
-            return_assistant_tokens_mask=True,
         )
-        assistant_mask = encoded.pop("assistant_masks", None)
-        if assistant_mask is None:
-            assistant_mask = encoded.pop("assistant_tokens_mask", None)
-        if assistant_mask is None:
-            raise RuntimeError(
-                "Qwen chat template did not return an assistant-token mask; refusing to train on prompt tokens"
-            )
-        if not torch.is_tensor(assistant_mask):
-            assistant_mask = torch.as_tensor(assistant_mask, device=encoded["input_ids"].device)
-        encoded["labels"] = encoded["input_ids"].clone()
-        encoded["labels"][assistant_mask.eq(0)] = -100
-        encoded["labels"][encoded["attention_mask"].eq(0)] = -100
+        prompt_encoded = processor.apply_chat_template(
+            prompt_messages,
+            tokenize=True,
+            add_generation_prompt=True,
+            return_dict=True,
+            return_tensors="pt",
+            padding=True,
+        )
+        encoded["labels"] = labels_after_prompt_prefix(
+            encoded["input_ids"],
+            encoded["attention_mask"],
+            prompt_encoded["input_ids"],
+            prompt_encoded["attention_mask"],
+        )
         return encoded
+
+    if not rows:
+        raise RuntimeError("point training dataset has no rows")
+    probe = collate(rows[:1])
+    probe_supervised_tokens = int(probe["labels"].ne(-100).sum().item())
+    if probe_supervised_tokens <= 0:
+        raise RuntimeError("point training produced no supervised assistant tokens")
+    del probe
 
     max_steps = 2 if smoke else int(config.get("max_steps", -1))
     arguments = make_training_arguments(
@@ -243,6 +258,12 @@ def train_condition(
     train_output = trainer.train(
         resume_from_checkpoint=args_resume_checkpoint(output_dir) if resume else None
     )
+    train_loss = float(train_output.metrics.get("train_loss", float("nan")))
+    if not math.isfinite(train_loss) or train_loss <= 0:
+        raise RuntimeError(
+            f"point training returned invalid train_loss={train_loss}; "
+            "refusing an unsupervised checkpoint"
+        )
     trainer.save_model(str(output_dir))
     return {
         "valid": True,
@@ -251,6 +272,8 @@ def train_condition(
         "training_mode": training_mode,
         "n_rows": len(rows),
         "metrics": train_output.metrics,
+        "label_policy": "verified multimodal prompt-prefix boundary",
+        "probe_supervised_tokens": probe_supervised_tokens,
         "memory_policy": {
             "use_cache": False,
             "gradient_checkpointing": True,
@@ -262,6 +285,60 @@ def train_condition(
             else "deterministic text point format replaces paper HTML boxes"
         ),
     }
+
+
+def labels_after_prompt_prefix(
+    full_input_ids: Any,
+    full_attention_mask: Any,
+    prompt_input_ids: Any,
+    prompt_attention_mask: Any,
+) -> Any:
+    """Mask the multimodal prompt and supervise only assistant-response tokens.
+
+    Qwen3-VL's current chat template does not expose Jinja generation spans, so
+    ``return_assistant_tokens_mask=True`` returns an all-zero mask. Derive the
+    boundary by applying the identical template to the user turn with an
+    assistant generation prompt, then verify that it is an exact token prefix
+    of the full user+assistant conversation. This works with either padding
+    side and refuses empty or mismatched supervision.
+    """
+
+    import torch
+
+    tensors = (
+        full_input_ids,
+        full_attention_mask,
+        prompt_input_ids,
+        prompt_attention_mask,
+    )
+    if any(not torch.is_tensor(value) or value.ndim != 2 for value in tensors):
+        raise ValueError("point-training token IDs and masks must be rank-two tensors")
+    if full_input_ids.shape != full_attention_mask.shape:
+        raise ValueError("full input IDs and attention mask must align")
+    if prompt_input_ids.shape != prompt_attention_mask.shape:
+        raise ValueError("prompt input IDs and attention mask must align")
+    if full_input_ids.shape[0] != prompt_input_ids.shape[0]:
+        raise ValueError("full and prompt batches must have equal size")
+
+    labels = torch.full_like(full_input_ids, -100)
+    for batch_index in range(full_input_ids.shape[0]):
+        full_positions = full_attention_mask[batch_index].ne(0).nonzero().flatten()
+        prompt_positions = prompt_attention_mask[batch_index].ne(0).nonzero().flatten()
+        full_tokens = full_input_ids[batch_index].index_select(0, full_positions)
+        prompt_tokens = prompt_input_ids[batch_index].index_select(0, prompt_positions)
+        if prompt_tokens.numel() >= full_tokens.numel():
+            raise RuntimeError("assistant response has no supervised tokens")
+        if not torch.equal(full_tokens[: prompt_tokens.numel()], prompt_tokens):
+            raise RuntimeError(
+                "generation-prompt tokens are not a prefix of the training conversation"
+            )
+        answer_positions = full_positions[prompt_tokens.numel() :]
+        if answer_positions.numel() == 0:
+            raise RuntimeError("assistant response has no supervised tokens")
+        labels[batch_index, answer_positions] = full_input_ids[batch_index].index_select(
+            0, answer_positions
+        )
+    return labels
 
 
 def make_training_arguments(

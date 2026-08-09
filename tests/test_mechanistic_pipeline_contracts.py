@@ -1479,6 +1479,44 @@ def test_point_training_arguments_match_locked_transformers_api(
     ).read_text(encoding="utf-8")
 
 
+def test_point_training_labels_only_verified_assistant_suffix() -> None:
+    import torch
+
+    module = load_script("train_point_search.py")
+    full_ids = torch.tensor([[0, 0, 11, 12, 13, 21, 22], [31, 32, 41, 42, 0, 0, 0]])
+    full_mask = torch.tensor([[0, 0, 1, 1, 1, 1, 1], [1, 1, 1, 1, 0, 0, 0]])
+    prompt_ids = torch.tensor([[0, 11, 12, 13], [31, 32, 0, 0]])
+    prompt_mask = torch.tensor([[0, 1, 1, 1], [1, 1, 0, 0]])
+
+    labels = module.labels_after_prompt_prefix(
+        full_ids, full_mask, prompt_ids, prompt_mask
+    )
+
+    assert labels.tolist() == [
+        [-100, -100, -100, -100, -100, 21, 22],
+        [-100, -100, 41, 42, -100, -100, -100],
+    ]
+    assert labels.ne(-100).sum(dim=1).tolist() == [2, 2]
+
+
+def test_point_training_labels_reject_empty_or_mismatched_suffix() -> None:
+    import torch
+
+    module = load_script("train_point_search.py")
+    mask = torch.ones((1, 3), dtype=torch.long)
+    with pytest.raises(RuntimeError, match="no supervised tokens"):
+        module.labels_after_prompt_prefix(
+            torch.tensor([[1, 2, 3]]), mask, torch.tensor([[1, 2, 3]]), mask
+        )
+    with pytest.raises(RuntimeError, match="not a prefix"):
+        module.labels_after_prompt_prefix(
+            torch.tensor([[1, 2, 3, 4]]),
+            torch.ones((1, 4), dtype=torch.long),
+            torch.tensor([[1, 9, 3]]),
+            mask,
+        )
+
+
 def test_every_mechanistic_slurm_entrypoint_refuses_tracked_dirty_code() -> None:
     for name in (
         "slurm_neuronic_mechanistic_heads.sh",
