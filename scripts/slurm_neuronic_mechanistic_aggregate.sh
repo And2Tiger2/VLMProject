@@ -28,6 +28,7 @@ case "$SOURCE_TASK" in
   maci-heads) ROOT=maci_head_scan ;;
   maci-heads-aligned) ROOT=maci_head_scan_aligned ;;
   vlmbias-heads) ROOT=vlmbias_signed_head_scan ;;
+  base-search-heads) ROOT=base_search_head_scan ;;
   *) echo "unsupported aggregate task: $SOURCE_TASK" >&2; exit 2 ;;
 esac
 uv run python scripts/aggregate_mechanistic_shards.py \

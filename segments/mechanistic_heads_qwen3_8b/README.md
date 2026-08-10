@@ -32,6 +32,25 @@ model weights, checkpoints, and activation stores are ignored by Git.
 The suite must not be described as a successful replication until its GPU
 calibrations, matched controls, and locked confirmations pass.
 
+## Frozen-base visual-search diagnosis
+
+The next visual-search experiment is independent of the Point-Answer/LoRA
+branch. It loads the unmodified Qwen3-VL base model, ranks heads by gaze-style
+attention routing to a correct candidate region, and validates the ranking by
+locked-set ablation against high-image-attention and random controls. It tests
+text cues, a real target exemplar, and an impostor-exemplar control.
+
+```bash
+# Short bounded contract run.
+bash scripts/run_neuronic_mechanistic_heads.sh base-search-smoke
+
+# Full discovery across all 36 layers plus locked causal validation.
+bash scripts/run_neuronic_mechanistic_heads.sh base-search
+```
+
+Neither command submits training jobs or loads adapter checkpoints. The full
+design and claim boundary are in [`BASE_SEARCH_EXPERIMENT.md`](BASE_SEARCH_EXPERIMENT.md).
+
 ## Environment
 
 ```bash

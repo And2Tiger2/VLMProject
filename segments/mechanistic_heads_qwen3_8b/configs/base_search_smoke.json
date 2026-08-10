@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "study": "frozen_base_visual_search_heads_smoke",
+  "model_id": "Qwen/Qwen3-VL-8B-Instruct",
+  "dataset": "segments/mechanistic_heads_qwen3_8b/data/generated/point_search/waldo_like.jsonl",
+  "behavior_split": "locked_test",
+  "discovery_split": "train",
+  "validation_split": "locked_test",
+  "cue_modes": ["text", "target_exemplar", "impostor_exemplar"],
+  "ranking_cues": ["text", "target_exemplar"],
+  "discovery_examples": 4,
+  "validation_examples": 2,
+  "top_k": 8,
+  "merged_head_scores": "segments/mechanistic_heads_qwen3_8b/runs/base_search_head_scan/smoke/base_search_head_scores.tsv",
+  "ranking": "segments/mechanistic_heads_qwen3_8b/reports/base_search_heads/smoke/base_search_head_ranking.json",
+  "adapter_path": null,
+  "checkpoint": null,
+  "training": false
+}

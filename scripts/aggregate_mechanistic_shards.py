@@ -23,6 +23,7 @@ ARTIFACTS = {
     "maci-heads": ["maci_head_scores_per_example.tsv", "maci_head_scores.tsv"],
     "maci-heads-aligned": ["maci_head_scores_per_example.tsv", "maci_head_scores.tsv"],
     "vlmbias-heads": ["vlmbias_signed_scores_per_example.tsv", "vlmbias_signed_head_scores.tsv"],
+    "base-search-heads": ["base_search_head_scores.tsv"],
 }
 
 
