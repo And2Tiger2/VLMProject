@@ -17,6 +17,39 @@ from vlm_eval.mechanistic_heads.reproducibility import seed_everything, write_ru
 from vlm_eval.mechanistic_heads.synthetic import render_syndot, syndot_positions
 
 
+def backend_equivalence_passes(
+    *,
+    eager_custom_error: float,
+    eager_custom_tolerance: float,
+    custom_candidate_margin: float,
+    sdpa_candidate_margin: float,
+    greedy_agreement: bool,
+) -> tuple[bool, bool]:
+    """Validate capture fidelity without imposing SDPA's BF16 reduction path.
+
+    The mechanistic implementation intentionally follows Hugging Face eager
+    attention because it must materialize probabilities and per-head values.
+    It must therefore reproduce eager logits to numerical precision. SDPA uses
+    a different fused BF16 reduction and can move logit magnitudes materially
+    while preserving inference decisions. Treat SDPA as a behavioral parity
+    check: it must preserve both the greedy token and the ordering of the two
+    tested answer candidates. Keep the magnitude delta as telemetry rather
+    than disguising backend arithmetic as a capture error.
+    """
+
+    candidate_order_agreement = (
+        custom_candidate_margin > 0 and sdpa_candidate_margin > 0
+    ) or (
+        custom_candidate_margin < 0 and sdpa_candidate_margin < 0
+    )
+    passed = (
+        eager_custom_error <= eager_custom_tolerance
+        and candidate_order_agreement
+        and greedy_agreement
+    )
+    return passed, candidate_order_agreement
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Run mandatory Qwen3 mechanistic instrumentation checks.")
     add_standard_run_arguments(parser)
@@ -120,7 +153,9 @@ def validate_runtime(runtime, fixture: Path):
     checks["batched_serial_agreement"] = batch_error < 5e-3
     diagnostics["batched_serial_margin_max_abs"] = batch_error
     spans = runtime.trace_spans(inputs, prompt)
-    spans.assert_partition_bounds(); checks["token_spans"] = True; diagnostics["token_spans"] = spans.to_dict()
+    spans.assert_partition_bounds()
+    checks["token_spans"] = True
+    diagnostics["token_spans"] = spans.to_dict()
     # First prove that our capture implementation is equivalent to HF eager,
     # then compare its tested answer margin and greedy token with the
     # repository-normal SDPA backend. Raw maxima over every vocabulary item at
@@ -157,14 +192,22 @@ def validate_runtime(runtime, fixture: Path):
     # These two paths call the same eager equations, so unlike the SDPA
     # comparison they should be bitwise identical.
     eager_custom_tolerance = 1e-5
-    checks["backend_equivalence"] = (
-        eager_custom_error <= eager_custom_tolerance
-        and backend_margin_error < 0.1
-        and backend_greedy_agreement
+    backend_passed, backend_candidate_order_agreement = backend_equivalence_passes(
+        eager_custom_error=eager_custom_error,
+        eager_custom_tolerance=eager_custom_tolerance,
+        custom_candidate_margin=float(custom_margin.detach().cpu()),
+        sdpa_candidate_margin=float(normal_margin.detach().cpu()),
+        greedy_agreement=backend_greedy_agreement,
     )
+    checks["backend_equivalence"] = backend_passed
     diagnostics["eager_custom_max_abs_logit_delta"] = eager_custom_error
     diagnostics["eager_custom_tolerance"] = eager_custom_tolerance
     diagnostics["normal_custom_candidate_margin_delta"] = backend_margin_error
+    diagnostics["custom_candidate_margin"] = float(custom_margin.detach().cpu())
+    diagnostics["normal_candidate_margin"] = float(normal_margin.detach().cpu())
+    diagnostics["normal_custom_candidate_order_agreement"] = (
+        backend_candidate_order_agreement
+    )
     diagnostics["normal_custom_greedy_agreement"] = backend_greedy_agreement
     diagnostics["normal_custom_last_token_max_abs_logit_delta"] = float(
         (next_normal - next_custom).abs().max().detach().cpu()

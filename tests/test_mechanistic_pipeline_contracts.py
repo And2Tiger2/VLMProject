@@ -1033,6 +1033,48 @@ def test_scientific_preflight_requires_current_git_instrumentation(tmp_path: Pat
         require_scientific_validation(report)
 
 
+def test_backend_equivalence_requires_capture_fidelity_and_behavioral_parity() -> None:
+    module = load_script("validate_mechanistic_instrumentation.py")
+
+    passed, ordering = module.backend_equivalence_passes(
+        eager_custom_error=0.0,
+        eager_custom_tolerance=1e-5,
+        custom_candidate_margin=2.0,
+        sdpa_candidate_margin=1.25,
+        greedy_agreement=True,
+    )
+    assert passed
+    assert ordering
+
+    # A large SDPA/eager magnitude difference is retained as telemetry, but
+    # is not itself evidence that the custom capture diverges from eager.
+    passed, ordering = module.backend_equivalence_passes(
+        eager_custom_error=0.0,
+        eager_custom_tolerance=1e-5,
+        custom_candidate_margin=2.0,
+        sdpa_candidate_margin=0.2,
+        greedy_agreement=True,
+    )
+    assert passed
+    assert ordering
+
+    for overrides in (
+        {"eager_custom_error": 1e-3},
+        {"sdpa_candidate_margin": -0.2},
+        {"greedy_agreement": False},
+    ):
+        arguments = {
+            "eager_custom_error": 0.0,
+            "eager_custom_tolerance": 1e-5,
+            "custom_candidate_margin": 2.0,
+            "sdpa_candidate_margin": 0.2,
+            "greedy_agreement": True,
+            **overrides,
+        }
+        passed, _ = module.backend_equivalence_passes(**arguments)
+        assert not passed
+
+
 def test_completed_manifest_binds_current_sha_inputs_and_outputs(tmp_path: Path) -> None:
     source = tmp_path / "input.json"
     output = tmp_path / "summary.json"
