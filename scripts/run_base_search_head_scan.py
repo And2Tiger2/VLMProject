@@ -32,6 +32,20 @@ from vlm_eval.mechanistic_heads.qwen3_runtime import Qwen3MechanisticRuntime
 from vlm_eval.mechanistic_heads.reproducibility import hash_paths, referenced_image_paths, seed_everything, write_run_manifest
 
 
+def materialize_projected_query_heads(projected_heads: Any, queries: list[int]) -> Any:
+    """Materialize only answer-query contributions from a lazy head capture."""
+
+    selected = projected_heads[0, queries, :, :]
+    materialize = getattr(selected, "materialize", None)
+    if callable(materialize):
+        selected = materialize()
+    if selected.ndim != 3:
+        raise ValueError(
+            "projected query heads must have [query, head, model_width] dimensions"
+        )
+    return selected.float()
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Discover frozen-base visual-search heads using gaze-style ROI routing.")
     add_standard_run_arguments(parser)
@@ -108,7 +122,9 @@ def main() -> None:
             chunk: list[dict[str, Any]] = []
             for layer in layers:
                 probabilities = capture.store.attention_probabilities[layer][0, :, queries, :].float()
-                projected = capture.store.projected_heads[layer][0, queries, :, :].float()
+                projected = materialize_projected_query_heads(
+                    capture.store.projected_heads[layer], queries
+                )
                 for head in range(runtime.architecture.n_heads):
                     key = (row["id"], cue_mode, layer, head)
                     if not checkpoint.missing(key):

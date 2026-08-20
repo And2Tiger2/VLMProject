@@ -11,6 +11,10 @@ from vlm_eval.mechanistic_heads.base_search import (
     build_search_probe,
     find_exemplars,
 )
+from vlm_eval.mechanistic_heads.patching import (
+    LazyProjectedHeads,
+    projected_head_contributions,
+)
 from vlm_eval.mechanistic_heads.synthetic import render_waldo_like_scene
 
 
@@ -128,6 +132,30 @@ def test_search_ranking_prefers_cue_invariant_selectivity_and_builds_controls() 
     assert controls["search_heads"] == [{"layer": 0, "head": 0}]
     assert controls["high_image_attention_control"] == [{"layer": 0, "head": 1}]
     assert controls["random_control"] == [{"layer": 1, "head": 0}]
+
+
+def test_search_scan_materializes_only_selected_lazy_query_heads() -> None:
+    import torch
+
+    module = load_script("run_base_search_head_scan.py")
+    raw = torch.arange(1 * 4 * 2 * 3, dtype=torch.float32).reshape(1, 4, 2, 3)
+    weight = torch.arange(6 * 6, dtype=torch.float32).reshape(6, 6) / 10
+    lazy = LazyProjectedHeads(raw, weight)
+
+    actual = module.materialize_projected_query_heads(lazy, [1, 3])
+    expected = projected_head_contributions(raw, weight)[0, [1, 3], :, :]
+
+    assert actual.shape == (2, 2, 6)
+    assert torch.equal(actual, expected)
+
+
+def test_base_search_smoke_retries_overwrite_stale_checkpoints() -> None:
+    gpu_source = (ROOT / "scripts/slurm_neuronic_base_search.sh").read_text()
+    post_source = (ROOT / "scripts/slurm_neuronic_base_search_postprocess.sh").read_text()
+
+    assert "RUN_POLICY=(--resume)" in gpu_source
+    assert "RUN_POLICY=(--overwrite)" in gpu_source
+    assert "RUN_POLICY=(--overwrite)" in post_source
 
 
 def test_base_search_submission_has_no_training_or_adapter_jobs(tmp_path: Path) -> None:
