@@ -16,9 +16,10 @@ from vlm_eval.mechanistic_heads.reproducibility import write_run_manifest
 def main() -> None:
     parser = argparse.ArgumentParser(description="Rank frozen-base gaze-style search heads and select causal controls.")
     add_standard_run_arguments(parser)
+    parser.add_argument("--source", type=Path)
     args = parser.parse_args()
     config = load_json_config(args.config)
-    source = Path(config["merged_head_scores"])
+    source = args.source or Path(config["merged_head_scores"])
     rows = read_tsv(source)
     ranking_cues = tuple(str(value) for value in config.get("ranking_cues", ["text", "target_exemplar"]))
     ranking = rank_heads(rows, ranking_cues=ranking_cues)

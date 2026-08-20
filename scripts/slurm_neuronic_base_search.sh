@@ -13,6 +13,7 @@ REPO="${REPO:-$SLURM_SUBMIT_DIR}"
 TASK="${TASK:?TASK is required}"
 MODE="${MODE:-full}"
 SEED="${SEED:-260809001}"
+RUN_NAMESPACE="${RUN_NAMESPACE:-}"
 cd "$REPO"
 if ! git diff --quiet -- . || ! git diff --cached --quiet -- .; then
   echo "refusing frozen-base search run: tracked worktree changes do not match HEAD" >&2
@@ -51,6 +52,9 @@ case "$TASK" in
     ;;
   discovery)
     OUT="segments/mechanistic_heads_qwen3_8b/runs/base_search_head_scan/$MODE"
+    if [[ -n "$RUN_NAMESPACE" ]]; then
+      OUT="$OUT/$RUN_NAMESPACE"
+    fi
     LAYER_ARGS=()
     if [[ -n "${SLURM_ARRAY_TASK_ID:-}" ]]; then
       OUT="$OUT/layer-$SLURM_ARRAY_TASK_ID"
@@ -62,8 +66,19 @@ case "$TASK" in
     ;;
   validation)
     OUT="segments/mechanistic_heads_qwen3_8b/runs/base_search_validation/$MODE"
+    RANKING="${RANKING:-$(
+      if [[ -n "$RUN_NAMESPACE" ]]; then
+        echo "segments/mechanistic_heads_qwen3_8b/reports/base_search_heads/$MODE/$RUN_NAMESPACE/base_search_head_ranking.json"
+      else
+        echo "segments/mechanistic_heads_qwen3_8b/reports/base_search_heads/$MODE/base_search_head_ranking.json"
+      fi
+    )}"
+    if [[ -n "$RUN_NAMESPACE" ]]; then
+      OUT="$OUT/$RUN_NAMESPACE"
+    fi
     uv run python scripts/run_base_search_head_validation.py \
-      --config "$CONFIG" --output-dir "$OUT" --seed "$SEED" --device-map cuda "${RUN_POLICY[@]}" "${SMOKE_ARGS[@]}"
+      --config "$CONFIG" --ranking "$RANKING" --output-dir "$OUT" --seed "$SEED" \
+      --device-map cuda "${RUN_POLICY[@]}" "${SMOKE_ARGS[@]}"
     ;;
   *)
     echo "unknown base-search task: $TASK" >&2

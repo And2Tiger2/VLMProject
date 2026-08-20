@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import hashlib
 from pathlib import Path
 from typing import Any
 
@@ -42,6 +43,49 @@ def configured_cues(config: dict[str, Any]) -> tuple[str, ...]:
     if unknown:
         raise ValueError(f"unknown cue modes: {sorted(unknown)}")
     return cues
+
+
+def seeded_group_sample(
+    rows: list[dict[str, Any]],
+    *,
+    limit: int | None,
+    seed: int,
+    purpose: str,
+) -> list[dict[str, Any]]:
+    """Select a reproducible, group-balanced subset for a replication seed."""
+
+    if limit is None or limit >= len(rows):
+        return list(rows)
+    if limit < 0:
+        raise ValueError("sample limit must be non-negative")
+
+    grouped: dict[str, list[dict[str, Any]]] = {}
+    for row in rows:
+        grouped.setdefault(str(row.get("group_id", row["id"])), []).append(row)
+
+    def digest(*parts: object) -> str:
+        payload = ":".join(str(part) for part in (seed, purpose, *parts))
+        return hashlib.sha256(payload.encode()).hexdigest()
+
+    group_order = sorted(grouped, key=lambda group: digest("group", group))
+    queues = {
+        group: sorted(grouped[group], key=lambda row: digest("row", row["id"]))
+        for group in group_order
+    }
+    selected: list[dict[str, Any]] = []
+    depth = 0
+    while len(selected) < limit:
+        added = False
+        for group in group_order:
+            if depth < len(queues[group]):
+                selected.append(queues[group][depth])
+                added = True
+                if len(selected) == limit:
+                    break
+        if not added:
+            break
+        depth += 1
+    return selected
 
 
 def crop_masked_object(image_path: str | Path, mask_path: str | Path, *, padding: int = 8) -> tuple[Image.Image, Image.Image]:

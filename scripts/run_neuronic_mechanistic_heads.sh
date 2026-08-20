@@ -6,7 +6,7 @@ ACTION="${1:-help}"
 MODE="${2:-smoke}"
 cd "$REPO"
 
-if [[ "$ACTION" == "base-search" || "$ACTION" == "base-search-smoke" ]]; then
+if [[ "$ACTION" == "base-search" || "$ACTION" == "base-search-smoke" || "$ACTION" == "base-search-3seed" ]]; then
   # The frozen-base search path deliberately has no PEFT/LoRA dependency.
   uv sync --frozen --extra qwen --extra dev
   export UV_NO_SYNC=1
@@ -60,6 +60,10 @@ case "$ACTION" in
     ;;
   base-search-smoke)
     uv run python scripts/submit_neuronic_base_search.py --repo "$REPO" --profile smoke
+    ;;
+  base-search-3seed)
+    uv run python scripts/submit_neuronic_base_search.py --repo "$REPO" --profile full \
+      --seeds 260809001 260809002 260809003
     ;;
   prepare-synthetic)
     uv run python scripts/generate_counting_data.py \
@@ -149,6 +153,6 @@ case "$ACTION" in
     fi
     ;;
   help|*)
-    echo "usage: $0 {base-search|base-search-smoke|point-recovery|archive-stale|refresh-generated-data|overnight-smoke|overnight-smoke-resume|overnight-all|overnight-all-resume|prepare-synthetic|download-mmmc|instrumentation|counting-behavior|counting-vap|counting-heads|counting-heads-repeat1|counting-heads-repeat2|general-importance|counting-controls|counting-validation|waldo-behavior|point-centroids|search-heads|verification-heads|distractor-heads|point-ablation|maci-heads|maci-heads-aligned|maci-stability|maci-ablation|maci-confirm|maci-detector|maci-gated|vlmbias-heads|vlmbias-validation|atlas} [smoke|full]"
+    echo "usage: $0 {base-search|base-search-smoke|base-search-3seed|point-recovery|archive-stale|refresh-generated-data|overnight-smoke|overnight-smoke-resume|overnight-all|overnight-all-resume|prepare-synthetic|download-mmmc|instrumentation|counting-behavior|counting-vap|counting-heads|counting-heads-repeat1|counting-heads-repeat2|general-importance|counting-controls|counting-validation|waldo-behavior|point-centroids|search-heads|verification-heads|distractor-heads|point-ablation|maci-heads|maci-heads-aligned|maci-stability|maci-ablation|maci-confirm|maci-detector|maci-gated|vlmbias-heads|vlmbias-validation|atlas} [smoke|full]"
     ;;
 esac

@@ -46,10 +46,16 @@ bash scripts/run_neuronic_mechanistic_heads.sh base-search-smoke
 
 # Full discovery across all 36 layers plus locked causal validation.
 bash scripts/run_neuronic_mechanistic_heads.sh base-search
+
+# Three seed-isolated full replications plus a stability report.
+bash scripts/run_neuronic_mechanistic_heads.sh base-search-3seed
 ```
 
-Neither command submits training jobs or loads adapter checkpoints. The full
-design and claim boundary are in [`BASE_SEARCH_EXPERIMENT.md`](BASE_SEARCH_EXPERIMENT.md).
+None of these commands submits training jobs or loads adapter checkpoints. The full
+three-seed run shares the seed-invariant instrumentation and complete behavior
+baseline, while discovery, control selection, causal validation, checkpoints,
+and reports are namespaced per seed. The full design and claim boundary are in
+[`BASE_SEARCH_EXPERIMENT.md`](BASE_SEARCH_EXPERIMENT.md).
 
 ## Environment
 

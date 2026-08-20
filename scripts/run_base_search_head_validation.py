@@ -7,7 +7,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-from vlm_eval.mechanistic_heads.base_search import assert_base_only, assert_unmodified_runtime, build_search_probe, configured_cues, exemplar_source_rows, find_exemplars, read_jsonl
+from vlm_eval.mechanistic_heads.base_search import assert_base_only, assert_unmodified_runtime, build_search_probe, configured_cues, exemplar_source_rows, find_exemplars, read_jsonl, seeded_group_sample
 from vlm_eval.mechanistic_heads.causal import projected_head_scaling
 from vlm_eval.mechanistic_heads.config import add_standard_run_arguments, effective_limit, load_json_config, prepare_output_directory
 from vlm_eval.mechanistic_heads.likelihood import candidate_sequence_log_likelihood
@@ -20,6 +20,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Causally validate frozen-base search heads on locked scenes.")
     add_standard_run_arguments(parser)
     parser.add_argument("--device-map", default="cuda")
+    parser.add_argument("--ranking", type=Path)
     args = parser.parse_args()
     config = load_json_config(args.config)
     assert_base_only(config)
@@ -32,7 +33,7 @@ def main() -> None:
         known_outputs=(output.name, summary_path.name),
     )
     seed_everything(args.seed)
-    ranking_path = Path(config["ranking"])
+    ranking_path = args.ranking or Path(config["ranking"])
     require_completed_manifest(ranking_path.parent, expected_outputs=(ranking_path,), require_current_git=True)
     ranking_summary = json.loads((ranking_path.parent / "summary.json").read_text(encoding="utf-8"))
     controls = ranking_summary["controls"]
@@ -49,7 +50,9 @@ def main() -> None:
     limit = effective_limit(args, smoke_max=2)
     if limit is None:
         limit = int(config.get("validation_examples", 24))
-    rows = rows[:limit]
+    rows = seeded_group_sample(
+        rows, limit=limit, seed=args.seed, purpose="base-search-validation"
+    )
     runtime = Qwen3MechanisticRuntime(
         model_id=str(config.get("model_id", "Qwen/Qwen3-VL-8B-Instruct")),
         device_map=args.device_map,

@@ -16,6 +16,7 @@ from vlm_eval.mechanistic_heads.base_search import (
     exemplar_source_rows,
     find_exemplars,
     read_jsonl,
+    seeded_group_sample,
 )
 from vlm_eval.mechanistic_heads.config import (
     add_standard_run_arguments,
@@ -49,8 +50,9 @@ def main() -> None:
     split = str(config.get("behavior_split", "locked_test"))
     rows = [row for row in all_rows if row["split"] == split]
     limit = effective_limit(args, smoke_max=4)
-    if limit is not None:
-        rows = rows[:limit]
+    rows = seeded_group_sample(
+        rows, limit=limit, seed=args.seed, purpose="base-search-behavior"
+    )
     runtime = Qwen3MechanisticRuntime(
         model_id=str(config.get("model_id", "Qwen/Qwen3-VL-8B-Instruct")),
         device_map=args.device_map,

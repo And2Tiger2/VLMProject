@@ -31,12 +31,14 @@ case "$SOURCE_TASK" in
   base-search-heads) ROOT=base_search_head_scan ;;
   *) echo "unsupported aggregate task: $SOURCE_TASK" >&2; exit 2 ;;
 esac
+INPUT_ROOT="${INPUT_ROOT:-segments/mechanistic_heads_qwen3_8b/runs/$ROOT/full}"
+OUTPUT_DIR="${OUTPUT_DIR:-segments/mechanistic_heads_qwen3_8b/runs/$ROOT/full}"
 uv run python scripts/aggregate_mechanistic_shards.py \
   --config segments/mechanistic_heads_qwen3_8b/configs/shard_aggregation.json \
-  --input-root "segments/mechanistic_heads_qwen3_8b/runs/$ROOT/full" \
-  --output-dir "segments/mechanistic_heads_qwen3_8b/runs/$ROOT/full" \
-  --task "$SOURCE_TASK" --seed 0 --resume
+  --input-root "$INPUT_ROOT" \
+  --output-dir "$OUTPUT_DIR" \
+  --task "$SOURCE_TASK" --seed "${SEED:-0}" --resume
 uv run python scripts/validate_mechanistic_run.py \
   --repo "$REPO" \
-  --run-dir "segments/mechanistic_heads_qwen3_8b/runs/$ROOT/full" \
+  --run-dir "$OUTPUT_DIR" \
   --newer-than-epoch "$JOB_STARTED_AT"
